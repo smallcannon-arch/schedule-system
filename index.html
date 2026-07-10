@@ -146,6 +146,24 @@ h1{font-size:27px;font-weight:900;margin-bottom:4px}
 .auth-status[data-kind="error"]{color:#a5384b;font-weight:800}
 .auth-admin-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .auth-admin-actions[hidden]{display:none}
+.management-panel{padding:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(72,55,78,.08)}
+.management-panel .auth-panel,.management-panel .teacher-handoff{border-left:0}
+.management-section{padding:18px 20px}
+.management-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.management-heading h2{font-size:17px;margin-bottom:2px}
+.management-caption{color:var(--muted);font-size:13px}
+.management-panel .auth-line{justify-content:flex-end}
+.management-panel .auth-status{margin-top:8px}
+.management-panel .auth-admin-actions{margin-top:14px;padding-top:14px}
+.management-panel .btn{padding:9px 14px;border-radius:7px;font-size:14px}
+.backup-disclosure{border-top:1px solid var(--line)}
+.backup-disclosure summary{padding:14px 20px;cursor:pointer;color:var(--ink)}
+.backup-disclosure summary::marker{color:var(--sky-d)}
+.backup-title{font-size:15px;font-weight:900}
+.backup-caption{margin-left:8px;color:var(--muted);font-size:13px}
+.backup-disclosure[open] summary{background:#fbfafc}
+.backup-body{padding:2px 20px 18px}
+.management-panel .teacher-code{width:230px;border-width:1px}
 .platform-school-actions{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .platform-school-actions[hidden]{display:none}
 .platform-school-form{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(200px,1.2fr) minmax(220px,1.4fr) minmax(240px,1.5fr) auto auto;gap:8px;align-items:end}
@@ -199,6 +217,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
+  .management-head{align-items:flex-start;flex-direction:column;gap:10px}.management-panel .auth-line{justify-content:flex-start}
+  .management-section{padding:16px}.backup-disclosure summary{padding:14px 16px}.backup-caption{display:block;margin:3px 0 0 18px}.backup-body{padding:2px 16px 16px}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
 }
 @media print{aside,.tt-tools,.poolbar,.sub,.teacher-handoff,.app-footer{display:none}main{margin:0}}
@@ -300,48 +320,57 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <h2>📊 資料概況</h2>
     <div class="sub" style="margin-bottom:0" id="statLine"></div>
   </div>
-  <div class="panel auth-panel">
-    <h2>系統管理員</h2>
-    <div class="auth-line">
-      <div id="googleSignInButton"></div>
-      <b id="teacherProfile"></b>
-      <button class="btn soft sm" id="googleLogoutButton" type="button" onclick="ScheduleAuth.logout()" hidden>登出</button>
-    </div>
-    <div class="auth-status" id="googleAuthStatus">正在檢查正式教師入口…</div>
-    <div class="auth-admin-actions" id="googleAdminActions" hidden>
-      <label class="btn soft sm" style="cursor:pointer">匯入教師帳號 CSV<input type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
-      <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.loadDraft()">載入雲端暫存</button>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
-      <span class="sub" style="margin:0">CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
-      <span class="sub" id="cloudDraftStatus" style="margin:0;flex-basis:100%">雲端暫存尚未啟動。</span>
-      <span class="sub" id="teacherSyncStatus" style="margin:0;flex-basis:100%">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
-    </div>
-    <div class="platform-school-actions" id="platformSchoolActions" hidden>
-      <h3>學校管理</h3>
-      <div class="platform-school-form">
-        <label>學校代碼<input id="platformSchoolId" type="text" maxlength="50" placeholder="school-code"></label>
-        <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
-        <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
-        <label>系統管理員帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
-        <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
-        <button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button>
+  <div class="panel management-panel">
+    <section class="auth-panel management-section">
+      <div class="management-head">
+        <div class="management-heading">
+          <h2>排課管理</h2>
+          <div class="management-caption">帳號、雲端暫存與教師同步</div>
+        </div>
+        <div class="auth-line">
+          <div id="googleSignInButton"></div>
+          <b id="teacherProfile"></b>
+          <button class="btn soft sm" id="googleLogoutButton" type="button" onclick="ScheduleAuth.logout()" hidden>登出</button>
+        </div>
       </div>
-      <div class="auth-status" id="platformSchoolStatus"></div>
-      <table class="platform-school-list" aria-label="已建立學校">
-        <thead><tr><th>學校</th><th>Workspace 網域</th><th>系統管理員</th><th>狀態</th></tr></thead>
-        <tbody id="platformSchoolList"></tbody>
-      </table>
-    </div>
-  </div>
-  <div class="panel teacher-handoff">
-    <h2>離線備援入口</h2>
-    <div class="teacher-actions">
-      <input class="teacher-code" id="teacherEntryCode" type="password" autocomplete="off" minlength="8" maxlength="64" placeholder="班級調整碼（至少 8 碼）" aria-label="班級調整碼">
-      <label class="btn mint sm" style="cursor:pointer">開啟教師調整檔<input type="file" accept=".json" hidden onchange="importTeacherPackage(this)"></label>
-      <span class="sub" style="margin:0">老師請使用管理者提供的單班調整檔。</span>
-    </div>
+      <div class="auth-status" id="googleAuthStatus">正在檢查正式教師入口…</div>
+      <div class="auth-admin-actions" id="googleAdminActions" hidden>
+        <label class="btn soft sm" style="cursor:pointer">匯入教師帳號 CSV<input type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
+        <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
+        <button class="btn soft sm" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
+        <button class="btn soft sm" type="button" onclick="ScheduleAuth.loadDraft()">載入雲端暫存</button>
+        <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
+        <span class="sub" style="margin:0">CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
+        <span class="sub" id="cloudDraftStatus" style="margin:0;flex-basis:100%">雲端暫存尚未啟動。</span>
+        <span class="sub" id="teacherSyncStatus" style="margin:0;flex-basis:100%">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
+      </div>
+      <div class="platform-school-actions" id="platformSchoolActions" hidden>
+        <h3>學校管理</h3>
+        <div class="platform-school-form">
+          <label>學校代碼<input id="platformSchoolId" type="text" maxlength="50" placeholder="school-code"></label>
+          <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
+          <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
+          <label>系統管理員帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
+          <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
+          <button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button>
+        </div>
+        <div class="auth-status" id="platformSchoolStatus"></div>
+        <table class="platform-school-list" aria-label="已建立學校">
+          <thead><tr><th>學校</th><th>Workspace 網域</th><th>系統管理員</th><th>狀態</th></tr></thead>
+          <tbody id="platformSchoolList"></tbody>
+        </table>
+      </div>
+    </section>
+    <details class="teacher-handoff backup-disclosure">
+      <summary><span class="backup-title">離線備援</span><span class="backup-caption">無法使用雲端時再開啟</span></summary>
+      <div class="backup-body">
+        <div class="teacher-actions">
+          <input class="teacher-code" id="teacherEntryCode" type="password" autocomplete="off" minlength="8" maxlength="64" placeholder="班級調整碼（至少 8 碼）" aria-label="班級調整碼">
+          <label class="btn mint sm" style="cursor:pointer">開啟教師調整檔<input type="file" accept=".json" hidden onchange="importTeacherPackage(this)"></label>
+          <span class="sub" style="margin:0">使用管理者提供的單班調整檔與調整碼。</span>
+        </div>
+      </div>
+    </details>
   </div>
 </section>
 
