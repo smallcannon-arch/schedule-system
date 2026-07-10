@@ -16,10 +16,21 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh;font-size:17px}
-.formal-gate{display:none;min-height:100vh;width:100%;padding:24px;background:#f7f7f5;place-items:center}
-.formal-gate-inner{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:32px}
-.formal-gate-mark{width:44px;height:44px;display:grid;place-items:center;background:var(--mint);border-radius:8px;font-size:23px;margin-bottom:18px}
-.formal-gate h1{font-size:25px;margin-bottom:8px}.formal-gate p{color:var(--muted);line-height:1.7;margin-bottom:22px}
+.formal-gate{display:none;min-height:100vh;width:100%;padding:32px;background:#f6f5f2;place-items:center;border-top:6px solid var(--mint-d)}
+.formal-gate-inner{width:min(620px,100%);background:#fff;border:1px solid #e5dedf;border-radius:8px;box-shadow:0 18px 50px rgba(72,55,78,.12);padding:42px 44px 30px}
+.formal-gate-head{display:grid;grid-template-columns:58px minmax(0,1fr);gap:18px;align-items:start}
+.formal-gate-mark{width:58px;height:58px;display:grid;place-items:center;background:var(--mint);border:1px solid #9fd0bf;border-radius:8px;color:var(--mint-d);font-size:28px}
+.formal-gate-eyebrow{margin-bottom:5px;color:var(--mint-d);font-size:13px;font-weight:900}
+.formal-gate h1{font-size:32px;margin-bottom:7px}.formal-gate .formal-gate-lead{margin:0;color:var(--muted);font-size:16px;line-height:1.65}
+.formal-gate-signin{margin-top:28px;padding:22px 0 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.formal-gate-signin>b{display:block;color:var(--ink);font-size:17px}.formal-gate-signin>small{display:block;margin-top:3px;color:var(--muted);font-size:13.5px}
+#formalGoogleSignInButton{width:min(400px,100%);min-height:44px;margin:16px auto 0}#formalGoogleSignInButton iframe{max-width:100%!important}
+.formal-gate .auth-status{margin:13px auto 0;width:min(400px,100%);padding:10px 12px;border-left:3px solid var(--sky-d);border-radius:4px;background:#f5f8fa;font-size:13.5px;line-height:1.5}
+.formal-gate-request{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 0 20px}
+.formal-gate-request h2{font-size:17px;margin-bottom:4px}.formal-gate-request p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
+.formal-request-link{flex:0 0 auto;padding:12px 18px;border:1px solid #9fcfbe;border-radius:7px;background:#eef8f4;color:var(--mint-d);font-weight:900;text-decoration:none;white-space:nowrap}
+.formal-request-link:hover{background:var(--mint)}
+.formal-gate-owner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
 body.formal-mode.formal-locked{display:block}.formal-mode.formal-locked>.formal-gate{display:grid}
 .formal-mode.formal-locked>aside,.formal-mode.formal-locked>main{display:none}
 .demo-mode .formal-only{display:none!important}.formal-mode .demo-only{display:none!important}
@@ -228,6 +239,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .case-section-heading{margin-top:26px}.case-summary-panel #statLine{white-space:normal;overflow:visible}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
+  .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{align-items:stretch;flex-direction:column}.formal-request-link{text-align:center}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
 @media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
 </style>
@@ -240,11 +252,28 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 
 <section class="formal-gate formal-only" aria-labelledby="formalGateTitle">
   <div class="formal-gate-inner">
-    <div class="formal-gate-mark">▦</div>
-    <h1 id="formalGateTitle">智慧排課系統</h1>
-    <p>使用學校 Google 帳號進入正式排課。</p>
-    <div id="formalGoogleSignInButton"></div>
-    <div class="auth-status" id="formalAuthStatus">正在檢查登入設定…</div>
+    <div class="formal-gate-head">
+      <div class="formal-gate-mark" aria-hidden="true">▦</div>
+      <div>
+        <div class="formal-gate-eyebrow">學校課務排程與協作平台</div>
+        <h1 id="formalGateTitle">智慧排課系統</h1>
+        <p class="formal-gate-lead">使用已核准的學校 Google 帳號進入正式排課。</p>
+      </div>
+    </div>
+    <div class="formal-gate-signin">
+      <b>Google 帳號登入</b>
+      <small>學校系統管理員、導師及科任教師皆由同一入口登入。</small>
+      <div id="formalGoogleSignInButton"></div>
+      <div class="auth-status" id="formalAuthStatus">正在檢查登入設定…</div>
+    </div>
+    <div class="formal-gate-request">
+      <div>
+        <h2>尚未開通學校？</h2>
+        <p>欲使用本系統，請填寫申請資料並寄出。</p>
+      </div>
+      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=智慧排課系統使用申請&amp;body=您好，我想申請使用智慧排課系統。%0D%0A%0D%0A學校名稱：%0D%0A縣市：%0D%0A申請人姓名／職稱：%0D%0A學校 Google Workspace 網域：%0D%0A預計使用學期：%0D%0A聯絡方式：">填寫使用申請</a>
+    </div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：江志宏</span><span>智慧排課系統 1.8</span></div>
   </div>
 </section>
 
@@ -2294,7 +2323,7 @@ document.getElementById('formalApiUrl').value=localStorage.getItem('schedule_for
 setFmt('num');
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260711-1"></script>
+<script src="schedule-auth.js?v=20260711-2"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

@@ -169,8 +169,10 @@
       root.google.accounts.id.initialize({client_id: config.client_id, callback: handleCredential,
         hd: config.workspace_domain || undefined});
       const gateTarget = document.getElementById("formalGoogleSignInButton") || document.getElementById("googleSignInButton");
+      const buttonWidth = Math.max(240, Math.min(400, Math.round(gateTarget.getBoundingClientRect().width || 400)));
       root.google.accounts.id.renderButton(gateTarget, {
-        type: "standard", theme: "outline", size: "large", text: "signin_with", shape: "rectangular",
+        type: "standard", theme: "filled_blue", size: "large", text: "signin_with", shape: "rectangular",
+        logo_alignment: "left", width: String(buttonWidth), locale: "zh_TW",
       });
       status(config.multi_tenant ? "請使用已核准的學校或平台管理員 Google 帳號登入。" :
         (config.workspace_domain ? `請使用 @${config.workspace_domain} 學校帳號登入。` : "請使用學校 Google 帳號登入。"), "ready");
