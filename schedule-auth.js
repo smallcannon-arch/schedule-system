@@ -192,6 +192,27 @@
     }
   }
 
+  function csvCell(value) {
+    const text = String(value == null ? "" : value);
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+
+  async function importTeacherRecords(records) {
+    if (!state.profile || !state.profile.is_admin) throw new Error("只有排課管理員可以同步教師名冊");
+    if (!Array.isArray(records) || !records.length) throw new Error("尚未建立可同步的教師資料");
+    const rows = [["教師姓名", "學校Google帳號", "角色", "負責班級"],
+      ...records.map((record) => [record.name, record.email, record.role,
+        (record.class_codes || []).join("、")])];
+    const csv = "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+    const body = new FormData();
+    body.append("file", new Blob([csv], {type: "text/csv;charset=utf-8"}), "teachers.csv");
+    body.append("replace", "true");
+    status("正在同步教師登入名冊…", "working");
+    const result = await request("/admin/teachers/import-csv", {method: "POST", body});
+    status(`已同步 ${result.imported} 位教師登入帳號。`, "ok");
+    return result;
+  }
+
   function splitValues(value) {
     return String(value || "").split(/[\s,，;；]+/).map((item) => item.trim()).filter(Boolean);
   }
@@ -390,6 +411,6 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, publishCurrent, saveDraft, loadDraft,
+  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft,
     syncTeacherUpdates, savePlacements, loadSchools, saveSchool, editSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

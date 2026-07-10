@@ -152,6 +152,24 @@ h1{font-size:27px;font-weight:900;margin-bottom:4px}
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
+.setup-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:12px 0 16px}
+.setup-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#f3ecf4;border-radius:8px;margin-bottom:14px}
+.setup-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:900;padding:9px 16px;border-radius:6px;cursor:pointer}
+.setup-tabs button.on{background:#fff;color:var(--pink-d);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.setup-pane{display:none}.setup-pane.on{display:block}
+.setup-stepbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.setup-step{min-height:62px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:9px 12px;cursor:pointer;text-align:left}
+.setup-step span{display:block;font-size:12px;font-weight:800}.setup-step b{display:block;font-size:20px;color:var(--ink);margin-top:2px}
+.setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done b{color:var(--mint-d)}
+.setup-health{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7;border-radius:4px;margin-bottom:14px}
+.setup-health.bad{border-color:var(--pink-d);background:#fff4f7}.setup-health span{font-size:13px;color:var(--muted);flex:1}
+.setup-grade-counts{display:grid;grid-template-columns:repeat(6,minmax(82px,1fr));gap:8px;max-width:760px}
+.setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:900}
+.setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}
+.setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
+.current-data-source{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fbfaf9}
 .les.resource-lock{outline:2px solid var(--sky-d);background:#e7f1f7;color:#315f7d}
 .les.resource-lock small{font-weight:900;opacity:1}
 body.teacher-mode .teacher-admin-only{display:none!important}
@@ -169,6 +187,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   nav .ic{width:auto}main{margin-left:0;padding:16px 12px 48px;max-width:none}.panel{padding:16px 12px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
+  .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
+  .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
@@ -200,6 +220,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <nav>
     <button class="on" data-v="set"><span class="ic">⚙️</span>基本設定</button>
+    <button data-v="build"><span class="ic">▤</span>資料建置</button>
     <button data-v="alloc"><span class="ic">👩‍🏫</span>配課檢視</button>
     <button data-v="res"><span class="ic">🧩</span>資源班</button>
     <button data-v="lim"><span class="ic">🚫</span>不排課時間</button>
@@ -223,10 +244,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <h2>📂 學校資料</h2>
     <div class="sub" id="dataSourceDescription" style="margin-bottom:10px">目前：<b id="dataSrc" style="color:var(--pink-d)">內建示範資料（匿名）</b>。
     匯入貴校「通用母版」Excel 即可用真實資料排課——<b>資料只存在這台電腦的瀏覽器，不會上傳任何伺服器</b>。</div>
-    <div class="sub" style="margin-bottom:8px"><b>三步驟：</b>① 下載母版範本 → ② 用 Excel 填寫貴校資料 → ③ 上傳回本系統</div>
+    <div class="sub" id="setupEntryHelp" style="margin-bottom:8px">可直接在系統建立資料；Excel 母版保留作為大量匯入選項。</div>
     <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
-      <a class="btn mint sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">⬇️ ① 下載母版範本</a>
-      <label class="btn pink sm" style="cursor:pointer">📥 ③ 上傳填好的母版<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
+      <button class="btn mint sm" type="button" onclick="go('build')">直接建置學校資料</button>
+      <a class="btn soft sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">下載 Excel 母版</a>
+      <label class="btn soft sm" style="cursor:pointer">匯入 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
       <button class="btn soft sm demo-only" onclick="resetDemo()">↺ 還原示範資料</button>
       <span style="flex-basis:100%"></span>
       <span class="demo-only" style="font-size:12.5px;color:var(--muted)">工作進度：</span>
@@ -297,6 +319,69 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span class="sub" style="margin:0">老師請使用管理者提供的單班調整檔。</span>
     </div>
   </div>
+</section>
+
+<!-- ═══ 資料建置 ═══ -->
+<section class="view" id="v-build">
+  <h1>資料建置</h1>
+  <div class="sub">排課案件基礎資料</div>
+  <div class="setup-actions">
+    <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
+    <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this);go('build')"></label>
+    <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
+  </div>
+  <div id="setupSummary"></div>
+  <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
+    <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">班級</button>
+    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">教師</button>
+    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">科目節數</button>
+    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">配課</button>
+  </div>
+
+  <section class="setup-pane on" id="setup-classes">
+    <div class="panel">
+      <h2>依年級班數建立</h2>
+      <div class="setup-grade-counts">
+        <label>一年級<input id="setupGradeCount1" type="number" min="0" max="20" value="0"></label>
+        <label>二年級<input id="setupGradeCount2" type="number" min="0" max="20" value="0"></label>
+        <label>三年級<input id="setupGradeCount3" type="number" min="0" max="20" value="0"></label>
+        <label>四年級<input id="setupGradeCount4" type="number" min="0" max="20" value="0"></label>
+        <label>五年級<input id="setupGradeCount5" type="number" min="0" max="20" value="0"></label>
+        <label>六年級<input id="setupGradeCount6" type="number" min="0" max="20" value="0"></label>
+      </div>
+      <div style="margin-top:10px"><button class="btn mint sm" type="button" onclick="ScheduleSetup.applyGradeCounts()">套用班級數</button></div>
+    </div>
+    <div class="panel tbl">
+      <table class="setup-table" id="setupClassesTable"></table>
+      <div style="margin-top:12px"><button class="btn soft sm" type="button" onclick="ScheduleSetup.addClass()">新增班級</button></div>
+    </div>
+  </section>
+
+  <section class="setup-pane" id="setup-teachers">
+    <div class="panel tbl">
+      <table class="setup-table" id="setupTeachersTable"></table>
+      <div class="setup-actions">
+        <button class="btn soft sm" type="button" onclick="ScheduleSetup.addTeacher()">新增教師</button>
+        <button class="btn mint sm formal-only" type="button" onclick="ScheduleSetup.syncTeachers()">同步教師登入名冊</button>
+      </div>
+      <div class="sub" id="setupTeacherSyncStatus" style="margin-bottom:0"></div>
+    </div>
+  </section>
+
+  <section class="setup-pane" id="setup-subjects">
+    <div class="panel tbl">
+      <table class="setup-table" id="setupSubjectsTable"></table>
+      <div style="margin-top:12px"><button class="btn soft sm" type="button" onclick="ScheduleSetup.addSubject()">新增科目</button></div>
+    </div>
+  </section>
+
+  <section class="setup-pane" id="setup-assign">
+    <div class="setup-actions">
+      <button class="btn soft sm" type="button" onclick="ScheduleSetup.autofillTutors()">自動帶入導師課</button>
+      <button class="btn mint sm" type="button" onclick="go('run')">前往執行排課</button>
+    </div>
+    <div class="panel tbl"><table class="setup-table" id="setupAssignmentsTable"></table></div>
+  </section>
 </section>
 
 <!-- ═══ 我的課表 ═══ -->
@@ -406,7 +491,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <h2>正式 CP-SAT + OpenAI</h2>
     <div class="frm formal-grid">
       <label class="wide">正式 API 網址<input id="formalApiUrl" type="text" inputmode="url" value="http://127.0.0.1:8766"></label>
-      <label>母版 Excel<input id="formalFile" type="file" accept=".xlsx"></label>
+      <div class="wide current-data-source"><b>排課資料</b><span id="formalDataSource">目前系統案件</span><button class="btn soft sm" type="button" onclick="go('build')">檢查資料</button></div>
       <label class="api-key-fallback">系統 API key<input id="formalApiKey" type="password" autocomplete="off" placeholder="本機可留空"></label>
       <label class="checkline"><input id="formalAutoTutor" type="checkbox" checked onchange="formalTutorModeChanged()">CP-SAT 自動排完導師課</label>
       <label class="checkline"><input id="formalStrict" type="checkbox" checked>必須達到正式完整標準</label>
@@ -528,6 +613,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="data.js"></script>
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
+<script src="setup-builder.js?v=20260710-2"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -543,6 +629,7 @@ function go(v){
   if(v==='tt')fillTT();
   if(v==='tutor')fillTutor();
   if(v==='edit')renderEditor();
+  if(v==='build')ScheduleSetup.render();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
@@ -736,16 +823,19 @@ function poolOf(code){
 function renderStat(){
   document.getElementById('statLine').innerHTML=
   `班級 <b>${DATA.classes.length}</b> 班｜教師 <b>${Object.keys(DATA.roster).length}</b> 人｜科目 <b>${Object.keys(DATA.subjects).length}</b> 科｜本土語鎖定 <b>${DATA.locks.length}</b> 筆｜不排課時間 <b>${LIMITS.length}</b> 筆｜場地封鎖 <b>${DATA.blocked.length}</b> 筆｜規則 <b>${RULES.length}</b> 條`;
+  const source=document.getElementById('formalDataSource');
+  if(source)source.textContent=document.getElementById('dataSrc').textContent||'目前系統案件';
 }
 
 /* ═══ 配課檢視 ═══ */
 let ENG_SUBJ=[],TEACHERS=[];
 function renderAlloc(){
   const t=document.getElementById('allocTable');
-  let h='<tr><th>班級</th><th>本土語文</th>'+ENG_SUBJ.map(s=>`<th>${esc(s)}</th>`).join('')+'</tr>';
+  const subjects=[...(DATA.subjects['本土語文']?['本土語文']:[]),...ENG_SUBJ];
+  let h='<tr><th>班級</th>'+subjects.map(s=>`<th>${esc(s)}</th>`).join('')+'</tr>';
   for(const c of DATA.classes){
     h+=`<tr><td class="cls">${esc(clsName(c))}</td>`;
-    for(const s of ['本土語文',...ENG_SUBJ]){
+    for(const s of subjects){
       const hrs=hoursOf(s,c.g);
       if(hrs===0){h+='<td class="na">–</td>';continue}
       const cur=(DATA.assign[c.code]&&DATA.assign[c.code][s])||'';
@@ -1215,29 +1305,32 @@ function formalTutorModeChanged(){
     auto?'導師課將由 CP-SAT 一併排完。':'CP-SAT 只排固定課；完成後可在導師自排頁匯出單班教師調整檔。');
 }
 async function runFormal(){
-  const btn=document.getElementById('formalBtn'),file=document.getElementById('formalFile').files[0];
-  if(!file)return formalMessage('bad','請先選擇母版 Excel');
-  if(!file.name.toLowerCase().endsWith('.xlsx'))return formalMessage('bad','只接受 .xlsx 檔案');
+  const btn=document.getElementById('formalBtn');
+  const setup=ScheduleSetup.validate();
+  if(setup.hard.length)return formalMessage('bad','排課資料尚未完整',setup.hard.slice(0,4).join('；'));
   let base;
   try{
     base=new URL(document.getElementById('formalApiUrl').value.trim());
     if(!['http:','https:'].includes(base.protocol))throw new Error('protocol');
   }catch(e){return formalMessage('bad','正式 API 網址格式不正確')}
   localStorage.setItem('schedule_formal_api_url',base.href.replace(/\/$/,''));
-  const form=new FormData();
-  form.append('file',file);
-  form.append('time_limit','120');
-  form.append('auto_schedule_tutor',String(document.getElementById('formalAutoTutor').checked));
-  form.append('strict_complete',String(document.getElementById('formalStrict').checked));
-  form.append('use_openai',String(document.getElementById('formalUseAI').checked));
-  form.append('ai_goal',document.getElementById('formalGoal').value.trim());
-  form.append('return_json','true');
+  const localData=TeacherWorkflow.clone(DATA);
+  const payload={
+    data:localData,
+    limits:TeacherWorkflow.clone(LIMITS),
+    rules:TeacherWorkflow.clone(RULES),
+    time_limit:120,
+    auto_schedule_tutor:document.getElementById('formalAutoTutor').checked,
+    strict_complete:document.getElementById('formalStrict').checked,
+    use_openai:document.getElementById('formalUseAI').checked,
+    ai_goal:document.getElementById('formalGoal').value.trim(),
+  };
   const headers=ScheduleAuth.authorizationHeaders(),apiKey=document.getElementById('formalApiKey').value;
+  headers['Content-Type']='application/json';
   if(apiKey)headers['X-API-Key']=apiKey;
   btn.disabled=true;formalMessage('warn','正式引擎求解中','請保持此頁開啟，完成後會自動下載。');
   try{
-    const localData=parseWorkbook(new Uint8Array(await file.arrayBuffer()));
-    const response=await fetch(base.href.replace(/\/$/,'')+'/solve',{method:'POST',headers,body:form});
+    const response=await fetch(base.href.replace(/\/$/,'')+'/solve-data',{method:'POST',headers,body:JSON.stringify(payload)});
     if(!response.ok){
       let data={};try{data=await response.json()}catch(e){}
       const details=[data.error,...(data.issues||[])].filter(Boolean).join('；')||`HTTP ${response.status}`;
@@ -1696,7 +1789,7 @@ const rl=document.createElement('datalist');rl.id='rlist';
 rl.innerHTML=['學年共同時間','行政會議','導護勤務','本土語直播協同','週三下午進修','他校兼課','社團指導','兼任行政職務'].map(x=>`<option>${x}</option>`).join('');
 document.body.appendChild(rl);
 
-function renderAll(){renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderRes();renderEditor()}
+function renderAll(){renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderRes();renderEditor();ScheduleSetup.render()}
 
 /* ═══ 資料來源切換（示範 / 匯入真實資料 / 瀏覽器存檔）═══ */
 const LSKEY=APP_MODE==='formal'?'schedule_formal_local_v1':'schedule_demo_progress_v2';
@@ -1704,19 +1797,20 @@ const LEGACY_LSKEY='schedule_system_data_v1';
 const LS_TTL_MS=(APP_MODE==='demo'?30:7)*24*60*60*1000;
 const DEMO0=JSON.parse(JSON.stringify(DATA));  // 內建示範資料快照
 function emptyFormalData(){
-  const gslot={};for(let grade=1;grade<=6;grade++)gslot[grade]=Array.from({length:5},()=>Array(7).fill(0));
+  const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
     rules:TeacherWorkflow.clone(DEMO0.rules||[]),blocked:[],gslot,rooms:{R00:99},roster:{},
-    resGroups:[],tcap:{}};
+    resGroups:[],tcap:{},teacherAccounts:{}};
 }
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   document.title='智慧排課系統｜正式版';
   document.getElementById('appBrandName').textContent='智慧排課系統';
   document.getElementById('appBrandMeta').textContent='正式排課・Google 驗證';
-  document.getElementById('appSideFoot').innerHTML='正式排課系統<br>CP-SAT 求解・雲端暫存<br>教師課表自動同步';
-  document.getElementById('appIntro').textContent='正式排課資料依學校 Google 帳號授權；請匯入母版或載入您的雲端暫存。';
-  document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。匯入母版後會先保存在承辦人的雲端暫存；只有按下「發布正式教師課表」才會開放教師查看。';
+  document.getElementById('appSideFoot').innerHTML='正式排課系統<br>CP-SAT 求解・雲端暫存<br>教師存檔手動讀取';
+  document.getElementById('appIntro').textContent='登入後可直接建立排課案件、載入雲端暫存，或從 Excel 快速匯入。';
+  document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
+  document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
   document.getElementById('runIntro').textContent='正式排課由 CP-SAT 執行，完成後再發布給教師查看或調整。';
 }
 function enterFormalAdminMode(){
@@ -1735,6 +1829,7 @@ function initDerived(){
   DATA.rooms=DATA.rooms||{R00:99};DATA.roster=DATA.roster||{};
   DATA.resGroups=DATA.resGroups||[];
   DATA.tcap=DATA.tcap||{};
+  DATA.teacherAccounts=DATA.teacherAccounts||{};
   DATA.derived=DATA.derived||[];
   DATA.classes.forEach(c=>{if(c.res===undefined)c.res=false});
   OVL=[];
@@ -1754,6 +1849,23 @@ function applyData(nd,srcLabel){
   initDerived();
   document.getElementById('dataSrc').textContent=srcLabel;
   renderAll();
+}
+function commitSetupData(message){
+  DATA.limits=TeacherWorkflow.clone(LIMITS);
+  DATA.rules=TeacherWorkflow.clone(RULES);
+  initDerived();
+  document.getElementById('dataSrc').textContent='系統內建置案件';
+  renderAll();
+  saveLS('系統內建置案件');
+  document.getElementById('lsMsg').textContent=message+' 已保存本機備份；登入期間會同步到雲端暫存。';
+}
+function startBlankSetupData(){
+  const hasData=DATA.classes.length||Object.keys(DATA.roster).length||Object.keys(DATA.subjects).length;
+  if(hasData&&!confirm('確定建立空白案件？目前尚未另存的班級、教師、科目與配課資料會被取代。'))return false;
+  applyData(emptyFormalData(),'系統內建置案件');
+  saveLS('系統內建置案件');
+  go('build');
+  return true;
 }
 function saveLS(label){
   if(TEACHER_MODE)return;
@@ -2073,6 +2185,14 @@ function parseV5(wb,S,opt){
   return nd;
 }
 
+ScheduleSetup.init({
+  getData:()=>DATA,
+  getLimits:()=>LIMITS,
+  escape:esc,
+  commit:commitSetupData,
+  startBlank:startBlankSetupData,
+  syncTeachers:(records)=>ScheduleAuth.importTeacherRecords(records),
+});
 configureAppMode();
 if(APP_MODE==='formal')applyData(emptyFormalData(),'尚未載入學校資料');
 else{
@@ -2083,7 +2203,7 @@ document.getElementById('formalApiUrl').value=localStorage.getItem('schedule_for
 setFmt('num');
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260710-2"></script>
+<script src="schedule-auth.js?v=20260710-3"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
