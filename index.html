@@ -267,9 +267,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.loadDraft()">載入雲端暫存</button>
+      <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
       <span class="sub" style="margin:0">CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
       <span class="sub" id="cloudDraftStatus" style="margin:0;flex-basis:100%">雲端暫存尚未啟動。</span>
-      <span class="sub" id="teacherSyncStatus" style="margin:0;flex-basis:100%">導師課表同步尚未啟動。</span>
+      <span class="sub" id="teacherSyncStatus" style="margin:0;flex-basis:100%">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
     </div>
     <div class="platform-school-actions" id="platformSchoolActions" hidden>
       <h3>學校管理</h3>
@@ -2082,7 +2083,7 @@ document.getElementById('formalApiUrl').value=localStorage.getItem('schedule_for
 setFmt('num');
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js"></script>
+<script src="schedule-auth.js?v=20260710-2"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

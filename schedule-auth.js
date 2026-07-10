@@ -112,7 +112,7 @@
         document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜排課管理員`;
         state.activeRevision = localStorage.getItem(userStorageKey("schedule_active_revision")) || "";
         state.updateSequence = Number(localStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
-        status("管理員已登入；雲端暫存與導師結果同步已啟動。", "ok");
+        status("管理員已登入；雲端暫存已啟動，導師存檔改由手動讀取。", "ok");
         await refreshDraftStatus();
         startAdminAutomation();
       } else if (state.profile.school_id) {
@@ -266,7 +266,7 @@
       state.updateSequence = Number(result.update_sequence || 0);
       localStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
       localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
-      document.getElementById("teacherSyncStatus").textContent = "已開始接收導師送出的課表調整。";
+      document.getElementById("teacherSyncStatus").textContent = "導師儲存後，請按「讀取導師存檔」取得更新。";
       status(`正式課表已發布（${new Date(result.published_at).toLocaleString("zh-TW")}）。`, "ok");
     } catch (error) {
       status(error.message, "error");
@@ -321,7 +321,6 @@
       localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), "0");
       state.lastDraftHash = JSON.stringify(root.getScheduleAuthSnapshot());
       document.getElementById("cloudDraftStatus").textContent = `已載入雲端暫存：${new Date(draft.saved_at).toLocaleString("zh-TW")}。`;
-      await syncTeacherUpdates();
     } catch (error) {
       alert(`無法載入雲端暫存：${error.message}`);
     }
@@ -331,7 +330,7 @@
     if (!state.profile || !state.profile.is_admin) return;
     const element = document.getElementById("teacherSyncStatus");
     if (!state.activeRevision) {
-      element.textContent = "發布正式課表後，導師完成結果會自動匯入。";
+      element.textContent = "發布正式課表後，可按「讀取導師存檔」取得更新。";
       return;
     }
     try {
@@ -344,8 +343,10 @@
           element.textContent = applied.reason || "收到導師更新，但承辦端尚未能套用。";
           return;
         }
-        element.textContent = `已自動匯入：${applied.codes.join("、")}（${new Date(result.updated_at).toLocaleString("zh-TW")}）。`;
+        element.textContent = `已讀取並匯入：${applied.codes.join("、")}（${new Date(result.updated_at).toLocaleString("zh-TW")}）。`;
         state.lastDraftHash = "";
+      } else {
+        element.textContent = "目前沒有新的導師存檔。";
       }
       state.updateSequence = Number(result.update_sequence || state.updateSequence);
       localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
@@ -358,8 +359,6 @@
     if (state.automationStarted) return;
     state.automationStarted = true;
     setInterval(() => saveDraft(false), 30000);
-    setInterval(syncTeacherUpdates, 10000);
-    syncTeacherUpdates();
   }
 
   async function savePlacements() {
@@ -376,8 +375,8 @@
         method: "PUT", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({revision, placements}),
       });
-      status(`${code} 課表已儲存，承辦端會自動匯入。`, "ok");
-      alert("課表調整已儲存，承辦端會自動匯入，不需另外傳檔。");
+      status(`${code} 課表已儲存，承辦人可讀取此存檔。`, "ok");
+      alert("課表調整已儲存，承辦人按「讀取導師存檔」即可匯入。");
       await loadWorkspace();
     } catch (error) {
       status(error.message, "error");
