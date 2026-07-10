@@ -168,7 +168,7 @@
       root.google.accounts.id.renderButton(gateTarget, {
         type: "standard", theme: "outline", size: "large", text: "signin_with", shape: "rectangular",
       });
-      status(config.multi_tenant ? "請使用已核准學校的 Google Workspace 帳號登入。" :
+      status(config.multi_tenant ? "請使用已核准的學校或平台管理員 Google 帳號登入。" :
         (config.workspace_domain ? `請使用 @${config.workspace_domain} 學校帳號登入。` : "請使用學校 Google 帳號登入。"), "ready");
     } catch (error) {
       status(error.message, "error");
