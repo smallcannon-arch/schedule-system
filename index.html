@@ -51,6 +51,13 @@ nav .ic{width:22px;text-align:center;font-size:17px}
 main{margin-left:230px;width:calc(100% - 230px);min-width:0;min-height:100vh;display:flex;flex:1;flex-direction:column;padding:22px 26px 60px;max-width:none}
 h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .sub{font-size:15.5px;color:var(--muted);margin-bottom:16px}
+.step-help{margin:0 0 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fbfaf9}
+.step-help summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;cursor:pointer;list-style:none;color:var(--lav-d);font-size:14px;font-weight:900}
+.step-help summary::-webkit-details-marker{display:none}.step-help summary::after{content:"＋";color:var(--muted);font-size:18px;font-weight:500}.step-help[open] summary::after{content:"－"}
+.step-help-body{padding:0 14px 14px;border-top:1px solid var(--line)}
+.step-help ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 24px;margin:13px 0 0;padding-left:22px}
+.step-help li{padding-right:8px;color:var(--muted);font-size:14px;line-height:1.65}.step-help li b{color:var(--ink)}
+.step-help-note{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);color:var(--peach-d);font-size:13.5px;line-height:1.55}
 .view{display:none}.view.on{display:block;margin-bottom:38px}
 .panel{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px}
 .panel h2{font-size:20px;font-weight:900;margin-bottom:12px}
@@ -178,7 +185,7 @@ body.platform-admin-mode .admin-dock{display:none!important}
 .setup-class-format{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.setup-class-format h3{font-size:17px;margin-bottom:10px}
 .platform-school-actions{margin-bottom:0}
 .platform-school-actions[hidden]{display:none}
-body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #setupSummary,body.platform-admin-mode #v-build>.setup-tabs,body.platform-admin-mode #v-build>.setup-pane,body.platform-admin-mode .setup-ready-only{display:none}
+body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #v-build>.step-help,body.platform-admin-mode #setupSummary,body.platform-admin-mode #v-build>.setup-tabs,body.platform-admin-mode #v-build>.setup-pane,body.platform-admin-mode .setup-ready-only{display:none}
 body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:not(.platform-admin-mode) .setup-ready-only,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-tabs,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-pane{display:none!important}
 .platform-school-form{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(170px,1.15fr) minmax(190px,1.3fr) auto auto;gap:8px;align-items:end}
 .platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
@@ -222,7 +229,7 @@ body.signed-teacher .auth-teacher-nav{display:flex}
 body.signed-teacher:not(.teacher-mode) aside nav button:not([data-v="my"]){display:none}
 body.server-teacher-mode .offline-teacher-only{display:none}
 body.server-teacher-mode .server-teacher-only{display:flex}
-button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
 @media(max-width:800px){
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
   .logo{margin-bottom:8px;padding-bottom:10px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
@@ -230,6 +237,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
+  .step-help ol{grid-template-columns:1fr;gap:8px}.step-help li{padding-right:0}
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
   .app-footer{align-items:flex-start;flex-direction:column;gap:10px}.app-footer-meta{text-align:left}.app-footer-session{margin-left:0;padding:10px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);width:100%}
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -240,7 +248,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{align-items:stretch;flex-direction:column}.formal-request-link{text-align:center}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
-@media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
+@media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.step-help,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
 </style>
 </head>
 <body>
@@ -336,6 +344,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view on" id="v-build">
   <h1 id="setupPageTitle">資料建置</h1>
   <div class="sub" id="appIntro">此 DEMO 內建一所 16 班國小的完整示範資料（教師姓名已匿名化），可直接體驗：配課 → 規則 → 排課 → 課表 → 導師自排。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>選擇來源：</b>建立空白案件，或先下載 Excel 母版，填妥後再匯入。</li>
+      <li><b>依序建置：</b>完成班級、教師、科目節數與配課，並確認資料概況。</li>
+      <li><b>保存案件：</b>按立即暫存後，再前往配課檢核與排課條件設定。</li>
+    </ol><div class="step-help-note">Excel 匯入會取代目前案件資料；匯入前請先確認雲端暫存已更新。</div></div>
+  </details>
   <div class="setup-actions">
     <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
     <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
@@ -448,6 +464,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-my">
   <h1 id="myScheduleTitle">我的課表</h1>
   <div class="sub" id="myScheduleMeta">登入後顯示個人正式課表。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>查看課表：</b>此頁顯示承辦人最近發布的個人正式課表。</li>
+      <li><b>導師調整：</b>有負責班級的導師可切換至導師自排，科任教師僅查看個人課表。</li>
+      <li><b>列印使用：</b>確認發布版本與節數後，可直接列印留存。</li>
+    </ol></div>
+  </details>
   <div class="panel">
     <div class="tt-tools">
       <button class="btn soft sm" type="button" onclick="window.print()">列印</button>
@@ -462,6 +486,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <h1>配課檢核</h1>
   <div class="csvbar" style="background:var(--sky);margin-bottom:12px"><b style="color:var(--sky-d)">檢核結果：</b>
   <b style="color:var(--pink-d)">粉紅格＝未配教師</b>；右側同步顯示教師實配節數、超鐘點與缺節。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>找出缺漏：</b>逐班檢查粉紅格，所有科目都必須指定授課教師。</li>
+      <li><b>核對節數：</b>確認右側教師實配節數沒有超鐘點，也沒有異常缺節。</li>
+      <li><b>返回修正：</b>發現問題時回到資料建置的配課頁修正，再重新檢核。</li>
+    </ol><div class="step-help-note">配課未完整或教師節數異常時，不建議直接執行正式排課。</div></div>
+  </details>
   <div class="alloc-wrap">
     <div class="panel tbl" style="margin:0"><table id="allocTable"></table></div>
     <div class="panel" style="margin:0">
@@ -476,6 +508,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-res">
   <h1>🧩 資源班</h1>
   <div class="sub">勾選有資源班學生的班級後，該班<b>國語文、數學改由排課系統排課</b>（不開放導師自填），並與下方抽離設定連動；排課後可在「課表檢視」看資源班教師課表。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>勾選班級：</b>先標示有資源班學生的原班，讓國語文與數學交由系統排定。</li>
+      <li><b>建立抽離組：</b>每一組學生、每一科建立一列，指定節數與資源班教師。</li>
+      <li><b>檢查同步：</b>排課後核對原班與資源班教師課表是否在相同節次。</li>
+    </ol><div class="step-help-note">資源班綁課屬於鎖定課程，導師與一般課表編修都不能移動。</div></div>
+  </details>
   <div class="panel">
     <h2>✅ 有資源班學生的班級</h2>
     <div class="poolbar" id="resClsBar"></div>
@@ -492,6 +532,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-lim">
   <h1>🚫 不排課時間</h1>
   <div class="sub">對象可填<b>教師姓名</b>（該師不排）、<b>年級</b>如「3年級」（學年共同時間）、<b>班級</b>如「3甲」。修改後重新排課即生效。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>年級共用：</b>學年共同時間可直接選年級後點選時段，快速套用到全年級。</li>
+      <li><b>個別限制：</b>教師、單一班級或特殊原因，使用限制清單逐列新增。</li>
+      <li><b>重新求解：</b>任何限制異動後都要重新執行排課，舊結果不會自動重算。</li>
+    </ol><div class="step-help-note">限制過多可能造成無解；若求解失敗，先檢查同一教師或班級是否被封鎖過多時段。</div></div>
+  </details>
   <div class="panel">
     <h2>⚡ 年級快速設定（學年共同時間）</h2>
     <div class="sub" style="margin-bottom:10px">選年級後直接點格子切換：<b style="color:var(--pink-d)">粉紅＝該年級此節不排</b>；灰＝本來就不可排。一次點好整個學年，免逐班設定。</div>
@@ -518,6 +566,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-rules">
   <h1>📐 排課規則</h1>
   <div class="sub">硬規則＝絕不違反。瀏覽器 DEMO 會驗證衝堂、場地、時段、連堂、鎖定與每日上限；<b>軟規則權重僅由正式版 CP-SAT 引擎最佳化</b>，此頁不再假裝已套用權重。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>先看硬規則：</b>衝堂、鎖定、場地與不可排時段等條件必須全部成立。</li>
+      <li><b>再調軟規則：</b>上午優先、分散或集中等偏好，由 CP-SAT 依權重盡量最佳化。</li>
+      <li><b>少量新增：</b>只有學校確實需要的條件才新增自訂規則，避免互相牴觸。</li>
+    </ol><div class="step-help-note">硬規則互相衝突會直接無解；軟規則未完全滿足不代表課表無效。</div></div>
+  </details>
   <div class="panel">
     <div class="tbl"><table id="ruleTbl" style="min-width:760px"></table></div>
     <div style="margin-top:12px"><button class="btn mint sm" onclick="addRule()">＋ 新增自訂規則</button></div>
@@ -528,6 +584,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-run">
   <h1>⚡ 執行排課</h1>
   <div class="sub" id="runIntro">瀏覽器 DEMO 適合快速預覽；正式成果請使用 CP-SAT API，並以完整度與硬規則檢核結果為準。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>排課前：</b>先確認配課完整，資源班、不排課時間與規則都已設定。</li>
+      <li><b>開始求解：</b>CP-SAT 可獨立完成正式排課；OpenAI 只在需要規劃軟規則時選用。</li>
+      <li><b>檢查結果：</b>確認排入節數、未排項目與硬規則違反，再進行課表編修。</li>
+    </ol><div class="step-help-note">正式使用應以硬規則違反為 0 且所有必要節數完整排入為準。</div></div>
+  </details>
   <div class="panel runbox demo-only">
     <h2>瀏覽器 DEMO</h2>
     <button class="btn pink big" id="runBtn" onclick="doSolve()">⚡ 開始排課</button>
@@ -565,6 +629,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-edit">
   <h1>課表編修</h1>
   <div class="sub">左側查看班級，右側同步查看教師；點選可移動課程後再點目標空格。資源班綁課、固定課與連堂群組保持鎖定。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>選擇對象：</b>搜尋班級或教師，左右課表會同步顯示目前安排。</li>
+      <li><b>移動課程：</b>先點可移動課程，再點目標空格；系統會即時檢查衝突。</li>
+      <li><b>確認變更：</b>查看完整度、操作結果與最近變更，完成後立即暫存。</li>
+    </ol><div class="step-help-note">資源班綁課、固定課與連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
+  </details>
   <div class="editor-toolbar">
     <label>搜尋班級<input id="editClassSearch" list="editClassList" placeholder="班級、導師" onchange="editorChooseClass(this.value)"><datalist id="editClassList"></datalist></label>
     <label>搜尋教師<input id="editTeacherSearch" list="editTeacherList" placeholder="教師姓名" onchange="editorChooseTeacher(this.value)"><datalist id="editTeacherList"></datalist></label>
@@ -605,6 +677,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-tt">
   <h1>📋 課表檢視</h1>
   <div class="sub">□＝導師自排空位（導師填完後自動更新）。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>切換檢視：</b>可在班級課表與教師課表間切換，逐一確認排課結果。</li>
+      <li><b>完成檢核：</b>檢查空白格、衝堂標記、資源班同步與教師節數。</li>
+      <li><b>發布課表：</b>確認無誤後，由管理區發布正式教師課表，再通知教師登入查看。</li>
+    </ol><div class="step-help-note">畫面中的 □ 是尚待導師自排的課程空位，不是一般可忽略的空堂。</div></div>
+  </details>
   <div class="panel">
     <div class="tt-tools">
       <div class="seg">
@@ -629,6 +709,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-tutor">
   <h1>✏️ 導師自排</h1>
   <div class="sub">先點下方科目膠囊，再點課表上的 <b>□</b> 放入；點已排的科目可移除。系統會即時阻擋教師、班級、場地與時段衝突。</div>
+  <details class="step-help">
+    <summary>操作說明</summary>
+    <div class="step-help-body"><ol>
+      <li><b>安排課程：</b>先選科目，再點 □ 放入；點自己已排的科目可移除重排。</li>
+      <li><b>送出存檔：</b>Google 教師模式按儲存課表調整，離線模式則匯出調整結果。</li>
+      <li><b>承辦同步：</b>承辦人按讀取導師存檔，檢核後將更新合併回全校課表。</li>
+    </ol><div class="step-help-note">導師只能調整自己班級；資源班綁課與固定課保持唯讀，不能移動或清除。</div></div>
+  </details>
   <div class="panel teacher-handoff">
     <h2 class="teacher-admin-only">離線備援</h2>
     <div class="teacher-actions teacher-admin-only">
