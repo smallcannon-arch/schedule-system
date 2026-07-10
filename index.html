@@ -170,6 +170,9 @@ h1{font-size:27px;font-weight:900;margin-bottom:4px}
 .setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}
 .icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
 .current-data-source{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fbfaf9}
+.app-footer{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-top:38px;padding:22px 2px 4px;border-top:1px solid #dfd7d9;color:var(--muted)}
+.app-footer-brand{display:flex;align-items:center;gap:10px}.app-footer-mark{width:34px;height:34px;display:grid;place-items:center;border:1px solid #d9cfd3;border-radius:6px;background:#fff;color:var(--pink-d);font-size:18px}
+.app-footer b{display:block;color:var(--ink);font-size:14px}.app-footer small{display:block;font-size:11.5px;line-height:1.7}.app-footer-meta{text-align:right}
 .les.resource-lock{outline:2px solid var(--sky-d);background:#e7f1f7;color:#315f7d}
 .les.resource-lock small{font-weight:900;opacity:1}
 body.teacher-mode .teacher-admin-only{display:none!important}
@@ -189,12 +192,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   .formal-grid{grid-template-columns:1fr}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
+  .app-footer{align-items:flex-start;flex-direction:column;gap:10px}.app-footer-meta{text-align:left}
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
 }
-@media print{aside,.tt-tools,.poolbar,.sub,.teacher-handoff{display:none}main{margin:0}}
+@media print{aside,.tt-tools,.poolbar,.sub,.teacher-handoff,.app-footer{display:none}main{margin:0}}
 </style>
 </head>
 <body>
@@ -277,7 +281,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="sub" style="margin-bottom:0" id="statLine"></div>
   </div>
   <div class="panel auth-panel">
-    <h2>教師 Google 登入</h2>
+    <h2>系統管理員</h2>
     <div class="auth-line">
       <div id="googleSignInButton"></div>
       <b id="teacherProfile"></b>
@@ -300,13 +304,13 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <label>學校代碼<input id="platformSchoolId" type="text" maxlength="50" placeholder="school-code"></label>
         <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
         <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
-        <label>承辦人帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
+        <label>系統管理員帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
         <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
         <button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button>
       </div>
       <div class="auth-status" id="platformSchoolStatus"></div>
       <table class="platform-school-list" aria-label="已建立學校">
-        <thead><tr><th>學校</th><th>Workspace 網域</th><th>承辦人</th><th>狀態</th></tr></thead>
+        <thead><tr><th>學校</th><th>Workspace 網域</th><th>系統管理員</th><th>狀態</th></tr></thead>
         <tbody id="platformSchoolList"></tbody>
       </table>
     </div>
@@ -607,6 +611,17 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <table class="tt" id="tutorTable"></table>
   </div>
 </section>
+
+<footer class="app-footer" aria-label="系統版權資訊">
+  <div class="app-footer-brand">
+    <span class="app-footer-mark" aria-hidden="true">▦</span>
+    <div><b>智慧排課系統</b><small>學校課務排程與協作平台</small></div>
+  </div>
+  <div class="app-footer-meta">
+    <b>系統規劃與維護：江志宏</b>
+    <small>© 2026 江志宏｜智慧排課系統．版權所有　版本 1.8</small>
+  </div>
+</footer>
 
 </main>
 
@@ -2203,7 +2218,7 @@ document.getElementById('formalApiUrl').value=localStorage.getItem('schedule_for
 setFmt('num');
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260710-3"></script>
+<script src="schedule-auth.js?v=20260710-4"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

@@ -46,7 +46,7 @@
   }
 
   function roleLabel(role) {
-    return ({admin: "排課管理員", homeroom_teacher: "導師", subject_teacher: "科任教師",
+    return ({admin: "學校系統管理員", homeroom_teacher: "導師", subject_teacher: "科任教師",
       resource_teacher: "資源班教師", platform_admin: "平台總管理員"})[role] || "教師";
   }
 
@@ -109,10 +109,10 @@
       if (state.profile.is_super_admin) await loadSchools();
       if (state.profile.is_admin) {
         if (root.enterFormalAdminMode) root.enterFormalAdminMode();
-        document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜排課管理員`;
+        document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜學校系統管理員`;
         state.activeRevision = localStorage.getItem(userStorageKey("schedule_active_revision")) || "";
         state.updateSequence = Number(localStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
-        status("管理員已登入；雲端暫存已啟動，導師存檔改由手動讀取。", "ok");
+        status("系統管理員已登入；雲端暫存已啟用，導師存檔請手動讀取。", "ok");
         await refreshDraftStatus();
         startAdminAutomation();
       } else if (state.profile.school_id) {
@@ -198,7 +198,7 @@
   }
 
   async function importTeacherRecords(records) {
-    if (!state.profile || !state.profile.is_admin) throw new Error("只有排課管理員可以同步教師名冊");
+    if (!state.profile || !state.profile.is_admin) throw new Error("只有學校系統管理員可以同步教師名冊");
     if (!Array.isArray(records) || !records.length) throw new Error("尚未建立可同步的教師資料");
     const rows = [["教師姓名", "學校Google帳號", "角色", "負責班級"],
       ...records.map((record) => [record.name, record.email, record.role,
