@@ -13,7 +13,7 @@
   }
 
   function status(message, kind) {
-    ["googleAuthStatus", "formalAuthStatus"].forEach((id) => {
+    ["googleAuthStatus", "formalAuthStatus", "platformFooterStatus"].forEach((id) => {
       const element = document.getElementById(id);
       if (!element) return;
       element.textContent = message;
@@ -119,8 +119,12 @@
         await loadWorkspace();
         status("已載入您的正式課表。", "ok");
       } else if (state.profile.is_super_admin) {
-        if (root.enterFormalAdminMode) root.enterFormalAdminMode();
-        document.getElementById("teacherProfile").textContent = `${state.profile.name}｜平台總管理員`;
+        if (root.enterPlatformAdminMode) root.enterPlatformAdminMode();
+        else if (root.enterFormalAdminMode) root.enterFormalAdminMode();
+        const profileLabel = `${state.profile.name}｜平台總管理員`;
+        document.getElementById("teacherProfile").textContent = profileLabel;
+        document.getElementById("platformFooterProfile").textContent = profileLabel;
+        document.getElementById("platformFooterSession").hidden = false;
         status("平台總管理員已登入。", "ok");
       }
       document.getElementById("googleLogoutButton").hidden = false;
