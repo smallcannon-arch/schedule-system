@@ -1876,10 +1876,21 @@ document.body.appendChild(rl);
 function renderAll(){renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderRes();renderEditor();ScheduleSetup.render()}
 
 /* ═══ 資料來源切換（示範 / 匯入真實資料 / 瀏覽器存檔）═══ */
-const LSKEY=APP_MODE==='formal'?'schedule_formal_local_v1':'schedule_demo_progress_v2';
+const DEMO_LSKEY='schedule_demo_progress_v2';
+const FORMAL_LEGACY_LSKEY='schedule_formal_local_v1';
 const LEGACY_LSKEY='schedule_system_data_v1';
+let FORMAL_LSKEY='';
 const LS_TTL_MS=(APP_MODE==='demo'?30:7)*24*60*60*1000;
 const DEMO0=JSON.parse(JSON.stringify(DATA));  // 內建示範資料快照
+function currentLocalStorageKey(){return APP_MODE==='demo'?DEMO_LSKEY:FORMAL_LSKEY}
+function setFormalStorageIdentity(profile){
+  if(APP_MODE!=='formal')return false;
+  const school=String(profile&&profile.school_id||'').trim().toLowerCase();
+  const email=String(profile&&profile.email||'').trim().toLowerCase();
+  FORMAL_LSKEY=school&&email?`schedule_formal_local_v2:${encodeURIComponent(school)}:${encodeURIComponent(email)}`:'';
+  localStorage.removeItem(FORMAL_LEGACY_LSKEY);
+  return FORMAL_LSKEY?loadLS():false;
+}
 function emptyFormalData(){
   const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
@@ -1966,8 +1977,10 @@ function startBlankSetupData(){
 function saveLS(label){
   if(TEACHER_MODE)return;
   try{
+    const storageKey=currentLocalStorageKey();
+    if(!storageKey)return;
     label=label||document.getElementById('dataSrc').textContent;
-    localStorage.setItem(LSKEY,JSON.stringify({d:DATA,limits:LIMITS,rules:RULES,sol:SOL,tp:tutorPlaced,ovl:OVL,
+    localStorage.setItem(storageKey,JSON.stringify({d:DATA,limits:LIMITS,rules:RULES,sol:SOL,tp:tutorPlaced,ovl:OVL,
       teacherPackages:TEACHER_PACKAGES,formalAutoTutor:FORMAL_AUTO_TUTOR,label,t:Date.now()}));
     document.getElementById('lsMsg').textContent=APP_MODE==='demo'?
       `已自動保存於此瀏覽器（${new Date().toLocaleString('zh-TW')}），30 天內可回來繼續；也可下載工作進度檔。`:
@@ -1976,10 +1989,12 @@ function saveLS(label){
 }
 function loadLS(){
   try{
-    const s=localStorage.getItem(LSKEY)||(APP_MODE==='demo'?localStorage.getItem(LEGACY_LSKEY):null);
+    const storageKey=currentLocalStorageKey();
+    if(!storageKey)return false;
+    const s=localStorage.getItem(storageKey)||(APP_MODE==='demo'?localStorage.getItem(LEGACY_LSKEY):null);
     if(!s)return false;
     const o=JSON.parse(s);
-    if(!o.t||Date.now()-o.t>LS_TTL_MS){localStorage.removeItem(LSKEY);return false}
+    if(!o.t||Date.now()-o.t>LS_TTL_MS){localStorage.removeItem(storageKey);return false}
     setSetupStarted(true);
     applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）');
     LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
@@ -1992,7 +2007,7 @@ function loadLS(){
 }
 function resetDemo(){
   if(!confirm('確定還原為內建示範資料？已匯入的學校資料將自瀏覽器移除（建議先匯出 JSON 備份）。'))return;
-  localStorage.removeItem(LSKEY);
+  localStorage.removeItem(DEMO_LSKEY);
   localStorage.removeItem(LEGACY_LSKEY);
   TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
   setSetupStarted(true);
@@ -2001,13 +2016,21 @@ function resetDemo(){
 }
 function clearBrowserData(){
   if(!confirm('確定清除這台瀏覽器內保存的學校排課資料？'))return;
-  localStorage.removeItem(LSKEY);
+  const storageKey=currentLocalStorageKey();
+  if(storageKey)localStorage.removeItem(storageKey);
   if(APP_MODE==='demo')localStorage.removeItem(LEGACY_LSKEY);
   TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
   applyData(APP_MODE==='demo'?TeacherWorkflow.clone(DEMO0):emptyFormalData(),
     APP_MODE==='demo'?'內建示範資料（匿名）':'尚未載入學校資料');
   setSetupStarted(APP_MODE==='demo');
   document.getElementById('lsMsg').textContent='瀏覽器內的排課資料已清除。';
+}
+function clearFormalSessionData(){
+  if(APP_MODE!=='formal')return;
+  FORMAL_LSKEY='';
+  TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
+  applyData(emptyFormalData(),'尚未載入學校資料');
+  setSetupStarted(false);
 }
 function exportJSON(){
   const snapshot=currentSnapshot();
@@ -2303,9 +2326,11 @@ else{
 }
 document.getElementById('formalApiUrl').value=localStorage.getItem('schedule_formal_api_url')||'http://127.0.0.1:8766';
 setFmt('num');
+window.setFormalStorageIdentity=setFormalStorageIdentity;
+window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260711-2"></script>
+<script src="schedule-auth.js?v=20260711-3"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

@@ -108,6 +108,7 @@
       document.getElementById("platformSchoolActions").hidden = !state.profile.is_super_admin;
       if (state.profile.is_super_admin) await loadSchools();
       if (state.profile.is_admin) {
+        if (root.setFormalStorageIdentity) root.setFormalStorageIdentity(state.profile);
         if (root.enterFormalAdminMode) root.enterFormalAdminMode();
         document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜學校系統管理員`;
         state.activeRevision = localStorage.getItem(userStorageKey("schedule_active_revision")) || "";
@@ -412,7 +413,10 @@
   }
 
   function logout() {
+    if (root.clearFormalSessionData) root.clearFormalSessionData();
     state.credential = "";
+    state.profile = null;
+    state.workspace = null;
     if (root.google && root.google.accounts && root.google.accounts.id) root.google.accounts.id.disableAutoSelect();
     location.reload();
   }
