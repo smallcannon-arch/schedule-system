@@ -15,7 +15,7 @@
   --r:18px; --shadow:0 2px 4px rgba(120,90,110,.05),0 10px 28px rgba(120,90,110,.09);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh;font-size:16px}
+body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh;font-size:17px}
 .formal-gate{display:none;min-height:100vh;width:100%;padding:24px;background:#f7f7f5;place-items:center}
 .formal-gate-inner{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:32px}
 .formal-gate-mark{width:44px;height:44px;display:grid;place-items:center;background:var(--mint);border-radius:8px;font-size:23px;margin-bottom:18px}
@@ -29,26 +29,26 @@ aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:24p
 .logo{display:flex;align-items:center;gap:11px;padding:0 8px 18px;border-bottom:2px dashed #ecdce6;margin-bottom:14px}
 .logo .mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--pink),var(--lav));display:grid;place-items:center;font-size:23px}
 .logo b{font-size:17.5px;display:block;line-height:1.25}
-.logo small{font-size:12px;color:var(--muted)}
-nav button{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border:0;background:none;color:var(--ink);font:inherit;font-size:15.5px;border-radius:14px;cursor:pointer;margin-bottom:5px;text-align:left;font-weight:500}
+.logo small{font-size:13px;color:var(--muted)}
+nav button{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border:0;background:none;color:var(--ink);font:inherit;font-size:16.5px;border-radius:14px;cursor:pointer;margin-bottom:5px;text-align:left;font-weight:500}
 nav button:hover{background:#fff}
 nav button.on{background:#fff;color:var(--pink-d);font-weight:900;box-shadow:var(--shadow)}
 nav .ic{width:22px;text-align:center;font-size:17px}
-.nav-group{padding:10px 13px 5px;color:#9a8ca0;font-size:11px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:5px}
+.nav-group{padding:10px 13px 5px;color:#9a8ca0;font-size:12px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:5px}
 .nav-group:first-child{border-top:0;margin-top:0;padding-top:3px}
-.side-foot{position:absolute;bottom:16px;left:16px;right:16px;font-size:11.5px;color:var(--muted);line-height:1.7}
-main{margin-left:230px;width:calc(100% - 230px);min-width:0;flex:1;padding:22px 26px 60px;max-width:none}
-h1{font-size:27px;font-weight:900;margin-bottom:4px}
-.sub{font-size:14.5px;color:var(--muted);margin-bottom:16px}
-.view{display:none}.view.on{display:block}
+.side-foot{position:absolute;bottom:16px;left:16px;right:16px;font-size:12.5px;color:var(--muted);line-height:1.65}
+main{margin-left:230px;width:calc(100% - 230px);min-width:0;min-height:100vh;display:flex;flex:1;flex-direction:column;padding:22px 26px 60px;max-width:none}
+h1{font-size:30px;font-weight:900;margin-bottom:5px}
+.sub{font-size:15.5px;color:var(--muted);margin-bottom:16px}
+.view{display:none}.view.on{display:block;margin-bottom:38px}
 .panel{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px}
-.panel h2{font-size:18px;font-weight:900;margin-bottom:12px}
-.btn{border:0;font:inherit;font-weight:900;border-radius:99px;padding:12px 26px;cursor:pointer;transition:.15s;font-size:15.5px}
+.panel h2{font-size:20px;font-weight:900;margin-bottom:12px}
+.btn{border:0;font:inherit;font-weight:900;border-radius:99px;padding:12px 26px;cursor:pointer;transition:.15s;font-size:16.5px}
 .btn.pink{background:var(--pink-d);color:#fff}.btn.pink:hover{filter:brightness(1.1)}
 .btn.soft{background:var(--lav);color:var(--lav-d)}
 .btn.mint{background:var(--mint);color:var(--mint-d)}
 .btn.big{font-size:17.5px;padding:15px 38px}
-.btn.sm{padding:8px 18px;font-size:14px}
+.btn.sm{padding:9px 18px;font-size:15.5px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .chip{display:inline-block;padding:4px 14px;border-radius:99px;font-size:13.5px;font-weight:900}
 .chip.ok{background:var(--mint);color:var(--mint-d)}.chip.warn{background:var(--lemon);color:var(--lemon-d)}.chip.bad{background:var(--pink);color:var(--pink-d)}
@@ -59,13 +59,13 @@ h1{font-size:27px;font-weight:900;margin-bottom:4px}
 .fmtopts .fo{border:3px solid var(--line);border-radius:15px;padding:13px 18px;cursor:pointer;font-weight:900;background:#fffdfb;font-size:15.5px}
 .fmtopts .fo.on{border-color:var(--pink-d);background:var(--pink);color:var(--pink-d)}
 .tbl{overflow-x:auto}
-.tbl table{border-collapse:collapse;font-size:14px;min-width:900px}
-.tbl th{background:#faf3f3;border:1px solid var(--line);padding:8px 6px;font-size:12.5px;color:var(--muted);white-space:nowrap;position:sticky;top:0}
+.tbl table{border-collapse:collapse;font-size:15px;min-width:900px}
+.tbl th{background:#faf3f3;border:1px solid var(--line);padding:8px 6px;font-size:13.5px;color:var(--muted);white-space:nowrap;position:sticky;top:0}
 .tbl td{border:1px solid var(--line);padding:3px;text-align:center;white-space:nowrap}
 .tbl td.cls{font-weight:900;background:#faf3f3;padding:5px 9px}
-.tbl input{border:0;border-bottom:2px dashed #e3cfa8;background:#fefaf0;font:inherit;font-size:14px;width:100%;text-align:center;padding:5px 4px;border-radius:8px 8px 0 0}
+.tbl input{border:0;border-bottom:2px dashed #e3cfa8;background:#fefaf0;font:inherit;font-size:15px;width:100%;text-align:center;padding:5px 4px;border-radius:8px 8px 0 0}
 .tbl input:focus{outline:none;border-bottom-color:var(--pink-d);background:#fff5f8}
-.tbl select{border:2px solid transparent;background:transparent;font:inherit;font-size:13.5px;padding:4px 2px;border-radius:8px;max-width:88px;cursor:pointer}
+.tbl select{border:2px solid transparent;background:transparent;font:inherit;font-size:14.5px;padding:4px 2px;border-radius:8px;max-width:96px;cursor:pointer}
 .tbl select:hover{border-color:var(--line);background:#fff}
 .tbl select.empty{background:var(--pink);color:var(--pink-d);font-weight:900}
 .tbl select.edit{border:2px solid var(--line);background:#fefaf0}
@@ -146,29 +146,30 @@ h1{font-size:27px;font-weight:900;margin-bottom:4px}
 .auth-status[data-kind="error"]{color:#a5384b;font-weight:800}
 .auth-admin-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .auth-admin-actions[hidden]{display:none}
-.admin-dock{display:none;position:sticky;top:12px;z-index:30;width:min(820px,calc(100% - 24px));margin:0 0 20px auto;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(72,55,78,.10)}
+.admin-dock{display:none;position:sticky;top:12px;z-index:30;width:min(980px,calc(100% - 24px));margin:0 0 20px auto;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(72,55,78,.10)}
 body.school-admin-mode .admin-dock{display:block}
 body.platform-admin-mode .admin-dock{display:none!important}
 .admin-dock summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:12px 14px;cursor:pointer;list-style:none}
 .admin-dock summary::-webkit-details-marker{display:none}
 .admin-dock-copy{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:3px 10px;min-width:0}
-.admin-dock-copy strong{color:var(--ink);font-size:14px}.admin-dock-copy b{overflow-wrap:anywhere;color:var(--ink);font-size:13.5px}
-.admin-dock-copy .auth-status{grid-column:1/-1;margin:0;font-size:12px}
-.admin-dock-toggle{padding:7px 11px;border:1px solid var(--line);border-radius:6px;background:#f7f4f8;color:var(--lav-d);font-size:12px;font-weight:900}
+.admin-dock-copy strong{color:var(--ink);font-size:15px}.admin-dock-copy b{overflow-wrap:anywhere;color:var(--ink);font-size:14.5px}
+.admin-dock-copy .auth-status{grid-column:1/-1;margin:0;font-size:13px}
+.admin-dock-toggle{padding:7px 11px;border:1px solid var(--line);border-radius:6px;background:#f7f4f8;color:var(--lav-d);font-size:13px;font-weight:900}
 .admin-dock-toggle::before{content:"管理"}.admin-dock[open] .admin-dock-toggle::before{content:"收合"}
 .admin-dock-body{padding:14px;border-top:1px solid var(--line);background:#fbfafc}
-.admin-dock-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--muted);font-size:13px}
-.admin-dock .auth-admin-actions{margin:0;padding:0;border:0}.admin-dock .btn{padding:9px 14px;border-radius:7px;font-size:14px}
-.admin-dock-notes{display:grid;gap:5px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.5}
+.admin-dock-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--muted);font-size:14px}
+.admin-dock .auth-admin-actions{margin:0;padding:0;border:0}.admin-dock .btn{padding:9px 14px;border-radius:7px;font-size:15px}
+.admin-dock-notes{display:grid;gap:5px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;line-height:1.5}
 .case-section-heading{display:flex;align-items:flex-start;gap:10px;margin:30px 2px 12px}
 .school-case-content>.case-section-heading:first-child{margin-top:4px}
 .case-section-index{width:26px;height:26px;display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--pink-d);font-size:11px;font-weight:900}
-.case-section-copy b{display:block;color:var(--ink);font-size:15px}.case-section-copy small{display:block;margin-top:2px;color:var(--muted);font-size:12.5px}
-.case-source-panel{margin-bottom:0}.case-support-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:24px;align-items:start}
-.case-support-grid .panel{margin-bottom:0}.case-summary-panel{border:1px solid var(--line);box-shadow:none;background:#fbfaf9}
+.case-section-copy b{display:block;color:var(--ink);font-size:16px}.case-section-copy small{display:block;margin-top:2px;color:var(--muted);font-size:13.5px}
+.case-source-panel{margin-bottom:0}.case-format-panel{margin-bottom:20px}.case-summary-panel{margin-bottom:0;border:1px solid var(--line);box-shadow:none;background:#fbfaf9}
+.case-summary-panel #statLine{white-space:nowrap;overflow-x:auto;padding-bottom:2px}
 .platform-school-actions{margin-bottom:0}
 .platform-school-actions[hidden]{display:none}
 body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #setupSummary,body.platform-admin-mode #v-build>.setup-tabs,body.platform-admin-mode .school-case-content{display:none}
+body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-tabs,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-pane{display:none!important}
 .platform-school-form{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(170px,1.15fr) minmax(190px,1.3fr) auto auto;gap:8px;align-items:end}
 .platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
 .platform-school-form input[type="text"],.platform-school-form input[type="email"]{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;color:var(--ink);background:#fff}
@@ -176,30 +177,30 @@ body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #setup
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
-.setup-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:12px 0 16px}
+.setup-actions{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;margin:14px 0 18px}.setup-actions .btn{white-space:nowrap}
 .setup-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#f3ecf4;border-radius:8px;margin-bottom:14px}
-.setup-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:900;padding:9px 16px;border-radius:6px;cursor:pointer}
+.setup-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:16px;font-weight:900;padding:10px 18px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .setup-tabs button.on{background:#fff;color:var(--pink-d);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .setup-pane{display:none}.setup-pane.on{display:block}
 .setup-stepbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
 .setup-step{min-height:62px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:9px 12px;cursor:pointer;text-align:left}
-.setup-step span{display:block;font-size:12px;font-weight:800}.setup-step b{display:block;font-size:20px;color:var(--ink);margin-top:2px}
+.setup-step span{display:block;font-size:13px;font-weight:800}.setup-step b{display:block;font-size:22px;color:var(--ink);margin-top:2px}
 .setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done b{color:var(--mint-d)}
 .setup-health{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7;border-radius:4px;margin-bottom:14px}
-.setup-health.bad{border-color:var(--pink-d);background:#fff4f7}.setup-health span{font-size:13px;color:var(--muted);flex:1}
+.setup-health.bad{border-color:var(--pink-d);background:#fff4f7}.setup-health span{font-size:14px;color:var(--muted);flex:1}
 .setup-grade-counts{display:grid;grid-template-columns:repeat(6,minmax(82px,1fr));gap:8px;max-width:760px}
-.setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:900}
+.setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:13px;font-weight:900}
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}
 .setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}
 .icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
 .current-data-source{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fbfaf9}
-.app-footer{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-top:38px;padding:22px 2px 4px;border-top:1px solid #dfd7d9;color:var(--muted)}
+.app-footer{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-top:auto;padding:22px 2px 4px;border-top:1px solid #dfd7d9;color:var(--muted)}
 .app-footer-brand{display:flex;align-items:center;gap:10px}.app-footer-mark{width:34px;height:34px;display:grid;place-items:center;border:1px solid #d9cfd3;border-radius:6px;background:#fff;color:var(--pink-d);font-size:18px}
-.app-footer b{display:block;color:var(--ink);font-size:14px}.app-footer small{display:block;font-size:11.5px;line-height:1.7}.app-footer-meta{text-align:right}
+.app-footer b{display:block;color:var(--ink);font-size:15px}.app-footer small{display:block;font-size:12.5px;line-height:1.7}.app-footer-meta{text-align:right}
 .app-footer-session{display:flex;align-items:center;gap:12px;margin-left:auto;padding:0 22px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
 .app-footer-session[hidden]{display:none}.app-footer-session-copy{min-width:0}.app-footer-session .session-kicker{font-weight:900;color:var(--lav-d)}
-.app-footer-session .auth-status{margin:1px 0 0;font-size:11.5px}.app-footer-session .btn{padding:8px 11px;border-radius:6px;font-size:12.5px}
+.app-footer-session .auth-status{margin:1px 0 0;font-size:12.5px}.app-footer-session .btn{padding:8px 11px;border-radius:6px;font-size:13.5px}
 .les.resource-lock{outline:2px solid var(--sky-d);background:#e7f1f7;color:#315f7d}
 .les.resource-lock small{font-weight:900;opacity:1}
 body.teacher-mode .teacher-admin-only{display:none!important}
@@ -216,7 +217,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
   .logo{margin-bottom:8px;padding-bottom:10px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
-  nav .ic{width:auto}main{margin-left:0;width:100%;padding:16px 12px 48px;max-width:none}.panel{padding:16px 12px}.rgrid{grid-template-columns:repeat(2,1fr)}
+  body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
@@ -224,11 +225,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
-  .admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
-  .case-support-grid{grid-template-columns:1fr;gap:20px}.case-section-heading{margin-top:26px}
+  .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
+  .case-section-heading{margin-top:26px}.case-summary-panel #statLine{white-space:normal;overflow:visible}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
 }
-@media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%}}
+@media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
 </style>
 </head>
 <body>
@@ -309,7 +310,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <div class="sub" id="appIntro">此 DEMO 內建一所 16 班國小的完整示範資料（教師姓名已匿名化），可直接體驗：配課 → 規則 → 排課 → 課表 → 導師自排。</div>
   <div class="setup-actions">
     <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
-    <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this);go('build')"></label>
+    <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
+    <a class="btn soft sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">下載 Excel 母版</a>
     <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
   </div>
   <div id="setupSummary"></div>
@@ -350,7 +352,6 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <div class="sub" id="setupEntryHelp" style="margin-bottom:8px">可直接在系統建立資料；Excel 母版保留作為大量匯入選項。</div>
         <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
           <button class="btn mint sm" type="button" onclick="ScheduleSetup.show('classes')">前往班級建置</button>
-          <a class="btn soft sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">下載 Excel 母版</a>
           <label class="btn soft sm" style="cursor:pointer">匯入 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
           <button class="btn soft sm demo-only" onclick="resetDemo()">↺ 還原示範資料</button>
           <span style="flex-basis:100%"></span>
@@ -365,25 +366,23 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <span class="case-section-index">02</span>
         <div class="case-section-copy"><b>顯示與檢核</b><small>設定班級名稱格式，並快速確認目前資料量。</small></div>
       </div>
-      <div class="case-support-grid">
-        <div class="panel">
-          <h2>🏷️ 班級顯示格式</h2>
-          <div class="fmtopts" id="fmtopts">
-            <div class="fo on" data-f="num">1年1班</div>
-            <div class="fo" data-f="abc">1年甲班</div>
-            <div class="fo" data-f="loyal">1年忠班</div>
-            <div class="fo" data-f="custom">自訂…</div>
-          </div>
-          <div id="customBox" style="display:none;margin-top:12px" class="frm">
-            <label>自訂班序（依序一字一班，例：梅蘭竹菊）</label>
-            <input id="customSeq" value="梅蘭竹菊" maxlength="10" style="width:260px" oninput="setFmt('custom')">
-          </div>
-          <div class="sub" style="margin-top:12px;margin-bottom:0">預覽：<b id="fmtPreview" style="color:var(--pink-d)"></b>　（全系統顯示同步套用）</div>
+      <div class="panel case-format-panel">
+        <h2>🏷️ 班級顯示格式</h2>
+        <div class="fmtopts" id="fmtopts">
+          <div class="fo on" data-f="num">1年1班</div>
+          <div class="fo" data-f="abc">1年甲班</div>
+          <div class="fo" data-f="loyal">1年忠班</div>
+          <div class="fo" data-f="custom">自訂…</div>
         </div>
-        <div class="panel case-summary-panel">
-          <h2>📊 資料概況</h2>
-          <div class="sub" style="margin-bottom:0" id="statLine"></div>
+        <div id="customBox" style="display:none;margin-top:12px" class="frm">
+          <label>自訂班序（依序一字一班，例：梅蘭竹菊）</label>
+          <input id="customSeq" value="梅蘭竹菊" maxlength="10" style="width:260px" oninput="setFmt('custom')">
         </div>
+        <div class="sub" style="margin-top:12px;margin-bottom:0">預覽：<b id="fmtPreview" style="color:var(--pink-d)"></b>　（全系統顯示同步套用）</div>
+      </div>
+      <div class="panel case-summary-panel">
+        <h2>📊 資料概況</h2>
+        <div class="sub" style="margin-bottom:0" id="statLine"></div>
       </div>
     </div>
 </section>
@@ -685,6 +684,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
+let SETUP_STARTED=APP_MODE!=='formal';
+function setSetupStarted(started){
+  SETUP_STARTED=APP_MODE!=='formal'||!!started;
+  document.body.classList.toggle('setup-pending',APP_MODE==='formal'&&!SETUP_STARTED);
+}
 const DAYS=['一','二','三','四','五'], PS=[1,2,3,4,5,6,7];
 const PAIRS=[[1,2],[2,3],[3,4],[5,6],[6,7]];
 let TEACHER_MODE=null,ADMIN_SNAPSHOT=null,TEACHER_PACKAGES={},FORMAL_AUTO_TUTOR=false;
@@ -1586,6 +1590,7 @@ function openServerTeacherPackage(pkg){
 function getScheduleAuthSnapshot(){return currentSnapshot()}
 function applyAdminDraft(snapshot){
   if(!snapshot||!snapshot.data)throw new Error('雲端暫存資料不完整');
+  setSetupStarted(true);
   applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label||'雲端排課暫存');
   LIMITS=TeacherWorkflow.clone(snapshot.limits||DATA.limits||[]);
   RULES=TeacherWorkflow.clone(snapshot.rules||DATA.rules||[]);
@@ -1890,6 +1895,7 @@ function enterFormalAdminMode(){
 function enterPlatformAdminMode(){
   document.body.classList.remove('formal-locked','school-admin-mode');
   document.body.classList.add('formal-admin-mode','platform-admin-mode');
+  document.body.classList.remove('setup-pending');
   document.getElementById('setupPageTitle').textContent='平台管理';
   document.getElementById('appIntro').textContent='建立學校、Workspace 網域與學校系統管理員。';
   go('build');ScheduleSetup.show('case');
@@ -1928,6 +1934,7 @@ function applyData(nd,srcLabel){
   renderAll();
 }
 function commitSetupData(message){
+  setSetupStarted(true);
   DATA.limits=TeacherWorkflow.clone(LIMITS);
   DATA.rules=TeacherWorkflow.clone(RULES);
   initDerived();
@@ -1940,6 +1947,7 @@ function startBlankSetupData(){
   const hasData=DATA.classes.length||Object.keys(DATA.roster).length||Object.keys(DATA.subjects).length;
   if(hasData&&!confirm('確定建立空白案件？目前尚未另存的班級、教師、科目與配課資料會被取代。'))return false;
   applyData(emptyFormalData(),'系統內建置案件');
+  setSetupStarted(true);
   saveLS('系統內建置案件');
   go('build');
   return true;
@@ -1961,6 +1969,7 @@ function loadLS(){
     if(!s)return false;
     const o=JSON.parse(s);
     if(!o.t||Date.now()-o.t>LS_TTL_MS){localStorage.removeItem(LSKEY);return false}
+    setSetupStarted(true);
     applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）');
     LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
     SOL=o.sol||null;tutorPlaced=o.tp||{};OVL=o.ovl||[];TEACHER_PACKAGES=o.teacherPackages||{};
@@ -1975,6 +1984,7 @@ function resetDemo(){
   localStorage.removeItem(LSKEY);
   localStorage.removeItem(LEGACY_LSKEY);
   TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
+  setSetupStarted(true);
   applyData(JSON.parse(JSON.stringify(DEMO0)),'內建示範資料（匿名）');
   document.getElementById('lsMsg').textContent='';
 }
@@ -1985,6 +1995,7 @@ function clearBrowserData(){
   TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
   applyData(APP_MODE==='demo'?TeacherWorkflow.clone(DEMO0):emptyFormalData(),
     APP_MODE==='demo'?'內建示範資料（匿名）':'尚未載入學校資料');
+  setSetupStarted(APP_MODE==='demo');
   document.getElementById('lsMsg').textContent='瀏覽器內的排課資料已清除。';
 }
 function exportJSON(){
@@ -2001,6 +2012,7 @@ function importJSON(inp){
       const o=JSON.parse(rd.result);
       const modern=o.schema==='schedule-demo-progress-v2';
       const data=modern?o.data:o.d;if(!data||!Array.isArray(data.classes)||!data.subjects)throw new Error('不是有效的排課工作進度檔');
+      setSetupStarted(true);
       applyData(data,'已載入工作進度');
       LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
       SOL=TeacherWorkflow.clone(o.sol||null);
@@ -2023,11 +2035,12 @@ function importXlsx(inp){
       const nd=parseWorkbook(new Uint8Array(rd.result));
       FORMAL_AUTO_TUTOR=false;TEACHER_PACKAGES={};
       const label=(nd._school?nd._school+'（':'')+'已匯入 Excel'+(nd._school?'）':'');
+      setSetupStarted(true);
       applyData(nd,label);
       saveLS(label);
       const w=(nd._warn&&nd._warn.length)?'\n\n提醒：\n'+nd._warn.slice(0,6).join('\n'):'';
       alert(`匯入成功：${nd.classes.length} 班、${Object.keys(nd.roster).length} 位教師、${Object.keys(nd.subjects).length} 科。\n資料已保存於此瀏覽器。${w}`);
-      go('alloc');
+      go('build');ScheduleSetup.show('case');
     }catch(e){alert('匯入失敗：'+e.message+'\n請確認檔案為「通用母版」格式且已在 Excel 開啟存檔過（公式需有計算值）。')}
   };
   rd.readAsArrayBuffer(f);inp.value='';
@@ -2271,6 +2284,7 @@ ScheduleSetup.init({
   syncTeachers:(records)=>ScheduleAuth.importTeacherRecords(records),
 });
 configureAppMode();
+if(APP_MODE==='formal')setSetupStarted(false);
 if(APP_MODE==='formal')applyData(emptyFormalData(),'尚未載入學校資料');
 else{
   initDerived();
