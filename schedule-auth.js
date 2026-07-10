@@ -2,7 +2,8 @@
   "use strict";
 
   const state = {credential: "", profile: null, workspace: null, apiBaseUrl: "",
-    activeRevision: "", updateSequence: 0, lastDraftHash: "", automationStarted: false};
+    activeRevision: "", updateSequence: 0, lastDraftHash: "", automationStarted: false,
+    schools: []};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -21,7 +22,8 @@
   }
 
   function userStorageKey(name) {
-    return `${name}:${(state.profile && state.profile.email) || "anonymous"}`;
+    const school = (state.profile && state.profile.school_id) || "platform";
+    return `${name}:${school}:${(state.profile && state.profile.email) || "anonymous"}`;
   }
 
   function authorizationHeaders() {
@@ -45,7 +47,11 @@
 
   function roleLabel(role) {
     return ({admin: "排課管理員", homeroom_teacher: "導師", subject_teacher: "科任教師",
-      resource_teacher: "資源班教師"})[role] || "教師";
+      resource_teacher: "資源班教師", platform_admin: "平台總管理員"})[role] || "教師";
+  }
+
+  function schoolLabel(profile) {
+    return profile && profile.school_name ? `${profile.school_name}｜` : "";
   }
 
   function renderPersonalSchedule(workspace) {
@@ -85,7 +91,7 @@
     state.workspace = workspace;
     renderPersonalSchedule(workspace);
     document.body.classList.add("signed-teacher");
-    document.getElementById("teacherProfile").textContent = `${workspace.profile.name}｜${roleLabel(workspace.profile.role)}`;
+    document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${workspace.profile.name}｜${roleLabel(workspace.profile.role)}`;
     if (workspace.editable_classes && workspace.editable_classes.length) {
       root.openServerTeacherPackage(workspace.editable_classes[0]);
     }
@@ -99,17 +105,23 @@
       state.credential = response.credential || "";
       state.profile = await request("/auth/me");
       document.getElementById("googleAdminActions").hidden = !state.profile.is_admin;
+      document.getElementById("platformSchoolActions").hidden = !state.profile.is_super_admin;
+      if (state.profile.is_super_admin) await loadSchools();
       if (state.profile.is_admin) {
         if (root.enterFormalAdminMode) root.enterFormalAdminMode();
-        document.getElementById("teacherProfile").textContent = `${state.profile.name}｜排課管理員`;
+        document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜排課管理員`;
         state.activeRevision = localStorage.getItem(userStorageKey("schedule_active_revision")) || "";
         state.updateSequence = Number(localStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
         status("管理員已登入；雲端暫存與導師結果同步已啟動。", "ok");
         await refreshDraftStatus();
         startAdminAutomation();
-      } else {
+      } else if (state.profile.school_id) {
         await loadWorkspace();
         status("已載入您的正式課表。", "ok");
+      } else if (state.profile.is_super_admin) {
+        if (root.enterFormalAdminMode) root.enterFormalAdminMode();
+        document.getElementById("teacherProfile").textContent = `${state.profile.name}｜平台總管理員`;
+        status("平台總管理員已登入。", "ok");
       }
       document.getElementById("googleLogoutButton").hidden = false;
     } catch (error) {
@@ -156,7 +168,8 @@
       root.google.accounts.id.renderButton(gateTarget, {
         type: "standard", theme: "outline", size: "large", text: "signin_with", shape: "rectangular",
       });
-      status(config.workspace_domain ? `請使用 @${config.workspace_domain} 學校帳號登入。` : "請使用學校 Google 帳號登入。", "ready");
+      status(config.multi_tenant ? "請使用已核准學校的 Google Workspace 帳號登入。" :
+        (config.workspace_domain ? `請使用 @${config.workspace_domain} 學校帳號登入。` : "請使用學校 Google 帳號登入。"), "ready");
     } catch (error) {
       status(error.message, "error");
     }
@@ -176,6 +189,67 @@
       status(error.message, "error");
     } finally {
       input.value = "";
+    }
+  }
+
+  function splitValues(value) {
+    return String(value || "").split(/[\s,，;；]+/).map((item) => item.trim()).filter(Boolean);
+  }
+
+  function renderSchools() {
+    const target = document.getElementById("platformSchoolList");
+    if (!target) return;
+    target.innerHTML = state.schools.map((school) => `<tr>
+      <td><b>${root.esc(school.name)}</b><small>${root.esc(school.school_id)}</small></td>
+      <td>${(school.domains || []).map(root.esc).join("<br>")}</td>
+      <td>${(school.admin_emails || []).map(root.esc).join("<br>") || "尚未指定"}</td>
+      <td><span class="chip ${school.active ? "ok" : "bad"}">${school.active ? "啟用" : "停用"}</span>
+        <button class="btn soft sm" type="button" onclick="ScheduleAuth.editSchool('${school.school_id}')">編輯</button></td>
+    </tr>`).join("") || '<tr><td colspan="4">尚未建立學校</td></tr>';
+  }
+
+  async function loadSchools() {
+    const element = document.getElementById("platformSchoolStatus");
+    try {
+      const result = await request("/platform/schools");
+      state.schools = result.schools || [];
+      renderSchools();
+      if (element) element.textContent = `共 ${state.schools.length} 間學校。`;
+    } catch (error) {
+      if (element) element.textContent = error.message;
+    }
+  }
+
+  function editSchool(schoolId) {
+    const school = state.schools.find((item) => item.school_id === schoolId);
+    if (!school) return;
+    document.getElementById("platformSchoolId").value = school.school_id;
+    document.getElementById("platformSchoolName").value = school.name;
+    document.getElementById("platformSchoolDomains").value = (school.domains || []).join(", ");
+    document.getElementById("platformSchoolAdmins").value = (school.admin_emails || []).join(", ");
+    document.getElementById("platformSchoolActive").checked = school.active !== false;
+    document.getElementById("platformSchoolId").focus();
+  }
+
+  async function saveSchool() {
+    const schoolId = document.getElementById("platformSchoolId").value.trim().toLowerCase();
+    const payload = {
+      name: document.getElementById("platformSchoolName").value.trim(),
+      domains: splitValues(document.getElementById("platformSchoolDomains").value),
+      admin_emails: splitValues(document.getElementById("platformSchoolAdmins").value),
+      active: document.getElementById("platformSchoolActive").checked,
+    };
+    const element = document.getElementById("platformSchoolStatus");
+    try {
+      if (!schoolId) throw new Error("請輸入學校代碼");
+      element.textContent = "正在儲存學校…";
+      await request(`/platform/schools/${encodeURIComponent(schoolId)}`, {
+        method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
+      });
+      element.textContent = `${payload.name} 已儲存。`;
+      await loadSchools();
+    } catch (error) {
+      element.textContent = error.message;
     }
   }
 
@@ -318,5 +392,5 @@
   }
 
   root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, publishCurrent, saveDraft, loadDraft,
-    syncTeacherUpdates, savePlacements, logout};
+    syncTeacherUpdates, savePlacements, loadSchools, saveSchool, editSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

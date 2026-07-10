@@ -144,6 +144,14 @@ h1{font-size:27px;font-weight:900;margin-bottom:4px}
 .auth-status[data-kind="error"]{color:#a5384b;font-weight:800}
 .auth-admin-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .auth-admin-actions[hidden]{display:none}
+.platform-school-actions{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.platform-school-actions[hidden]{display:none}
+.platform-school-form{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(200px,1.2fr) minmax(220px,1.4fr) minmax(240px,1.5fr) auto auto;gap:8px;align-items:end}
+.platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
+.platform-school-form input[type="text"],.platform-school-form input[type="email"]{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;color:var(--ink);background:#fff}
+.platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.platform-school-list th{color:var(--muted);font-size:12px}
 .les.resource-lock{outline:2px solid var(--sky-d);background:#e7f1f7;color:#315f7d}
 .les.resource-lock small{font-weight:900;opacity:1}
 body.teacher-mode .teacher-admin-only{display:none!important}
@@ -164,6 +172,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
+  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
 }
 @media print{aside,.tt-tools,.poolbar,.sub,.teacher-handoff{display:none}main{margin:0}}
 </style>
@@ -261,6 +270,22 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span class="sub" style="margin:0">CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
       <span class="sub" id="cloudDraftStatus" style="margin:0;flex-basis:100%">雲端暫存尚未啟動。</span>
       <span class="sub" id="teacherSyncStatus" style="margin:0;flex-basis:100%">導師課表同步尚未啟動。</span>
+    </div>
+    <div class="platform-school-actions" id="platformSchoolActions" hidden>
+      <h3>學校管理</h3>
+      <div class="platform-school-form">
+        <label>學校代碼<input id="platformSchoolId" type="text" maxlength="50" placeholder="school-code"></label>
+        <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
+        <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
+        <label>承辦人帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
+        <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
+        <button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button>
+      </div>
+      <div class="auth-status" id="platformSchoolStatus"></div>
+      <table class="platform-school-list" aria-label="已建立學校">
+        <thead><tr><th>學校</th><th>Workspace 網域</th><th>承辦人</th><th>狀態</th></tr></thead>
+        <tbody id="platformSchoolList"></tbody>
+      </table>
     </div>
   </div>
   <div class="panel teacher-handoff">
