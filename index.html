@@ -34,6 +34,8 @@ nav button{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px
 nav button:hover{background:#fff}
 nav button.on{background:#fff;color:var(--pink-d);font-weight:900;box-shadow:var(--shadow)}
 nav .ic{width:22px;text-align:center;font-size:17px}
+.nav-group{padding:10px 13px 5px;color:#9a8ca0;font-size:11px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:5px}
+.nav-group:first-child{border-top:0;margin-top:0;padding-top:3px}
 .side-foot{position:absolute;bottom:16px;left:16px;right:16px;font-size:11.5px;color:var(--muted);line-height:1.7}
 main{margin-left:230px;flex:1;padding:22px 26px 60px;max-width:1320px}
 h1{font-size:27px;font-weight:900;margin-bottom:4px}
@@ -179,6 +181,7 @@ body.teacher-mode .teacher-admin-only{display:none!important}
 body.teacher-mode .teacher-only{display:flex}
 body.teacher-mode aside nav button:not([data-v="tutor"]):not([data-v="my"]){display:none}
 body.teacher-mode .side-foot{display:none}
+body.teacher-mode nav .nav-group,body.signed-teacher:not(.teacher-mode) nav .nav-group{display:none}
 body.signed-teacher .auth-teacher-nav{display:flex}
 body.signed-teacher:not(.teacher-mode) aside nav button:not([data-v="my"]){display:none}
 body.server-teacher-mode .offline-teacher-only{display:none}
@@ -186,7 +189,7 @@ body.server-teacher-mode .server-teacher-only{display:flex}
 button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
 @media(max-width:800px){
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
-  .logo{margin-bottom:8px;padding-bottom:10px}.side-foot{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .logo{margin-bottom:8px;padding-bottom:10px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   nav .ic{width:auto}main{margin-left:0;padding:16px 12px 48px;max-width:none}.panel{padding:16px 12px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
@@ -223,15 +226,18 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div><b id="appBrandName">智慧排課 DEMO</b><small id="appBrandMeta">示範資料・已匿名化</small></div>
   </div>
   <nav>
-    <button class="on" data-v="set"><span class="ic">⚙️</span>基本設定</button>
-    <button data-v="build"><span class="ic">▤</span>資料建置</button>
-    <button data-v="alloc"><span class="ic">👩‍🏫</span>配課檢視</button>
+    <div class="nav-group">資料準備</div>
+    <button class="on" data-v="build"><span class="ic">▤</span>資料建置</button>
+    <button data-v="alloc"><span class="ic">👩‍🏫</span>配課檢核</button>
+    <div class="nav-group">排課條件</div>
     <button data-v="res"><span class="ic">🧩</span>資源班</button>
     <button data-v="lim"><span class="ic">🚫</span>不排課時間</button>
     <button data-v="rules"><span class="ic">📐</span>排課規則</button>
+    <div class="nav-group">排課作業</div>
     <button data-v="run"><span class="ic">⚡</span>執行排課</button>
     <button data-v="edit"><span class="ic">↔</span>課表編修</button>
     <button data-v="tt"><span class="ic">📋</span>課表檢視</button>
+    <div class="nav-group">教師協作</div>
     <button class="auth-teacher-nav" data-v="my"><span class="ic">▦</span>我的課表</button>
     <button data-v="tutor"><span class="ic">✏️</span>導師自排</button>
   </nav>
@@ -240,17 +246,31 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 
 <main>
 
-<!-- ═══ 設定 ═══ -->
-<section class="view on" id="v-set">
-  <h1>⚙️ 基本設定</h1>
+<!-- ═══ 資料建置 ═══ -->
+<section class="view on" id="v-build">
+  <h1>資料建置</h1>
   <div class="sub" id="appIntro">此 DEMO 內建一所 16 班國小的完整示範資料（教師姓名已匿名化），可直接體驗：配課 → 規則 → 排課 → 課表 → 導師自排。</div>
+  <div class="setup-actions">
+    <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
+    <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this);go('build')"></label>
+    <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
+  </div>
+  <div id="setupSummary"></div>
+  <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
+    <button class="on" type="button" data-setup-tab="case" onclick="ScheduleSetup.show('case')">案件</button>
+    <button type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">班級</button>
+    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">教師</button>
+    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">科目節數</button>
+    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">配課</button>
+  </div>
+  <section class="setup-pane on" id="setup-case">
   <div class="panel">
     <h2>📂 學校資料</h2>
     <div class="sub" id="dataSourceDescription" style="margin-bottom:10px">目前：<b id="dataSrc" style="color:var(--pink-d)">內建示範資料（匿名）</b>。
     匯入貴校「通用母版」Excel 即可用真實資料排課——<b>資料只存在這台電腦的瀏覽器，不會上傳任何伺服器</b>。</div>
     <div class="sub" id="setupEntryHelp" style="margin-bottom:8px">可直接在系統建立資料；Excel 母版保留作為大量匯入選項。</div>
     <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
-      <button class="btn mint sm" type="button" onclick="go('build')">直接建置學校資料</button>
+      <button class="btn mint sm" type="button" onclick="ScheduleSetup.show('classes')">前往班級建置</button>
       <a class="btn soft sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">下載 Excel 母版</a>
       <label class="btn soft sm" style="cursor:pointer">匯入 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
       <button class="btn soft sm demo-only" onclick="resetDemo()">↺ 還原示範資料</button>
@@ -325,24 +345,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </section>
 
-<!-- ═══ 資料建置 ═══ -->
-<section class="view" id="v-build">
-  <h1>資料建置</h1>
-  <div class="sub">排課案件基礎資料</div>
-  <div class="setup-actions">
-    <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
-    <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this);go('build')"></label>
-    <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
-  </div>
-  <div id="setupSummary"></div>
-  <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
-    <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">班級</button>
-    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">教師</button>
-    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">科目節數</button>
-    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">配課</button>
-  </div>
-
-  <section class="setup-pane on" id="setup-classes">
+  <section class="setup-pane" id="setup-classes">
     <div class="panel">
       <h2>依年級班數建立</h2>
       <div class="setup-grade-counts">
@@ -401,13 +404,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </section>
 
-<!-- ═══ 配課檢視 ═══ -->
+<!-- ═══ 配課檢核 ═══ -->
 <section class="view" id="v-alloc">
-  <h1>👩‍🏫 配課檢視</h1>
-  <div class="csvbar" style="background:var(--sky);margin-bottom:12px"><b style="color:var(--sky-d)">📌 大校流程：</b>
-  母版 Excel 先「粗配」（任教班級填「全部」「3年級全部」即可）→ 上傳後在下表補細節：
-  <b style="color:var(--pink-d)">粉紅格＝未配</b>，直接下拉選老師；右側教師節數即時顯示<b style="color:var(--pink-d)">超鐘點</b>／缺節。
-  導師課（自動帶入導師）不在此表，減課/超鐘點改他師者除外。</div>
+  <h1>配課檢核</h1>
+  <div class="csvbar" style="background:var(--sky);margin-bottom:12px"><b style="color:var(--sky-d)">檢核結果：</b>
+  <b style="color:var(--pink-d)">粉紅格＝未配教師</b>；右側同步顯示教師實配節數、超鐘點與缺節。</div>
   <div class="alloc-wrap">
     <div class="panel tbl" style="margin:0"><table id="allocTable"></table></div>
     <div class="panel" style="margin:0">
@@ -628,7 +629,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="data.js"></script>
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
-<script src="setup-builder.js?v=20260710-2"></script>
+<script src="setup-builder.js?v=20260710-3"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -1645,7 +1646,7 @@ function restoreAdminSnapshot(){
 function exitTeacherMode(){
   if(!TEACHER_MODE||!ADMIN_SNAPSHOT)return;
   if(!confirm('確定離開教師調整模式？尚未匯出的變更將不會保留。'))return;
-  restoreAdminSnapshot();go('set');
+  restoreAdminSnapshot();go('build');ScheduleSetup.show('case');
 }
 function importTeacherResult(input){
   const file=input.files&&input.files[0];if(!file)return;
@@ -1831,7 +1832,7 @@ function configureAppMode(){
 function enterFormalAdminMode(){
   document.body.classList.remove('formal-locked');
   document.body.classList.add('formal-admin-mode');
-  go('set');
+  go('build');ScheduleSetup.show('case');
 }
 function enterFormalTeacherMode(){
   document.body.classList.remove('formal-locked');
