@@ -4,7 +4,7 @@
   const ROLES = ["導師", "科任", "組長", "主任", "資源班教師", "鐘點教師", "其他"];
   const CLASS_SEQUENCE = "甲乙丙丁戊己庚辛壬癸";
   let adapter = null;
-  let activeTab = "case";
+  let activeTab = "classes";
   let lastMessage = "";
   let syncMessage = "";
 
