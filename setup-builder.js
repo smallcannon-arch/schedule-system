@@ -253,10 +253,12 @@
         <td><select class="edit" onchange="ScheduleSetup.setClass(${index},'g',this.value)">${[1, 2, 3, 4, 5, 6].map((grade) => `<option value="${grade}" ${+item.g === grade ? "selected" : ""}>${grade} 年級</option>`).join("")}</select></td>
         <td><input class="numin" type="number" min="1" max="20" value="${Number(item.i) || 1}" onchange="ScheduleSetup.setClass(${index},'i',this.value)"></td>
         <td><input value="${esc(item.code)}" maxlength="20" onchange="ScheduleSetup.renameClass(${index},this.value)"></td>
-        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setClass(${index},'tutor',this.value)">${teacherOptions(item.tutor, true)}</select></td>
+        <td><input class="setup-wide-select" list="setupTutorNames" value="${esc(item.tutor)}" placeholder="輸入導師姓名" maxlength="40" onchange="ScheduleSetup.setClass(${index},'tutor',this.value)"></td>
         <td><input type="checkbox" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
         <td><button class="icon-btn" type="button" title="刪除班級" aria-label="刪除班級" onclick="ScheduleSetup.removeClass(${index})">×</button></td>
       </tr>`).join("")}</tbody>`;
+    const tutorNames = document.getElementById("setupTutorNames");
+    if (tutorNames) tutorNames.innerHTML = Object.keys(d.roster).map((name) => `<option value="${esc(name)}"></option>`).join("");
 
     for (let grade = 1; grade <= 6; grade += 1) {
       const input = document.getElementById(`setupGradeCount${grade}`);
@@ -357,11 +359,18 @@
     else if (key === "res") item.res = !!value;
     else if (key === "tutor") {
       const previous = item.tutor;
-      item.tutor = value;
+      const tutor = String(value || "").trim();
+      item.tutor = tutor;
+      if (tutor && !Object.prototype.hasOwnProperty.call(d.roster, tutor)) {
+        d.roster[tutor] = "導師";
+        d.teacherAccounts[tutor] = "";
+        d.teacherNativeLangs[tutor] = [];
+        d.tcap[tutor] = {cap: 0, minus: 0};
+      }
       d.assign[item.code] = d.assign[item.code] || {};
       for (const [subject, info] of Object.entries(d.subjects)) {
         const current = d.assign[item.code][subject];
-        if (info.self && (!current || current === previous)) d.assign[item.code][subject] = value;
+        if (info.self && (!current || current === previous)) d.assign[item.code][subject] = tutor;
       }
     }
     commit(`${item.code || "班級"}已更新。`);
@@ -497,12 +506,15 @@
 
   async function syncTeachers() {
     const d = data();
-    const records = Object.keys(d.roster).map((name) => ({
-      name,
-      email: String(d.teacherAccounts[name] || "").trim().toLowerCase(),
-      role: portalRole(d.roster[name] || ""),
-      class_codes: d.classes.filter((item) => item.tutor === name).map((item) => item.code),
-    }));
+    const records = Object.keys(d.roster).map((name) => {
+      const classCodes = d.classes.filter((item) => item.tutor === name).map((item) => item.code);
+      return {
+        name,
+        email: String(d.teacherAccounts[name] || "").trim().toLowerCase(),
+        role: classCodes.length ? "導師" : portalRole(d.roster[name] || ""),
+        class_codes: classCodes,
+      };
+    });
     const invalid = records.find((record) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email));
     if (invalid) {
       syncMessage = `${invalid.name}尚未填寫有效的 Google 帳號。`;

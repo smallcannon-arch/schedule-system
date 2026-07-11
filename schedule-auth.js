@@ -171,7 +171,8 @@
       root.google.accounts.id.initialize({client_id: config.client_id, callback: handleCredential,
         hd: config.workspace_domain || undefined});
       const gateTarget = document.getElementById("formalGoogleSignInButton") || document.getElementById("googleSignInButton");
-      const buttonWidth = Math.max(240, Math.min(400, Math.round(gateTarget.getBoundingClientRect().width || 400)));
+      const availableWidth = Math.floor((gateTarget.getBoundingClientRect().width || 408) - 8);
+      const buttonWidth = Math.max(240, Math.min(400, availableWidth));
       root.google.accounts.id.renderButton(gateTarget, {
         type: "standard", theme: "filled_blue", size: "large", text: "signin_with", shape: "rectangular",
         logo_alignment: "left", width: String(buttonWidth), locale: "zh_TW",

@@ -16,15 +16,15 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh;font-size:17px}
-.formal-gate{display:none;min-height:100vh;width:100%;padding:32px;background:#f6f5f2;place-items:center;border-top:6px solid var(--mint-d)}
-.formal-gate-inner{width:min(620px,100%);background:#fff;border:1px solid #e5dedf;border-radius:8px;box-shadow:0 18px 50px rgba(72,55,78,.12);padding:42px 44px 30px}
+.formal-gate{display:none;min-height:100vh;width:100%;padding:32px;background:#f6f5f2;place-items:start center;overflow-y:auto;border-top:6px solid var(--mint-d)}
+.formal-gate-inner{width:min(620px,100%);margin:auto 0;background:#fff;border:1px solid #e5dedf;border-radius:8px;box-shadow:0 18px 50px rgba(72,55,78,.12);padding:42px 44px 30px}
 .formal-gate-head{display:grid;grid-template-columns:58px minmax(0,1fr);gap:18px;align-items:start}
 .formal-gate-mark{width:58px;height:58px;display:grid;place-items:center;background:var(--mint);border:1px solid #9fd0bf;border-radius:8px;color:var(--mint-d);font-size:28px}
 .formal-gate-eyebrow{margin-bottom:5px;color:var(--mint-d);font-size:13px;font-weight:900}
 .formal-gate h1{font-size:32px;margin-bottom:7px}.formal-gate .formal-gate-lead{margin:0;color:var(--muted);font-size:16px;line-height:1.65}
 .formal-gate-signin{margin-top:28px;padding:22px 0 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .formal-gate-signin>b{display:block;color:var(--ink);font-size:17px}.formal-gate-signin>small{display:block;margin-top:3px;color:var(--muted);font-size:13.5px}
-#formalGoogleSignInButton{width:min(400px,100%);min-height:44px;margin:16px auto 0}#formalGoogleSignInButton iframe{max-width:100%!important}
+#formalGoogleSignInButton{width:min(408px,100%);min-height:52px;margin:16px auto 0;padding:4px;display:flex;align-items:center;justify-content:center;overflow:visible}#formalGoogleSignInButton>div{max-width:100%!important;overflow:visible!important}#formalGoogleSignInButton iframe{display:block;max-width:100%!important;min-height:44px!important}
 .formal-gate .auth-status{margin:13px auto 0;width:min(400px,100%);padding:10px 12px;border-left:3px solid var(--sky-d);border-radius:4px;background:#f5f8fa;font-size:13.5px;line-height:1.5}
 .formal-gate-request{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 0 20px}
 .formal-gate-request h2{font-size:17px;margin-bottom:4px}.formal-gate-request p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
@@ -40,7 +40,7 @@ aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:14p
 .logo{display:flex;align-items:center;gap:12px;padding:14px 12px;margin-bottom:10px;border:1px solid rgba(194,85,127,.12);border-radius:8px;background:rgba(255,255,255,.68)}
 .logo .mark{width:42px;height:42px;flex:0 0 auto;border:1px solid #d8c8dd;border-radius:7px;background:#fff;display:grid;place-items:center;color:var(--pink-d);font-size:21px}
 .logo-copy{min-width:0}.logo b{font-size:17.5px;display:block;line-height:1.3;white-space:nowrap}
-.logo small{display:block;margin-top:3px;font-size:12px;color:var(--muted);white-space:nowrap}
+.logo small{display:block;margin-top:3px;font-size:12px;color:var(--muted);white-space:nowrap}.logo small:empty{display:none}
 nav{min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#d9ccdf transparent}
 nav button{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border:0;background:none;color:var(--ink);font:inherit;font-size:16.5px;border-radius:14px;cursor:pointer;margin-bottom:5px;text-align:left;font-weight:500}
 nav button:hover{background:#fff}
@@ -443,6 +443,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div class="panel tbl">
       <table class="setup-table" id="setupClassesTable"></table>
+      <datalist id="setupTutorNames"></datalist>
       <div style="margin-top:12px"><button class="btn soft sm" type="button" onclick="ScheduleSetup.addClass()">新增班級</button></div>
     </div>
   </section>
@@ -2388,7 +2389,7 @@ function configureAppMode(){
   if(APP_MODE!=='formal')return;
   document.title='智慧排課系統｜正式版';
   document.getElementById('appBrandName').textContent='智慧排課系統';
-  document.getElementById('appBrandMeta').textContent='正式排課・Google 驗證';
+  document.getElementById('appBrandMeta').textContent='';
   document.getElementById('appSideFoot').innerHTML='<div class="side-status"><span class="side-status-dot"></span><div><b>正式服務運作中</b><small>CP-SAT 排課引擎</small></div></div><div class="side-foot-meta">雲端暫存已啟用<br>教師存檔由管理員讀取</div>';
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
