@@ -212,6 +212,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}
 .native-band-table{min-width:620px}.native-table{min-width:1380px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:140px;text-align:left}.native-table input[data-native="sources"]{min-width:170px;text-align:left}.native-table input[data-native="group"]{min-width:150px;text-align:left}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
+.export-panel{margin-top:16px}.export-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.export-settings{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}.export-settings summary{cursor:pointer;color:var(--sky-d);font-weight:900}.export-settings-body{padding-top:14px}.export-identity{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.export-map-table{min-width:1120px}.export-map-table input{min-width:130px;text-align:left}.export-map-table input[data-export="schoolName"]{min-width:190px}.export-status{margin-top:12px;color:var(--muted);font-size:13px}.export-status.bad{color:var(--bad);font-weight:800}
 .setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}
 .icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
 .current-data-source{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fbfaf9}
@@ -739,6 +740,29 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><i style="background:var(--mint)"></i>生活/綜合</span><span><i style="background:#f1ebe6"></i>彈性</span>
     </div>
   </div>
+  <div class="panel export-panel">
+    <h2>課表匯出</h2>
+    <div class="sub">班級與教師課表供校內使用；系統上傳檔會先檢查科目對應及教師識別資料。</div>
+    <div class="export-actions">
+      <button class="btn soft sm" type="button" onclick="exportClassTimetables()">匯出班級課表</button>
+      <button class="btn soft sm" type="button" onclick="exportTeacherTimetables()">匯出教師課表</button>
+      <button class="btn mint sm" type="button" onclick="exportUploadWorkbook('human')">匯出人力資源網上傳檔案</button>
+      <button class="btn pink sm" type="button" onclick="exportUploadWorkbook('school')">匯出校務系統上傳檔案</button>
+    </div>
+    <details class="export-settings">
+      <summary>人力網／校務系統對應設定</summary>
+      <div class="export-settings-body">
+        <div class="sub">教師身分證對照表只在目前瀏覽器記憶體中使用，不會寫入案件、雲端暫存或工作進度檔。</div>
+        <div class="export-identity">
+          <button class="btn soft sm" type="button" onclick="downloadTeacherIdTemplate()">下載教師身分證對照表</button>
+          <label class="btn soft sm" style="cursor:pointer">載入填妥的對照表<input type="file" accept=".xlsx,.xls,.csv,text/csv" hidden onchange="loadTeacherIdMap(this)"></label>
+          <span class="chip warn" id="exportTeacherIdStatus">尚未載入教師身分證對照表</span>
+        </div>
+        <div class="tbl"><table class="export-map-table" id="exportMappingTable"></table></div>
+      </div>
+    </details>
+    <div class="export-status" id="exportStatus">完成正式排課後即可匯出。</div>
+  </div>
 </section>
 
 <!-- ═══ 導師自排 ═══ -->
@@ -815,7 +839,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="data.js"></script>
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
-<script src="setup-builder.js?v=20260711-4"></script>
+<script src="setup-builder.js?v=20260711-5"></script>
+<script src="schedule-exports.js?v=20260711-1"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -1811,7 +1836,7 @@ function fillTT(){
     sel.innerHTML=[...ts].sort().map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')||'<option>（請先執行排課）</option>';
   }
   if([...sel.options].some(o=>o.value===prev))sel.value=prev;
-  renderTT();
+  renderTT();renderExportPanel();
 }
 function ovlAt(code,d,p){return OVL.find(o=>o.code===code&&o.d===d&&o.p===p)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
@@ -1864,6 +1889,105 @@ function renderTT(){
     h+='</tr>';
   }
   tb.innerHTML=h;
+}
+
+/* ═══ 課表與系統上傳檔匯出 ═══ */
+let EXPORT_TEACHER_IDS={};
+function exportEntries(){
+  return ScheduleExports.buildEntries(DATA,scheduleEntries(false),OVL);
+}
+function exportFileDate(){return new Date().toISOString().slice(0,10).replaceAll('-','')}
+function exportSchoolName(){return safeFilePart(DATA._school||'全校')}
+function makeSheet(rows,kind='table'){
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  if(kind==='timetable'){
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
+    ws['!cols']=[{wch:12},...DAYS.map(()=>({wch:24}))];
+    ws['!rows']=[{hpt:25},{hpt:22},...PS.map(()=>({hpt:54}))];
+  }else{
+    ws['!cols']=ScheduleExports.UPLOAD_HEADERS.map((header,index)=>({wch:index===5?16:Math.max(12,header.length*2+2)}));
+    ws['!autofilter']={ref:`A1:L${Math.max(1,rows.length)}`};
+  }
+  return ws;
+}
+function appendSheets(workbook,sheets){
+  for(const sheet of sheets)XLSX.utils.book_append_sheet(workbook,makeSheet(sheet.rows,'timetable'),sheet.name);
+}
+function writeWorkbook(workbook,filename){
+  XLSX.writeFile(workbook,filename,{compression:true});
+  const status=document.getElementById('exportStatus');if(status){status.className='export-status';status.textContent=`已產生 ${filename}`}
+}
+function exportScheduleReady(){
+  if(!SOL){alert('請先完成正式排課，再匯出課表。');return false}
+  const check=validateSchedule();
+  if(check.hard.length||check.pending.length){
+    alert(`課表尚未完成，暫不匯出。\n硬規則問題：${check.hard.length} 項\n待排課程：${check.pending.length} 項`);return false;
+  }
+  return true;
+}
+function exportClassTimetables(){
+  if(!exportScheduleReady())return;
+  const wb=XLSX.utils.book_new(),sheets=ScheduleExports.classSheets(DATA,exportEntries());
+  if(!sheets.length)return alert('沒有可匯出的班級課表。');
+  appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_班級課表_${exportFileDate()}.xlsx`);
+}
+function exportTeacherTimetables(){
+  if(!exportScheduleReady())return;
+  const wb=XLSX.utils.book_new(),sheets=ScheduleExports.teacherSheets(DATA,exportEntries());
+  if(!sheets.length)return alert('沒有可匯出的教師課表。');
+  appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_教師課表_${exportFileDate()}.xlsx`);
+}
+function exportUploadWorkbook(kind){
+  if(!exportScheduleReady())return;
+  const entries=exportEntries(),issues=ScheduleExports.validateUpload(DATA,entries,EXPORT_TEACHER_IDS);
+  if(issues.length){
+    const status=document.getElementById('exportStatus');if(status){status.className='export-status bad';status.textContent=`上傳格式尚有 ${issues.length} 項資料需補齊。`}
+    alert(['無法產生可上傳檔案，請先完成：',...issues.slice(0,20).map(item=>`• ${item}`),...(issues.length>20?[`• 另有 ${issues.length-20} 項`]:[])].join('\n'));
+    return;
+  }
+  const wb=XLSX.utils.book_new(),rows=ScheduleExports.uploadRows(DATA,entries,EXPORT_TEACHER_IDS);
+  XLSX.utils.book_append_sheet(wb,makeSheet(rows,'upload'),'國小教師課表');
+  const label=kind==='school'?'校務系統上傳':'人力資源網上傳';
+  writeWorkbook(wb,`${exportSchoolName()}_${label}_${exportFileDate()}.xlsx`);
+}
+function downloadTeacherIdTemplate(){
+  const rows=[['教師姓名','教師身分證號'],...Object.keys(DATA.roster||{}).sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(name=>[name,''])];
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:20},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'教師身分證對照表');
+  XLSX.writeFile(wb,`${exportSchoolName()}_教師身分證對照表.xlsx`,{compression:true});
+}
+async function loadTeacherIdMap(input){
+  const file=input.files&&input.files[0];if(!file)return;
+  try{
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+    const parsed=ScheduleExports.parseTeacherIdRows(rows);
+    if(!Object.keys(parsed).length)throw new Error('找不到「教師姓名」與「教師身分證號」欄位');
+    EXPORT_TEACHER_IDS=parsed;renderExportPanel();
+  }catch(error){alert(`教師身分證對照表讀取失敗：${error.message}`)}finally{input.value=''}
+}
+function exportMappingSet(index,key,value){
+  const name=Object.keys(DATA.subjects||{})[index];if(!name)return;
+  const mappings=ScheduleExports.ensureMappings(DATA);mappings[name][key]=String(value||'').trim();
+  saveLS();renderExportPanel();
+}
+function renderExportPanel(){
+  const table=document.getElementById('exportMappingTable');if(!table||typeof ScheduleExports==='undefined')return;
+  const mappings=ScheduleExports.ensureMappings(DATA),names=Object.keys(DATA.subjects||{});
+  let html='<tr><th>排課科目</th><th>類別</th><th>領域</th><th>人力網科目</th><th>語言別</th><th>校訂課程名稱</th><th>上課頻率</th></tr>';
+  names.forEach((name,index)=>{
+    const item=mappings[name];
+    html+=`<tr><td><b>${esc(name)}</b></td>
+      <td><select class="edit" onchange="exportMappingSet(${index},'category',this.value)"><option ${item.category==='領域學習'?'selected':''}>領域學習</option><option ${item.category==='彈性學習'?'selected':''}>彈性學習</option></select></td>
+      <td><input data-export="domain" value="${esc(item.domain)}" onchange="exportMappingSet(${index},'domain',this.value)"></td>
+      <td><input data-export="subject" value="${esc(item.subject)}" onchange="exportMappingSet(${index},'subject',this.value)"></td>
+      <td><input data-export="language" value="${esc(item.language)}" placeholder="本土語才填" onchange="exportMappingSet(${index},'language',this.value)"></td>
+      <td><input data-export="schoolName" value="${esc(item.schoolName)}" placeholder="彈性學習必填" onchange="exportMappingSet(${index},'schoolName',this.value)"></td>
+      <td><select class="edit" onchange="exportMappingSet(${index},'frequency',this.value)">${['每週上課','單週上課','雙週上課'].map(value=>`<option ${item.frequency===value?'selected':''}>${value}</option>`).join('')}</select></td></tr>`;
+  });
+  table.innerHTML=html;
+  const status=document.getElementById('exportTeacherIdStatus'),matched=Object.keys(EXPORT_TEACHER_IDS).filter(name=>Object.prototype.hasOwnProperty.call(DATA.roster||{},name)).length;
+  if(status){status.className=`chip ${matched?'ok':'warn'}`;status.textContent=matched?`已在記憶體載入 ${matched} 位教師資料`:'尚未載入教師身分證對照表'}
 }
 
 /* ═══ 教師單班調整檔交接 ═══ */
@@ -2243,7 +2367,7 @@ function emptyFormalData(){
   const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
     rules:TeacherWorkflow.clone(DEMO0.rules||[]),blocked:[],gslot,rooms:{R00:99},roster:{},
-    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{}};
+    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},exportMappings:{}};
 }
 function configureAppMode(){
   if(APP_MODE!=='formal')return;

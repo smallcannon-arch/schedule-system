@@ -23,6 +23,7 @@
     value.resGroups = value.resGroups || [];
     value.nativeBands = Array.isArray(value.nativeBands) ? value.nativeBands : [];
     value.nativeGroups = Array.isArray(value.nativeGroups) ? value.nativeGroups : [];
+    value.exportMappings = value.exportMappings && typeof value.exportMappings === "object" ? value.exportMappings : {};
     value.rooms = value.rooms || {};
     if (!Object.prototype.hasOwnProperty.call(value.rooms, "R00")) value.rooms.R00 = 99;
     return value;
@@ -522,6 +523,7 @@
     const d = data();
     const name = uniqueName("新科目", Object.keys(d.subjects));
     d.subjects[name] = {hours: [0, 0, 0, 0, 0, 0], room: "R00", banned: [], block: "", self: false, pairMode: ""};
+    if (root.ScheduleExports) d.exportMappings[name] = root.ScheduleExports.defaultMapping(name);
     commit(`已新增科目 ${name}。`);
   }
 
@@ -551,6 +553,7 @@
     if (!next) return alert("科目名稱不可空白。");
     if (Object.prototype.hasOwnProperty.call(d.subjects, next)) return alert(`科目「${next}」已存在。`);
     d.subjects[next] = d.subjects[old]; delete d.subjects[old];
+    if (d.exportMappings[old]) { d.exportMappings[next] = d.exportMappings[old]; delete d.exportMappings[old]; }
     Object.values(d.assign).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
     Object.values(d.override).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
     d.locks.forEach((lock) => { if (lock.s === old) lock.s = next; });
@@ -563,6 +566,7 @@
     const name = Object.keys(d.subjects)[index];
     if (!name || !confirm(`確定刪除科目 ${name}？相關配課、固定課及資源班設定也會移除。`)) return;
     delete d.subjects[name];
+    delete d.exportMappings[name];
     Object.values(d.assign).forEach((row) => delete row[name]);
     Object.values(d.override).forEach((row) => delete row[name]);
     d.locks = d.locks.filter((lock) => lock.s !== name);
