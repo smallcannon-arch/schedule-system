@@ -210,7 +210,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:13px;font-weight:900}
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}
-.native-table{min-width:980px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:150px;text-align:left}
+.native-band-table{min-width:620px}.native-table{min-width:1380px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:140px;text-align:left}.native-table input[data-native="sources"]{min-width:170px;text-align:left}.native-table input[data-native="group"]{min-width:150px;text-align:left}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
 .setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}
 .icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
@@ -359,7 +359,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <div class="setup-import-hint">Excel 匯入：<b>下載 Excel 母版填寫後再上傳</b>。</div>
   <div class="setup-actions">
     <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
-    <a class="btn soft sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">下載 Excel 母版</a>
+    <a class="btn soft sm" style="text-decoration:none" href="template.xlsx?v=20260711" download="排課母版範本.xlsx">下載 Excel 母版</a>
     <label class="btn soft sm" style="cursor:pointer">上傳填妥的 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
     <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
   </div>
@@ -520,14 +520,22 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <details class="step-help">
       <summary>操作說明</summary>
       <div class="step-help-body"><ol>
-        <li><b>設定年級時段：</b>每個年級選定一個固定節次，多種語別各建一列並共用該節次。</li>
-        <li><b>指定人員場地：</b>填入授課教師、直播教室及校內協同教師，系統會同步禁止衝堂。</li>
+        <li><b>設定共同時段：</b>每個年級只設定一次星期與節次，系統會鎖定該年級所有班級課表。</li>
+        <li><b>建立抽離分組：</b>依語別填入來源班級、人數、授課教師、教室與上課方式。</li>
         <li><b>重新排課：</b>任何異動都會使舊課表失效，請重新執行 CP-SAT 並確認硬規則為零違反。</li>
       </ol><div class="step-help-note">儲存後會鎖定全年級班級課表、授課與協同教師，以及非原班教室；導師與課表編修均不能移動。</div></div>
     </details>
+    <div class="panel">
+      <h2>班級共同時段</h2>
+      <div class="sub">每個年級設定一個固定節次；班級課表只顯示「本土語文（分組上課）」，不重複計算各分組教師。</div>
+      <div class="tbl"><table class="native-band-table" id="nativeBandTable"></table></div>
+      <div style="margin-top:12px"><button class="btn mint sm" type="button" onclick="addNativeBand()">新增年級共同時段</button></div>
+    </div>
     <div class="panel tbl">
+      <h2>語言抽離分組</h2>
+      <div class="sub">授課教師由「資料建置／教師」名冊帶入；設定本土語專長後，符合語別的教師會優先列出。</div>
       <table class="native-table" id="nativeTable"></table>
-      <div style="margin-top:12px"><button class="btn mint sm" type="button" onclick="addNativeGroup()">新增本土語分組</button></div>
+      <div style="margin-top:12px"><button class="btn mint sm" type="button" onclick="addNativeGroup()">新增語言分組</button></div>
     </div>
   </div>
 </section>
@@ -807,7 +815,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="data.js"></script>
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
-<script src="setup-builder.js?v=20260711-3"></script>
+<script src="setup-builder.js?v=20260711-4"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -922,30 +930,75 @@ function toggleG(g,d,p){
 }
 
 /* ═══ 本土語／直播共學硬鎖 ═══ */
-function nativeRows(){
-  if(typeof DATA.nativeLockEnabled!=='boolean')DATA.nativeLockEnabled=
-    (Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length>0)||(DATA.locks||[]).some(lock=>lock.s==='本土語文');
-  if(!DATA.nativeLockEnabled){
-    if(!Array.isArray(DATA.nativeGroups))DATA.nativeGroups=[];
-    return DATA.nativeGroups;
-  }
-  if(Array.isArray(DATA.nativeGroups))return DATA.nativeGroups;
+function nativeSourceCodes(value){
+  const raw=Array.isArray(value)?value:String(value||'').split(/[、,，;；\s]+/);
+  return [...new Set(raw.map(code=>String(code||'').trim()).filter(Boolean))];
+}
+function nativeBandRows(){
+  const sourceGroups=Array.isArray(DATA.nativeGroups)?DATA.nativeGroups:[];
+  const legacy=DATA.nativeSchemaVersion!==2;
+  if(Array.isArray(DATA.nativeBands)&&(DATA.nativeBands.length||!legacy))return DATA.nativeBands;
   const byGrade=new Map();
+  for(const group of sourceGroups){
+    const g=+group.g,d=String(group.d||''),p=+group.p;
+    if(g>=1&&g<=6&&DAYS.includes(d)&&PS.includes(p)&&!byGrade.has(g))byGrade.set(g,{g,d,p});
+  }
   for(const lock of (DATA.locks||[])){
     if(lock.s!=='本土語文')continue;
     const c=(DATA.classes||[]).find(item=>item.code===lock.c);
     if(c&&!byGrade.has(+c.g))byGrade.set(+c.g,{g:+c.g,d:lock.d,p:+lock.p});
   }
-  DATA.nativeGroups=[];
-  for(const slot of byGrade.values()){
-    const teachers=new Set();
-    DATA.classes.filter(c=>+c.g===slot.g).forEach(c=>{
-      const teacher=String(((DATA.assign||{})[c.code]||{})['本土語文']||'').trim();
-      if(teacher)teachers.add(teacher);
-    });
-    const names=teachers.size?[...teachers]:[''];
-    names.forEach(teacher=>DATA.nativeGroups.push({...slot,lang:'本土語文',t:teacher,room:'R00',assistant:''}));
+  DATA.nativeBands=[...byGrade.values()].sort((a,b)=>a.g-b.g);
+  return DATA.nativeBands;
+}
+function nativeQualifiedTeachers(language){
+  const target=String(language||'').replace(/[\s（）()直播共學語文]/g,'');
+  if(!target)return[];
+  return Object.keys(DATA.roster||{}).filter(name=>(DATA.teacherNativeLangs?.[name]||[]).some(skill=>{
+    const value=String(skill||'').replace(/[\s（）()直播共學語文]/g,'');
+    return value&&(target.includes(value)||value.includes(target));
+  }));
+}
+function nativeTeacherOptions(selected,language,preferQualified=true){
+  const names=Object.keys(DATA.roster||{}),qualified=preferQualified?nativeQualifiedTeachers(language):[];
+  const preferred=names.filter(name=>qualified.includes(name)),others=names.filter(name=>!qualified.includes(name));
+  let html='<option value="">尚未指定</option>';
+  if(selected&&!names.includes(selected))html+=`<option value="${esc(selected)}" selected>${esc(selected)}（請先加入教師名冊）</option>`;
+  if(preferred.length)html+=`<optgroup label="符合語別專長">${preferred.map(name=>`<option value="${esc(name)}" ${name===selected?'selected':''}>${esc(name)}</option>`).join('')}</optgroup>`;
+  if(others.length)html+=`<optgroup label="${preferred.length?'其他教師':'教師名冊'}">${others.map(name=>`<option value="${esc(name)}" ${name===selected?'selected':''}>${esc(name)}</option>`).join('')}</optgroup>`;
+  return html;
+}
+function nativeRows(){
+  const legacy=DATA.nativeSchemaVersion!==2;
+  if(typeof DATA.nativeLockEnabled!=='boolean')DATA.nativeLockEnabled=
+    (Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length>0)||(DATA.locks||[]).some(lock=>lock.s==='本土語文');
+  if(!Array.isArray(DATA.nativeGroups)||(legacy&&!DATA.nativeGroups.length)){
+    DATA.nativeGroups=[];
+    for(const band of nativeBandRows()){
+      const teacherClasses=new Map();
+      DATA.classes.filter(c=>+c.g===band.g).forEach(c=>{
+        const teacher=String(((DATA.assign||{})[c.code]||{})['本土語文']||'').trim();
+        if(teacher){
+          if(!teacherClasses.has(teacher))teacherClasses.set(teacher,[]);
+          teacherClasses.get(teacher).push(c.code);
+        }
+      });
+      const allClasses=DATA.classes.filter(c=>+c.g===band.g).map(c=>c.code);
+      const groups=teacherClasses.size?[...teacherClasses]:[['',allClasses]];
+      groups.forEach(([teacher,sources],index)=>DATA.nativeGroups.push({...band,grp:`${band.g}年級本土語${index+1}組`,lang:'本土語文',sources,students:0,t:teacher,room:'R00',assistant:'',mode:'實體'}));
+    }
   }
+  const bands=nativeBandRows();
+  DATA.nativeGroups.forEach((group,index)=>{
+    group.g=+group.g||1;group.lang=String(group.lang||'本土語文').trim();
+    group.grp=String(group.grp||group.group||`${group.g}年級${group.lang}${index+1}組`).trim();
+    if(!Object.prototype.hasOwnProperty.call(group,'sources'))group.sources=DATA.classes.filter(c=>+c.g===group.g).map(c=>c.code);
+    group.sources=nativeSourceCodes(group.sources);group.students=Math.max(0,+group.students||0);
+    group.t=String(group.t||'').trim();group.room=String(group.room||'R00').trim()||'R00';
+    group.assistant=String(group.assistant||'').trim();group.mode=String(group.mode||(/直播/.test(group.lang)?'直播共學':'實體'));
+    const band=bands.find(item=>+item.g===group.g);if(band){group.d=band.d;group.p=+band.p}
+  });
+  DATA.nativeSchemaVersion=2;
   return DATA.nativeGroups;
 }
 function nativeGeneratedKeys(rows){
@@ -953,6 +1006,7 @@ function nativeGeneratedKeys(rows){
 }
 function syncNativeHardLocks(previousRows){
   const groups=DATA.nativeLockEnabled?nativeRows():[];
+  const bands=DATA.nativeLockEnabled?nativeBandRows():[];
   const savedBlocked=(DATA.nativeGenerated&&DATA.nativeGenerated.blocked)||[];
   const oldBlocked=new Set(savedBlocked.length?savedBlocked:nativeGeneratedKeys(previousRows||[]));
   const savedDerived=(DATA.nativeGenerated&&DATA.nativeGenerated.derived)||[];
@@ -961,19 +1015,20 @@ function syncNativeHardLocks(previousRows){
   DATA.blocked=(DATA.blocked||[]).filter(row=>!oldBlocked.has(`${row[0]}|${row[1]}|${+row[2]}`));
   DATA.locks=(DATA.locks||[]).filter(lock=>lock.s!=='本土語文');
   DATA.derived=(DATA.derived||[]).filter(row=>!oldDerived.has(`${row[0]}|${row[1]}|${+row[2]}`));
-  const lockedGrades=new Set(),blocked=new Set(DATA.blocked.map(row=>`${row[0]}|${row[1]}|${+row[2]}`));
+  const blocked=new Set(DATA.blocked.map(row=>`${row[0]}|${row[1]}|${+row[2]}`));
   const derived=new Set(DATA.derived.map(row=>`${row[0]}|${row[1]}|${+row[2]}`));
+  for(const band of bands){
+    band.g=+band.g;band.p=+band.p;band.d=String(band.d||'二');
+    if(band.g>=1&&band.g<=6&&DAYS.includes(band.d)&&PS.includes(band.p))
+      DATA.classes.filter(c=>+c.g===band.g).forEach(c=>DATA.locks.push({c:c.code,d:band.d,p:band.p,s:'本土語文'}));
+  }
   for(const group of groups){
-    group.g=+group.g;group.p=+group.p;group.d=String(group.d||'二');group.lang=String(group.lang||'本土語文').trim();
+    const band=bands.find(item=>+item.g===+group.g);if(!band)continue;
+    group.g=+group.g;group.p=+band.p;group.d=band.d;group.lang=String(group.lang||'本土語文').trim();
     group.t=String(group.t||'').trim();group.room=String(group.room||'R00').trim()||'R00';group.assistant=String(group.assistant||'').trim();
-    if(!lockedGrades.has(group.g)&&group.g>=1&&group.g<=6&&DAYS.includes(group.d)&&PS.includes(group.p)){
-      lockedGrades.add(group.g);
-      DATA.classes.filter(c=>+c.g===group.g).forEach(c=>DATA.locks.push({c:c.code,d:group.d,p:group.p,s:'本土語文'}));
-    }
     if(group.room!=='R00')blocked.add(`${group.room}|${group.d}|${group.p}`);
     for(const teacher of [group.t,group.assistant])if(teacher){
       derived.add(`${teacher}|${group.d}|${group.p}`);
-      if(!Object.prototype.hasOwnProperty.call(DATA.roster,teacher))DATA.roster[teacher]='其他';
     }
   }
   DATA.blocked=[...blocked].map(key=>{const[room,day,period]=key.split('|');return[room,day,+period]});
@@ -982,40 +1037,63 @@ function syncNativeHardLocks(previousRows){
   DATA.nativeGenerated={blocked:[...nativeGeneratedKeys(groups)],derived:[...currentDerived]};
   initDerived();
 }
+function renderNativeBands(){
+  const table=document.getElementById('nativeBandTable');if(!table)return;
+  const bands=nativeBandRows();
+  let html='<tr><th>年級</th><th>星期</th><th>節次</th><th>鎖定班級</th><th></th></tr>';
+  bands.forEach((band,index)=>{
+    const classes=DATA.classes.filter(c=>+c.g===+band.g).map(c=>c.code);
+    html+=`<tr>
+      <td><select class="edit" onchange="nativeBandSet(${index},'g',this.value)">${[1,2,3,4,5,6].map(g=>`<option value="${g}" ${+band.g===g?'selected':''}>${g}年級</option>`).join('')}</select></td>
+      <td><select class="edit" onchange="nativeBandSet(${index},'d',this.value)">${DAYS.map(day=>`<option ${band.d===day?'selected':''}>${day}</option>`).join('')}</select></td>
+      <td><select class="edit" onchange="nativeBandSet(${index},'p',this.value)">${PS.map(period=>`<option value="${period}" ${+band.p===period?'selected':''}>第${period}節</option>`).join('')}</select></td>
+      <td>${classes.length?classes.map(code=>esc(code)).join('、'):'尚無班級'}</td>
+      <td><button class="icon-btn" type="button" title="刪除此共同時段" aria-label="刪除此共同時段" onclick="removeNativeBand(${index})">×</button></td>
+    </tr>`;
+  });
+  if(!bands.length)html+='<tr><td colspan="5" style="padding:18px;color:var(--muted)">尚未設定年級共同時段</td></tr>';
+  table.innerHTML=html;
+}
 function renderNative(){
   const table=document.getElementById('nativeTable');if(!table)return;
   const toggle=document.getElementById('nativeLockToggle'),settings=document.getElementById('nativeLockSettings');
   if(toggle)toggle.checked=!!DATA.nativeLockEnabled;
   if(settings)settings.hidden=!DATA.nativeLockEnabled;
-  const groups=nativeRows(),rooms=Object.keys(DATA.rooms||{});
-  let html='<tr><th>年級</th><th>星期</th><th>節次</th><th>語別／直播</th><th>授課教師</th><th>教室</th><th>協同教師</th><th></th></tr>';
+  renderNativeBands();
+  const groups=nativeRows(),rooms=Object.keys(DATA.rooms||{}),bands=nativeBandRows();
+  let html='<tr><th>分組名稱</th><th>年級</th><th>語別</th><th>來源班級</th><th>人數</th><th>授課教師</th><th>教室</th><th>協同教師</th><th>方式</th><th></th></tr>';
   groups.forEach((group,index)=>{
     html+=`<tr>
-      <td><select class="edit" onchange="nativeSet(${index},'g',this.value)">${[1,2,3,4,5,6].map(g=>`<option value="${g}" ${+group.g===g?'selected':''}>${g}年級</option>`).join('')}</select></td>
-      <td><select class="edit" onchange="nativeSet(${index},'d',this.value)">${DAYS.map(day=>`<option ${group.d===day?'selected':''}>${day}</option>`).join('')}</select></td>
-      <td><select class="edit" onchange="nativeSet(${index},'p',this.value)">${PS.map(period=>`<option value="${period}" ${+group.p===period?'selected':''}>第${period}節</option>`).join('')}</select></td>
+      <td><input data-native="group" value="${esc(group.grp||'')}" placeholder="例：三年級客語組" onchange="nativeSet(${index},'grp',this.value)"></td>
+      <td><select class="edit" onchange="nativeSet(${index},'g',this.value)">${bands.map(band=>`<option value="${band.g}" ${+group.g===+band.g?'selected':''}>${band.g}年級</option>`).join('')}</select></td>
       <td><input data-native="lang" value="${esc(group.lang||'')}" placeholder="例：原民語(直播)" onchange="nativeSet(${index},'lang',this.value)"></td>
-      <td><input list="tlist" value="${esc(group.t||'')}" placeholder="授課教師" onchange="nativeSet(${index},'t',this.value)"></td>
+      <td><input data-native="sources" value="${esc(nativeSourceCodes(group.sources).join('、'))}" placeholder="例：3甲、3乙" onchange="nativeSet(${index},'sources',this.value)"></td>
+      <td><input class="numin" type="number" min="0" max="999" value="${+group.students||0}" onchange="nativeSet(${index},'students',this.value)"></td>
+      <td><select class="edit setup-wide-select" onchange="nativeSet(${index},'t',this.value)">${nativeTeacherOptions(group.t,group.lang,true)}</select></td>
       <td><select class="edit setup-wide-select" onchange="nativeSet(${index},'room',this.value)">${rooms.map(room=>`<option value="${esc(room)}" ${group.room===room?'selected':''}>${esc(room==='R00'?'原班教室':room)}</option>`).join('')}</select></td>
-      <td><input list="tlist" value="${esc(group.assistant||'')}" placeholder="選填" onchange="nativeSet(${index},'assistant',this.value)"></td>
+      <td><select class="edit setup-wide-select" onchange="nativeSet(${index},'assistant',this.value)">${nativeTeacherOptions(group.assistant,'',false)}</select></td>
+      <td><select class="edit" onchange="nativeSet(${index},'mode',this.value)"><option ${group.mode==='實體'?'selected':''}>實體</option><option ${group.mode==='直播共學'?'selected':''}>直播共學</option></select></td>
       <td><button class="icon-btn" type="button" title="刪除此分組" aria-label="刪除此分組" onclick="removeNativeGroup(${index})">×</button></td>
     </tr>`;
   });
-  if(!groups.length)html+='<tr><td colspan="8" style="padding:18px;color:var(--muted)">尚未設定本土語固定節次</td></tr>';
+  if(!groups.length)html+='<tr><td colspan="10" style="padding:18px;color:var(--muted)">尚未建立語言抽離分組</td></tr>';
   table.innerHTML=html;
 }
 function setNativeLockEnabled(enabled){
   const previous=TeacherWorkflow.clone(Array.isArray(DATA.nativeGroups)?DATA.nativeGroups:nativeRows());
   DATA.nativeLockEnabled=!!enabled;
   if(enabled){
+    const subject=DATA.subjects&&DATA.subjects['本土語文'];
+    if(!Array.isArray(DATA.nativeBands)||!DATA.nativeBands.length){
+      DATA.nativeBands=[];
+      for(let grade=1;grade<=6;grade++)if(subject&&Number((subject.hours||[])[grade-1]||0)>0&&DATA.classes.some(c=>+c.g===grade))
+        DATA.nativeBands.push({g:grade,d:'二',p:Math.min(grade,6)});
+    }
     if(!Array.isArray(DATA.nativeGroups)||!DATA.nativeGroups.length){
-      DATA.nativeGroups=[];
-      const subject=DATA.subjects&&DATA.subjects['本土語文'];
-      for(let grade=1;grade<=6;grade++){
-        const hours=subject&&Number((subject.hours||[])[grade-1]||0);
-        if(hours>0&&DATA.classes.some(c=>+c.g===grade))
-          DATA.nativeGroups.push({g:grade,d:'二',p:Math.min(grade,6),lang:'本土語文',t:'',room:'R00',assistant:''});
-      }
+      DATA.nativeGroups=nativeBandRows().map(band=>{
+        const lang='閩南語',qualified=nativeQualifiedTeachers(lang);
+        return{...band,grp:`${band.g}年級${lang}組`,lang,sources:DATA.classes.filter(c=>+c.g===band.g).map(c=>c.code),students:0,t:qualified.length===1?qualified[0]:'',room:'R00',assistant:'',mode:'實體'};
+      });
     }
   }
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();
@@ -1023,21 +1101,44 @@ function setNativeLockEnabled(enabled){
 }
 function nativeSet(index,key,value){
   const groups=nativeRows(),previous=TeacherWorkflow.clone(groups),row=groups[index];if(!row)return;
-  const oldGrade=+row.g;
-  if(key==='d'||key==='p')groups.filter(item=>+item.g===oldGrade).forEach(item=>item[key]=key==='p'?+value:value);
-  else if(key==='g'){
+  if(key==='g'){
     row.g=+value;
-    const same=groups.find((item,i)=>i!==index&&+item.g===+value);
-    if(same){row.d=same.d;row.p=+same.p}
+    row.sources=DATA.classes.filter(c=>+c.g===row.g).map(c=>c.code);
+  }else if(key==='sources')row.sources=nativeSourceCodes(value);
+  else if(key==='students')row.students=Math.max(0,+value||0);
+  else if(key==='lang'){
+    row.lang=String(value||'').trim();
+    const qualified=nativeQualifiedTeachers(row.lang);if(!row.t&&qualified.length===1)row.t=qualified[0];
   }else row[key]=value;
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('本土語課鎖定已更新');
+}
+function nativeBandSet(index,key,value){
+  const bands=nativeBandRows(),previous=TeacherWorkflow.clone(nativeRows()),band=bands[index];if(!band)return;
+  const oldGrade=+band.g;
+  if(key==='g'){
+    const next=+value;if(bands.some((item,i)=>i!==index&&+item.g===next))return alert(`${next}年級已設定共同時段。`);
+    band.g=next;nativeRows().filter(group=>+group.g===oldGrade).forEach(group=>{group.g=next;group.sources=DATA.classes.filter(c=>+c.g===next).map(c=>c.code)});
+  }else band[key]=key==='p'?+value:value;
+  syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('年級共同時段已更新');
+}
+function addNativeBand(){
+  if(!DATA.nativeLockEnabled)return;
+  const bands=nativeBandRows(),previous=TeacherWorkflow.clone(nativeRows()),grade=[1,2,3,4,5,6].find(g=>!bands.some(item=>+item.g===g));
+  if(!grade)return alert('一至六年級都已設定共同時段。');
+  bands.push({g:grade,d:'二',p:Math.min(grade,6)});syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('已新增年級共同時段');
+}
+function removeNativeBand(index){
+  const bands=nativeBandRows(),band=bands[index];if(!band)return;
+  if(!confirm(`刪除${band.g}年級共同時段時，該年級語言分組也會移除。確定繼續？`))return;
+  const previous=TeacherWorkflow.clone(nativeRows());DATA.nativeGroups=nativeRows().filter(group=>+group.g!==+band.g);bands.splice(index,1);
+  syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('已刪除年級共同時段');
 }
 function addNativeGroup(){
   if(!DATA.nativeLockEnabled)return;
   const groups=nativeRows(),previous=TeacherWorkflow.clone(groups);
-  const grade=[1,2,3,4,5,6].find(g=>!groups.some(item=>+item.g===g))||1;
-  const same=groups.find(item=>+item.g===grade);
-  groups.push({g:grade,d:same?same.d:'二',p:same?+same.p:Math.min(grade,6),lang:'本土語文',t:'',room:'R00',assistant:''});
+  const band=nativeBandRows()[0];if(!band)return alert('請先新增年級共同時段。');
+  const lang='閩南語',qualified=nativeQualifiedTeachers(lang),number=groups.filter(item=>+item.g===+band.g).length+1;
+  groups.push({...band,grp:`${band.g}年級${lang}${number}組`,lang,sources:DATA.classes.filter(c=>+c.g===band.g).map(c=>c.code),students:0,t:qualified.length===1?qualified[0]:'',room:'R00',assistant:'',mode:'實體'});
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('已新增本土語分組');
 }
 function removeNativeGroup(index){
@@ -1825,7 +1926,11 @@ function buildTeacherData(code,busySlots){
     locks:(DATA.locks||[]).filter(item=>item.c===code).map(item=>TeacherWorkflow.clone(item)),
     limits,derived:[],rules:TeacherWorkflow.clone(RULES),blocked:TeacherWorkflow.clone(DATA.blocked||[]),
     gslot:TeacherWorkflow.clone(DATA.gslot),rooms:TeacherWorkflow.clone(DATA.rooms),roster,
-    resGroups:(DATA.resGroups||[]).filter(item=>item.code===code).map(item=>TeacherWorkflow.clone(item)),tcap};
+    resGroups:(DATA.resGroups||[]).filter(item=>item.code===code).map(item=>TeacherWorkflow.clone(item)),tcap,
+    nativeLockEnabled:!!DATA.nativeLockEnabled,
+    nativeBands:(DATA.nativeBands||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
+    nativeGroups:(DATA.nativeGroups||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
+    teacherNativeLangs:TeacherWorkflow.clone(DATA.teacherNativeLangs||{})};
 }
 function openServerTeacherPackage(pkg){
   if(!pkg||pkg.schema!=='schedule-server-teacher-v1'||!pkg.data||!pkg.class_code)
@@ -2138,7 +2243,7 @@ function emptyFormalData(){
   const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
     rules:TeacherWorkflow.clone(DEMO0.rules||[]),blocked:[],gslot,rooms:{R00:99},roster:{},
-    resGroups:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{}};
+    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{}};
 }
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
@@ -2174,13 +2279,15 @@ function initDerived(){
   DATA.classes=DATA.classes||[];DATA.subjects=DATA.subjects||{};DATA.assign=DATA.assign||{};
   DATA.override=DATA.override||{};DATA.locks=DATA.locks||[];DATA.limits=DATA.limits||[];
   DATA.rules=DATA.rules||[];DATA.blocked=DATA.blocked||[];DATA.gslot=DATA.gslot||{};
-  DATA.rooms=DATA.rooms||{R00:99};DATA.roster=DATA.roster||{};
+  DATA.rooms=DATA.rooms||{};if(!Object.prototype.hasOwnProperty.call(DATA.rooms,'R00'))DATA.rooms.R00=99;DATA.roster=DATA.roster||{};
   DATA.resGroups=DATA.resGroups||[];
   DATA.tcap=DATA.tcap||{};
   DATA.teacherAccounts=DATA.teacherAccounts||{};
+  DATA.teacherNativeLangs=DATA.teacherNativeLangs||{};
   if(typeof DATA.nativeLockEnabled!=='boolean')DATA.nativeLockEnabled=
     (Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length>0)||(DATA.locks||[]).some(lock=>lock.s==='本土語文');
   if(!Array.isArray(DATA.nativeGroups))DATA.nativeGroups=null;
+  if(!Array.isArray(DATA.nativeBands))DATA.nativeBands=null;
   DATA.derived=DATA.derived||[];
   DATA.classes.forEach(c=>{if(c.res===undefined)c.res=false});
   OVL=[];
@@ -2447,7 +2554,7 @@ function parseWorkbook(buf){
 
 /* ═══ 母版 v5 解析（極簡8分頁、教師中心配課）═══ */
 function parseV5(wb,S,opt){
-  const nd={};
+  const nd={_warn:[]};
   const sch=opt('學校基本資料');
   nd._school=sch.find(r=>r&&String(r[0]||'').includes('學校'))?.[1]||'';
   // 班級
@@ -2459,21 +2566,25 @@ function parseV5(wb,S,opt){
   }
   if(!nd.classes.length)throw new Error('「班級」分頁無有效資料（灰色範例列請改成貴校班級）');
   // 教師：導師自動由班級分頁帶入；教師分頁填科任/行政/特例導師（同名覆蓋）
-  nd.roster={};nd.tcap={};
+  nd.roster={};nd.tcap={};nd.teacherAccounts={};nd.teacherNativeLangs={};
   for(const c of nd.classes){
     if(c.tutor){nd.roster[c.tutor]='導師';nd.tcap[c.tutor]={cap:0,minus:0}}
   }
   const trows=S('教師');
   const th=(trows[0]||[]).map(x=>String(x||''));
-  const iCap=th.findIndex(x=>x.includes('上限')), iMinus=th.findIndex(x=>x.includes('減課'));
+  const iCap=th.findIndex(x=>x.includes('上限')),iMinus=th.findIndex(x=>x.includes('減課')),
+    iEmail=th.findIndex(x=>x.includes('Google')||x.includes('帳號')),
+    iNative=th.findIndex(x=>x.includes('本土語專長')||x.includes('可授語別'));
   for(const r of trows.slice(1)){
     if(!r||!r[0])continue;
     const nm=String(r[0]).trim();
     nd.roster[nm]=String(r[1]||nd.roster[nm]||'').trim();
     nd.tcap[nm]={cap:iCap>0?(+r[iCap]||0):0, minus:iMinus>0?(+r[iMinus]||0):0};
+    if(iEmail>0&&r[iEmail])nd.teacherAccounts[nm]=String(r[iEmail]).trim().toLowerCase();
+    nd.teacherNativeLangs[nm]=iNative>0?nativeSourceCodes(r[iNative]):[];
   }
   // 場地（以名稱為識別；「原班」→不佔場地）
-  nd.rooms={};const rprio={};
+  nd.rooms={R00:99};const rprio={};
   const roomKey=n=>{n=String(n||'').trim();return !n||/原班/.test(n)?'R00':n};
   for(const r of S('場地').slice(1)){
     if(!r||!r[0])continue;
@@ -2503,26 +2614,35 @@ function parseV5(wb,S,opt){
   }
   for(let g=1;g<=6;g++)if(!nd.gslot[g])nd.gslot[g]=[[1,1,1,1,0,0,0],[1,1,1,1,1,1,1],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0]];
   // 本土語分組 → 鎖定＋場地封鎖＋授課與協同教師硬封鎖
-  nd.locks=[];nd.derived=[];nd.nativeGroups=[];
+  nd.locks=[];nd.derived=[];nd.nativeBands=[];nd.nativeGroups=[];
   const blocked=new Set();const bandDone=new Set();
   for(const r of opt('本土語分組').slice(1)){
     if(!r||!+r[0]||!r[1]||!r[2])continue;
     const g=+r[0],d=String(r[1]).trim(),p=+r[2];
     if(!bandDone.has(g)){
       bandDone.add(g);
+      nd.nativeBands.push({g,d,p});
       nd.classes.filter(c=>c.g===g).forEach(c=>nd.locks.push({c:c.code,d,p,s:'本土語文'}));
     }
     const rk=roomKey(r[5]);
     if(rk!=='R00')blocked.add(rk+'|'+d+'|'+p);
     const teacher=String(r[4]||'').trim(),assistant=String(r[6]||'').trim();
-    nd.nativeGroups.push({g,d,p,lang:String(r[3]||'本土語文').trim(),t:teacher,room:rk,assistant});
+    const lang=String(r[3]||'本土語文').trim();
+    nd.nativeGroups.push({g,d,p,lang,t:teacher,room:rk,assistant,
+      grp:String(r[7]||`${g}年級${lang}${nd.nativeGroups.filter(item=>item.g===g).length+1}組`).trim(),
+      sources:nativeSourceCodes(r[8]||nd.classes.filter(c=>c.g===g).map(c=>c.code)),
+      students:Math.max(0,+r[9]||0),mode:String(r[10]||(/直播/.test(lang)?'直播共學':'實體')).trim()});
     for(const name of [teacher,assistant])if(name){
       nd.derived.push([name,d,p]);
-      if(!Object.prototype.hasOwnProperty.call(nd.roster,name))nd.roster[name]='其他';
+      if(!Object.prototype.hasOwnProperty.call(nd.roster,name)){
+        nd.roster[name]='其他';nd.tcap[name]={cap:0,minus:0};nd.teacherNativeLangs[name]=[];
+        nd._warn.push(`本土語教師「${name}」未列在教師分頁，已自動加入名冊`);
+      }
     }
   }
   nd.blocked=[...blocked].map(x=>{const[a,b,c]=x.split('|');return[a,b,+c]});
   nd.nativeGenerated={blocked:[...blocked],derived:nd.derived.map(row=>row.join('|'))};
+  nd.nativeSchemaVersion=2;
   nd.nativeLockEnabled=nd.nativeGroups.length>0;
   // 配課：導師課自動帶入 → 配課列展開覆蓋（含減課/超鐘點之導師課異動）
   nd.assign={};
@@ -2548,7 +2668,6 @@ function parseV5(wb,S,opt){
     }
     return out;
   };
-  nd._warn=[];
   for(const r of S('配課').slice(1)){
     if(!r||!r[0]||!r[1])continue;
     const t=String(r[0]).trim(),subj=String(r[1]).trim();

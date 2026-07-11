@@ -14,13 +14,32 @@
     value.classes = value.classes || [];
     value.roster = value.roster || {};
     value.teacherAccounts = value.teacherAccounts || {};
+    value.teacherNativeLangs = value.teacherNativeLangs || {};
     value.tcap = value.tcap || {};
     value.subjects = value.subjects || {};
     value.assign = value.assign || {};
     value.override = value.override || {};
     value.locks = value.locks || [];
     value.resGroups = value.resGroups || [];
+    value.nativeBands = Array.isArray(value.nativeBands) ? value.nativeBands : [];
+    value.nativeGroups = Array.isArray(value.nativeGroups) ? value.nativeGroups : [];
+    value.rooms = value.rooms || {};
+    if (!Object.prototype.hasOwnProperty.call(value.rooms, "R00")) value.rooms.R00 = 99;
     return value;
+  }
+
+  function nativeValues(value) {
+    const source = Array.isArray(value) ? value : String(value || "").split(/[、,，;；\s]+/);
+    return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
+  }
+
+  function nativeSkillMatches(language, skills) {
+    const normalize = (value) => String(value || "").replace(/[\s（）()直播共學語文]/g, "");
+    const target = normalize(language);
+    return !!target && nativeValues(skills).some((skill) => {
+      const value = normalize(skill);
+      return value && (target.includes(value) || value.includes(target));
+    });
   }
 
   function esc(value) {
@@ -55,6 +74,7 @@
     const subjectNames = Object.keys(d.subjects);
     const nativeSubject = d.subjects["本土語文"];
     const nativeGroups = Array.isArray(d.nativeGroups) ? d.nativeGroups : [];
+    const nativeBands = Array.isArray(d.nativeBands) ? d.nativeBands : [];
     const nativeLockEnabled = d.nativeLockEnabled === true;
     let assignmentTotal = 0;
     let assignmentMissing = 0;
@@ -99,37 +119,67 @@
     if (nativeSubject && nativeLockEnabled) {
       const nativeStaffSlots = new Set();
       const nativeRoomLoad = new Map();
+      const groupNames = new Set();
       for (let grade = 1; grade <= 6; grade += 1) {
         const hours = Math.max(0, Number((nativeSubject.hours || [])[grade - 1]) || 0);
         const gradeClasses = d.classes.filter((item) => +item.g === grade);
         if (!hours || !gradeClasses.length) continue;
         if (hours !== 1) hard.push(`${grade}年級本土語文每週節數必須為 1`);
+        const bands = nativeBands.filter((item) => +item.g === grade);
+        if (bands.length !== 1) hard.push(`${grade}年級必須且只能設定一個本土語共同時段`);
+        const band = bands[0] || {};
+        const day = String(band.d || "");
+        const period = Number(band.p);
+        if (!DAYS.includes(day) || !Number.isInteger(period) || period < 1 || period > 7) {
+          hard.push(`${grade}年級本土語共同時段不正確`);
+        } else if (!((d.gslot || {})[grade] || [])[DAYS.indexOf(day)]?.[period - 1]) {
+          hard.push(`${grade}年級本土語共同時段不在該年級可排時段內`);
+        }
         const groups = nativeGroups.filter((item) => +item.g === grade);
         if (!groups.length) hard.push(`${grade}年級尚未建立本土語課鎖定分組`);
         const groupSlots = new Set();
         for (const group of groups) {
-          const day = String(group.d || "");
-          const period = Number(group.p);
-          groupSlots.add(`${day}|${period}`);
+          const groupDay = String(group.d || day);
+          const groupPeriod = Number(group.p || period);
+          groupSlots.add(`${groupDay}|${groupPeriod}`);
+          const groupName = String(group.grp || group.group || "").trim();
+          if (!groupName) hard.push(`${grade}年級有本土語分組尚未填寫名稱`);
+          else if (groupNames.has(groupName)) hard.push(`本土語分組名稱重複：${groupName}`);
+          else groupNames.add(groupName);
           if (!String(group.lang || "").trim()) hard.push(`${grade}年級本土語分組尚未填寫語別`);
-          if (!String(group.t || "").trim()) hard.push(`${grade}年級本土語分組尚未填寫授課教師`);
+          const sourceCodes = nativeValues(group.sources);
+          if (!sourceCodes.length) hard.push(`${groupName || `${grade}年級分組`}尚未填寫來源班級`);
+          for (const code of sourceCodes) {
+            const sourceClass = d.classes.find((item) => item.code === code);
+            if (!sourceClass) hard.push(`${groupName || `${grade}年級分組`}引用不存在的來源班級：${code}`);
+            else if (+sourceClass.g !== grade) hard.push(`${groupName || `${grade}年級分組`}的來源班級 ${code} 不屬於${grade}年級`);
+          }
+          if (!(Number(group.students) > 0)) warnings.push(`${groupName || `${grade}年級分組`}尚未填寫學生人數`);
+          const mainTeacher = String(group.t || "").trim();
+          if (!mainTeacher) hard.push(`${grade}年級本土語分組尚未填寫授課教師`);
+          else if (!teacherNames.has(mainTeacher)) hard.push(`${groupName || `${grade}年級分組`}的授課教師不在教師名冊：${mainTeacher}`);
+          else if (!nativeSkillMatches(group.lang, d.teacherNativeLangs[mainTeacher])) warnings.push(`${mainTeacher}尚未標示「${group.lang}」專長`);
+          const assistant = String(group.assistant || "").trim();
+          if (assistant && !teacherNames.has(assistant)) hard.push(`${groupName || `${grade}年級分組`}的協同教師不在教師名冊：${assistant}`);
           for (const teacher of [group.t, group.assistant].map((name) => String(name || "").trim()).filter(Boolean)) {
-            const key = `${teacher}|${day}|${period}`;
-            if (nativeStaffSlots.has(key)) hard.push(`${teacher}在週${day}第${period}節被重複指派本土語分組`);
+            const key = `${teacher}|${groupDay}|${groupPeriod}`;
+            if (nativeStaffSlots.has(key)) hard.push(`${teacher}在週${groupDay}第${groupPeriod}節被重複指派本土語分組`);
             nativeStaffSlots.add(key);
           }
           if (!Object.prototype.hasOwnProperty.call(d.rooms || {}, group.room || "R00")) {
             hard.push(`${grade}年級本土語分組引用不存在的場地：${group.room}`);
           } else if (group.room && group.room !== "R00") {
-            const roomKey = `${group.room}|${day}|${period}`;
+            const roomKey = `${group.room}|${groupDay}|${groupPeriod}`;
             const used = (nativeRoomLoad.get(roomKey) || 0) + 1;
             nativeRoomLoad.set(roomKey, used);
             if (used > Number(d.rooms[group.room] || 0)) {
-              hard.push(`${group.room}在週${day}第${period}節超過本土語分組可用容量`);
+              hard.push(`${group.room}在週${groupDay}第${groupPeriod}節超過本土語分組可用容量`);
             }
           }
-          if (!DAYS.includes(day) || !Number.isInteger(period) || period < 1 || period > 7) {
+          if (!DAYS.includes(groupDay) || !Number.isInteger(groupPeriod) || groupPeriod < 1 || groupPeriod > 7) {
             hard.push(`${grade}年級本土語分組的固定時段不正確`);
+          } else if (groupDay !== day || groupPeriod !== period) {
+            hard.push(`${groupName || `${grade}年級分組`}未使用年級共同時段`);
           }
         }
         if (groupSlots.size > 1) hard.push(`${grade}年級本土語分組必須使用相同星期與節次`);
@@ -148,6 +198,7 @@
           }
         }
         if (slots.size > 1) hard.push(`${grade}年級本土語分組必須使用相同星期與節次`);
+        if (slots.size === 1 && !slots.has(`${day}|${period}`)) hard.push(`${grade}年級班級鎖課與共同時段不一致`);
       }
     } else if (nativeLockEnabled) {
       hard.push("已設定本土語分組，但科目節數缺少「本土語文」");
@@ -217,12 +268,13 @@
     const target = document.getElementById("setupTeachersTable");
     if (!target) return;
     const names = Object.keys(d.roster);
-    target.innerHTML = `<thead><tr><th>教師姓名</th><th>角色</th><th>Google 帳號</th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
+    target.innerHTML = `<thead><tr><th>教師姓名</th><th>角色</th><th>Google 帳號</th><th>本土語專長</th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
       const cap = d.tcap[name] || {cap: 0, minus: 0};
       return `<tr>
         <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
         <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setTeacher(${index},'role',this.value)">${ROLES.map((role) => `<option ${d.roster[name] === role ? "selected" : ""}>${role}</option>`).join("")}</select></td>
         <td><input type="email" value="${esc(d.teacherAccounts[name] || "")}" placeholder="name@school.edu.tw" onchange="ScheduleSetup.setTeacher(${index},'email',this.value)"></td>
+        <td><input value="${esc(nativeValues(d.teacherNativeLangs[name]).join("、"))}" placeholder="例：閩南語、客語" onchange="ScheduleSetup.setTeacher(${index},'nativeLangs',this.value)"></td>
         <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.cap) || 0}" onchange="ScheduleSetup.setTeacher(${index},'cap',this.value)"></td>
         <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.minus) || 0}" onchange="ScheduleSetup.setTeacher(${index},'minus',this.value)"></td>
         <td><button class="icon-btn" type="button" title="刪除教師" aria-label="刪除教師" onclick="ScheduleSetup.removeTeacher(${index})">×</button></td>
@@ -262,6 +314,7 @@
       `<tr><td class="cls">${esc(item.code)}</td>${subjects.map((subject) => {
         const hours = Number((d.subjects[subject].hours || [])[item.g - 1]) || 0;
         if (!hours) return '<td class="na">–</td>';
+        if (subject === "本土語文" && d.nativeLockEnabled === true) return '<td class="na">由本土語課鎖定管理</td>';
         const selected = (d.assign[item.code] || {})[subject] || "";
         return `<td><select class="${selected ? "" : "empty"}" data-code="${esc(item.code)}" data-subject="${esc(subject)}" onchange="ScheduleSetup.setAssignment(this.dataset.code,this.dataset.subject,this.value)">${teacherOptions(selected, true)}</select><small class="setup-hours">${hours} 節</small></td>`;
       }).join("")}</tr>`).join("")}</tbody>`;
@@ -327,6 +380,7 @@
     delete d.assign[old]; delete d.override[old];
     d.locks.forEach((lock) => { if (lock.c === old) lock.c = next; });
     d.resGroups.forEach((group) => { if (group.code === old) group.code = next; });
+    d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).map((code) => code === old ? next : code); });
     adapter.getLimits().forEach((row) => { if (row[0] === old) row[0] = next; });
     commit(`班級 ${old} 已更名為 ${next}。`);
   }
@@ -339,6 +393,7 @@
     delete d.assign[item.code]; delete d.override[item.code];
     d.locks = d.locks.filter((lock) => lock.c !== item.code);
     d.resGroups = d.resGroups.filter((group) => group.code !== item.code);
+    d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => code !== item.code); });
     const limits = adapter.getLimits();
     for (let row = limits.length - 1; row >= 0; row -= 1) if (limits[row][0] === item.code) limits.splice(row, 1);
     commit(`已刪除班級 ${item.code}。`);
@@ -367,6 +422,7 @@
     d.override = Object.fromEntries(Object.entries(d.override).filter(([code]) => codes.has(code)));
     d.locks = d.locks.filter((lock) => codes.has(lock.c));
     d.resGroups = d.resGroups.filter((group) => codes.has(group.code));
+    d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => codes.has(code)); });
     commit(`已依班級數建立 ${nextClasses.length} 個班級。`);
   }
 
@@ -375,6 +431,7 @@
     const name = uniqueName("新教師", Object.keys(d.roster));
     d.roster[name] = "科任";
     d.teacherAccounts[name] = "";
+    d.teacherNativeLangs[name] = [];
     d.tcap[name] = {cap: 20, minus: 0};
     commit(`已新增 ${name}。`);
   }
@@ -386,6 +443,7 @@
     d.tcap[name] = d.tcap[name] || {cap: 0, minus: 0};
     if (key === "role") d.roster[name] = value;
     else if (key === "email") d.teacherAccounts[name] = String(value || "").trim().toLowerCase();
+    else if (key === "nativeLangs") d.teacherNativeLangs[name] = nativeValues(value);
     else d.tcap[name][key] = Math.max(0, Number(value) || 0);
     commit(`${name}的教師資料已更新。`);
   }
@@ -400,10 +458,15 @@
     d.roster[next] = d.roster[old]; delete d.roster[old];
     d.tcap[next] = d.tcap[old] || {cap: 0, minus: 0}; delete d.tcap[old];
     d.teacherAccounts[next] = d.teacherAccounts[old] || ""; delete d.teacherAccounts[old];
+    d.teacherNativeLangs[next] = nativeValues(d.teacherNativeLangs[old]); delete d.teacherNativeLangs[old];
     d.classes.forEach((item) => { if (item.tutor === old) item.tutor = next; });
     Object.values(d.assign).forEach((row) => Object.keys(row).forEach((subject) => { if (row[subject] === old) row[subject] = next; }));
     d.resGroups.forEach((group) => { if (group.t === old) group.t = next; });
     d.locks.forEach((lock) => { if (lock.teacher === old) lock.teacher = next; });
+    d.nativeGroups.forEach((group) => {
+      if (group.t === old) group.t = next;
+      if (group.assistant === old) group.assistant = next;
+    });
     adapter.getLimits().forEach((row) => { if (row[0] === old) row[0] = next; });
     commit(`教師 ${old} 已更名為 ${next}。`);
   }
@@ -412,10 +475,14 @@
     const d = data();
     const name = Object.keys(d.roster)[index];
     if (!name || !confirm(`確定刪除教師 ${name}？相關導師與配課欄位會改為未指定。`)) return;
-    delete d.roster[name]; delete d.tcap[name]; delete d.teacherAccounts[name];
+    delete d.roster[name]; delete d.tcap[name]; delete d.teacherAccounts[name]; delete d.teacherNativeLangs[name];
     d.classes.forEach((item) => { if (item.tutor === name) item.tutor = ""; });
     Object.values(d.assign).forEach((row) => Object.keys(row).forEach((subject) => { if (row[subject] === name) row[subject] = ""; }));
     d.resGroups.forEach((group) => { if (group.t === name) group.t = ""; });
+    d.nativeGroups.forEach((group) => {
+      if (group.t === name) group.t = "";
+      if (group.assistant === name) group.assistant = "";
+    });
     const limits = adapter.getLimits();
     for (let row = limits.length - 1; row >= 0; row -= 1) if (limits[row][0] === name) limits.splice(row, 1);
     commit(`已刪除教師 ${name}。`);
