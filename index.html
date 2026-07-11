@@ -36,18 +36,19 @@ body.formal-mode.formal-locked{display:block}.formal-mode.formal-locked>.formal-
 .demo-mode .formal-only{display:none!important}.formal-mode .demo-only{display:none!important}
 .demo-mode .auth-panel{display:none}
 .formal-mode .api-key-fallback{display:none!important}
-aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:24px 14px;position:fixed;top:0;bottom:0;border-right:1px solid var(--line)}
+aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:24px 14px;position:fixed;top:0;bottom:0;border-right:1px solid var(--line);display:flex;flex-direction:column}
 .logo{display:flex;align-items:center;gap:11px;padding:0 8px 18px;border-bottom:2px dashed #ecdce6;margin-bottom:14px}
 .logo .mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--pink),var(--lav));display:grid;place-items:center;font-size:23px}
 .logo b{font-size:17.5px;display:block;line-height:1.25}
 .logo small{font-size:13px;color:var(--muted)}
+nav{min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#d9ccdf transparent}
 nav button{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border:0;background:none;color:var(--ink);font:inherit;font-size:16.5px;border-radius:14px;cursor:pointer;margin-bottom:5px;text-align:left;font-weight:500}
 nav button:hover{background:#fff}
 nav button.on{background:#fff;color:var(--pink-d);font-weight:900;box-shadow:var(--shadow)}
 nav .ic{width:22px;text-align:center;font-size:17px}
 .nav-group{padding:10px 13px 5px;color:#9a8ca0;font-size:12px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:5px}
 .nav-group:first-child{border-top:0;margin-top:0;padding-top:3px}
-.side-foot{position:absolute;bottom:16px;left:16px;right:16px;font-size:12.5px;color:var(--muted);line-height:1.65}
+.side-foot{flex:0 0 auto;margin-top:10px;padding:10px 2px 0;border-top:1px solid rgba(130,105,130,.12);font-size:12.5px;color:var(--muted);line-height:1.65}
 main{margin-left:230px;width:calc(100% - 230px);min-width:0;min-height:100vh;display:flex;flex:1;flex-direction:column;padding:22px 26px 60px;max-width:none}
 h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .sub{font-size:15.5px;color:var(--muted);margin-bottom:16px}
@@ -236,7 +237,7 @@ body.server-teacher-mode .server-teacher-only{display:flex}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
 @media(max-width:800px){
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
-  .logo{margin-bottom:8px;padding-bottom:10px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .logo{margin-bottom:8px;padding-bottom:10px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
@@ -306,6 +307,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button data-v="run"><span class="ic">⚡</span>執行排課</button>
     <button data-v="edit"><span class="ic">↔</span>課表編修</button>
     <button data-v="tt"><span class="ic">📋</span>課表檢視</button>
+    <button data-v="export"><span class="ic">⇩</span>課表匯出</button>
     <div class="nav-group">教師協作</div>
     <button class="auth-teacher-nav" data-v="my"><span class="ic">▦</span>我的課表</button>
     <button data-v="tutor"><span class="ic">✏️</span>導師自排</button>
@@ -740,8 +742,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><i style="background:var(--mint)"></i>生活/綜合</span><span><i style="background:#f1ebe6"></i>彈性</span>
     </div>
   </div>
+</section>
+
+<!-- ═══ 課表匯出 ═══ -->
+<section class="view" id="v-export">
+  <h1>⇩ 課表匯出</h1>
+  <div class="sub">集中下載校內課表，以及人力資源網與校務系統上傳檔案。</div>
   <div class="panel export-panel">
-    <h2>課表匯出</h2>
+    <h2>匯出格式</h2>
     <div class="sub">班級與教師課表供校內使用；系統上傳檔會先檢查科目對應及教師識別資料。</div>
     <div class="export-actions">
       <button class="btn soft sm" type="button" onclick="exportClassTimetables()">匯出班級課表</button>
@@ -859,6 +867,7 @@ function go(v){
   document.getElementById('v-'+v).classList.add('on');
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(v==='tt')fillTT();
+  if(v==='export')renderExportPanel();
   if(v==='tutor')fillTutor();
   if(v==='edit')renderEditor();
   if(v==='build')ScheduleSetup.render();
