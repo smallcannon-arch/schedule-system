@@ -73,7 +73,8 @@
         if (!items.length) html += "<td></td>";
         else if (items.length === 1) {
           const item = items[0];
-          const suffix = item.source === "overlay" ? "・資源班" : "";
+          const suffix = item.source === "overlay" ? "・資源班" :
+            item.source === "native" ? `・${item.group || "本土語"}` : "";
           html += `<td><div class="les ${root.cat ? root.cat(item.subject) : ""}"><b>${root.esc(item.subject)}</b><small>${root.esc(item.class_label + suffix)}</small></div></td>`;
         } else {
           html += `<td><div class="les conflict"><b>衝堂 ${items.length} 筆</b>${items.map((item) => `<small>${root.esc(item.subject)}｜${root.esc(item.class_label)}</small>`).join("")}</div></td>`;

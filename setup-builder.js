@@ -3,6 +3,7 @@
 
   const ROLES = ["導師", "科任", "組長", "主任", "資源班教師", "鐘點教師", "其他"];
   const CLASS_SEQUENCE = "甲乙丙丁戊己庚辛壬癸";
+  const DAYS = ["一", "二", "三", "四", "五"];
   let adapter = null;
   let activeTab = "classes";
   let lastMessage = "";
@@ -52,6 +53,8 @@
     const classCodes = new Set();
     const teacherNames = new Set(Object.keys(d.roster));
     const subjectNames = Object.keys(d.subjects);
+    const nativeSubject = d.subjects["本土語文"];
+    const nativeGroups = Array.isArray(d.nativeGroups) ? d.nativeGroups : [];
     let assignmentTotal = 0;
     let assignmentMissing = 0;
 
@@ -81,6 +84,7 @@
         const hours = Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0);
         if (!hours) continue;
         assignmentTotal += 1;
+        if (subject === "本土語文") continue;
         const teacher = d.assign[item.code] && d.assign[item.code][subject];
         if (!teacher) {
           assignmentMissing += 1;
@@ -89,6 +93,63 @@
           hard.push(`${code} ${subject}的教師不在名冊：${teacher}`);
         }
       }
+    }
+
+    if (nativeSubject) {
+      const nativeStaffSlots = new Set();
+      const nativeRoomLoad = new Map();
+      for (let grade = 1; grade <= 6; grade += 1) {
+        const hours = Math.max(0, Number((nativeSubject.hours || [])[grade - 1]) || 0);
+        const gradeClasses = d.classes.filter((item) => +item.g === grade);
+        if (!hours || !gradeClasses.length) continue;
+        if (hours !== 1) hard.push(`${grade}年級本土語文每週節數必須為 1`);
+        const groups = nativeGroups.filter((item) => +item.g === grade);
+        if (!groups.length) hard.push(`${grade}年級尚未建立本土語硬鎖分組`);
+        const groupSlots = new Set();
+        for (const group of groups) {
+          const day = String(group.d || "");
+          const period = Number(group.p);
+          groupSlots.add(`${day}|${period}`);
+          if (!String(group.lang || "").trim()) hard.push(`${grade}年級本土語分組尚未填寫語別`);
+          if (!String(group.t || "").trim()) hard.push(`${grade}年級本土語分組尚未填寫授課教師`);
+          for (const teacher of [group.t, group.assistant].map((name) => String(name || "").trim()).filter(Boolean)) {
+            const key = `${teacher}|${day}|${period}`;
+            if (nativeStaffSlots.has(key)) hard.push(`${teacher}在週${day}第${period}節被重複指派本土語分組`);
+            nativeStaffSlots.add(key);
+          }
+          if (!Object.prototype.hasOwnProperty.call(d.rooms || {}, group.room || "R00")) {
+            hard.push(`${grade}年級本土語分組引用不存在的場地：${group.room}`);
+          } else if (group.room && group.room !== "R00") {
+            const roomKey = `${group.room}|${day}|${period}`;
+            const used = (nativeRoomLoad.get(roomKey) || 0) + 1;
+            nativeRoomLoad.set(roomKey, used);
+            if (used > Number(d.rooms[group.room] || 0)) {
+              hard.push(`${group.room}在週${day}第${period}節超過本土語分組可用容量`);
+            }
+          }
+          if (!DAYS.includes(day) || !Number.isInteger(period) || period < 1 || period > 7) {
+            hard.push(`${grade}年級本土語分組的固定時段不正確`);
+          }
+        }
+        if (groupSlots.size > 1) hard.push(`${grade}年級本土語分組必須使用相同星期與節次`);
+        const slots = new Set();
+        for (const item of gradeClasses) {
+          const locks = (d.locks || []).filter((lock) =>
+            lock.c === item.code && lock.s === "本土語文");
+          if (locks.length !== 1) {
+            hard.push(`${item.code} 本土語文必須設定且只能有一個固定節次`);
+            continue;
+          }
+          const lock = locks[0];
+          slots.add(`${lock.d}|${+lock.p}`);
+          if (!((d.gslot || {})[grade] || [])[DAYS.indexOf(lock.d)]?.[+lock.p - 1]) {
+            hard.push(`${item.code} 本土語固定節次不在該年級可排時段內`);
+          }
+        }
+        if (slots.size > 1) hard.push(`${grade}年級本土語分組必須使用相同星期與節次`);
+      }
+    } else if (nativeGroups.length) {
+      hard.push("已設定本土語分組，但科目節數缺少「本土語文」");
     }
 
     for (const name of teacherNames) {
