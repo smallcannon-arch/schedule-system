@@ -185,7 +185,7 @@ body.platform-admin-mode .admin-dock{display:none!important}
 .setup-class-format{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.setup-class-format h3{font-size:17px;margin-bottom:10px}
 .platform-school-actions{margin-bottom:0}
 .platform-school-actions[hidden]{display:none}
-body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #v-build>.step-help,body.platform-admin-mode #setupSummary,body.platform-admin-mode #v-build>.setup-tabs,body.platform-admin-mode #v-build>.setup-pane,body.platform-admin-mode .setup-ready-only{display:none}
+body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #v-build>.setup-import-hint,body.platform-admin-mode #v-build>.step-help,body.platform-admin-mode #setupSummary,body.platform-admin-mode #v-build>.setup-tabs,body.platform-admin-mode #v-build>.setup-pane,body.platform-admin-mode .setup-ready-only{display:none}
 body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:not(.platform-admin-mode) .setup-ready-only,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-tabs,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-pane{display:none!important}
 .platform-school-form{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(170px,1.15fr) minmax(190px,1.3fr) auto auto;gap:8px;align-items:end}
 .platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
@@ -195,6 +195,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
 .setup-actions{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;margin:14px 0 18px}.setup-actions .btn{white-space:nowrap}
+.setup-import-hint{margin:12px 0 -4px;color:var(--muted);font-size:14px;font-weight:800}.setup-import-hint b{color:var(--ink)}
 .setup-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#f3ecf4;border-radius:8px;margin-bottom:14px}
 .setup-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:16px;font-weight:900;padding:10px 18px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .setup-tabs button.on{background:#fff;color:var(--pink-d);box-shadow:0 1px 4px rgba(0,0,0,.1)}
@@ -355,10 +356,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <li><b>保存案件：</b>按立即暫存後，再前往配課檢核與排課條件設定。</li>
     </ol><div class="step-help-note">Excel 匯入會取代目前案件資料；匯入前請先確認雲端暫存已更新。</div></div>
   </details>
+  <div class="setup-import-hint">Excel 匯入：<b>下載 Excel 母版填寫後再上傳</b>。</div>
   <div class="setup-actions">
     <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
-    <label class="btn soft sm" style="cursor:pointer">從 Excel 匯入<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
     <a class="btn soft sm" style="text-decoration:none" href="template.xlsx" download="排課母版範本.xlsx">下載 Excel 母版</a>
+    <label class="btn soft sm" style="cursor:pointer">上傳填妥的 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
     <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
   </div>
   <section class="panel platform-school-actions" id="platformSchoolActions" hidden>
@@ -2144,7 +2146,7 @@ function configureAppMode(){
   document.getElementById('appBrandName').textContent='智慧排課系統';
   document.getElementById('appBrandMeta').textContent='正式排課・Google 驗證';
   document.getElementById('appSideFoot').innerHTML='正式排課系統<br>CP-SAT 求解・雲端暫存<br>教師存檔手動讀取';
-  document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「從 Excel 匯入」。';
+  document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
   document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
   document.getElementById('runIntro').textContent='正式排課由 CP-SAT 執行，完成後再發布給教師查看或調整。';
