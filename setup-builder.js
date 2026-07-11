@@ -55,6 +55,7 @@
     const subjectNames = Object.keys(d.subjects);
     const nativeSubject = d.subjects["本土語文"];
     const nativeGroups = Array.isArray(d.nativeGroups) ? d.nativeGroups : [];
+    const nativeLockEnabled = d.nativeLockEnabled === true;
     let assignmentTotal = 0;
     let assignmentMissing = 0;
 
@@ -84,7 +85,7 @@
         const hours = Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0);
         if (!hours) continue;
         assignmentTotal += 1;
-        if (subject === "本土語文") continue;
+        if (subject === "本土語文" && nativeLockEnabled) continue;
         const teacher = d.assign[item.code] && d.assign[item.code][subject];
         if (!teacher) {
           assignmentMissing += 1;
@@ -95,7 +96,7 @@
       }
     }
 
-    if (nativeSubject) {
+    if (nativeSubject && nativeLockEnabled) {
       const nativeStaffSlots = new Set();
       const nativeRoomLoad = new Map();
       for (let grade = 1; grade <= 6; grade += 1) {
@@ -104,7 +105,7 @@
         if (!hours || !gradeClasses.length) continue;
         if (hours !== 1) hard.push(`${grade}年級本土語文每週節數必須為 1`);
         const groups = nativeGroups.filter((item) => +item.g === grade);
-        if (!groups.length) hard.push(`${grade}年級尚未建立本土語硬鎖分組`);
+        if (!groups.length) hard.push(`${grade}年級尚未建立本土語課鎖定分組`);
         const groupSlots = new Set();
         for (const group of groups) {
           const day = String(group.d || "");
@@ -148,7 +149,7 @@
         }
         if (slots.size > 1) hard.push(`${grade}年級本土語分組必須使用相同星期與節次`);
       }
-    } else if (nativeGroups.length) {
+    } else if (nativeLockEnabled) {
       hard.push("已設定本土語分組，但科目節數缺少「本土語文」");
     }
 
