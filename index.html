@@ -368,7 +368,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <div class="setup-import-hint">Excel 匯入：<b>下載 Excel 母版填寫後再上傳</b>。</div>
   <div class="setup-actions">
     <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
-    <a class="btn soft sm" style="text-decoration:none" href="template.xlsx?v=20260711-2" download="排課母版範本_v6.xlsx">下載 Excel 母版</a>
+    <a class="btn soft sm" style="text-decoration:none" href="template.xlsx?v=20260712-1" download="排課母版範本_v6.xlsx">下載 Excel 母版</a>
     <label class="btn soft sm" style="cursor:pointer">上傳填妥的 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
     <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
   </div>
@@ -450,6 +450,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 
   <section class="setup-pane" id="setup-teachers">
     <div class="panel tbl">
+      <div class="sub" style="margin-bottom:12px"><b>學校 Google 帳號用途：</b>發布課表後，導師可調整負責班級；科任與資源班教師可查看個人課表。只填帳號，不需提供密碼。</div>
       <table class="setup-table" id="setupTeachersTable"></table>
       <div class="setup-actions">
         <button class="btn soft sm" type="button" onclick="ScheduleSetup.addTeacher()">新增教師</button>

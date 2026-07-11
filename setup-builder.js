@@ -271,7 +271,7 @@
     const target = document.getElementById("setupTeachersTable");
     if (!target) return;
     const names = Object.keys(d.roster);
-    target.innerHTML = `<thead><tr><th>教師姓名</th><th>角色</th><th>Google 帳號</th><th>本土語專長</th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
+    target.innerHTML = `<thead><tr><th>教師姓名</th><th>角色</th><th>學校 Google 帳號<br><small>課表登入用</small></th><th>本土語專長</th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
       const cap = d.tcap[name] || {cap: 0, minus: 0};
       return `<tr>
         <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
@@ -284,7 +284,7 @@
       </tr>`;
     }).join("")}</tbody>`;
     const status = document.getElementById("setupTeacherSyncStatus");
-    if (status) status.textContent = syncMessage || "Google 帳號填妥後，可一次同步到教師登入名冊。";
+    if (status) status.textContent = syncMessage || "學校 Google 帳號填妥後，可一次同步到教師登入名冊。";
   }
 
   function renderSubjects() {
