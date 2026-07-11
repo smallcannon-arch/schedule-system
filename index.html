@@ -36,11 +36,11 @@ body.formal-mode.formal-locked{display:block}.formal-mode.formal-locked>.formal-
 .demo-mode .formal-only{display:none!important}.formal-mode .demo-only{display:none!important}
 .demo-mode .auth-panel{display:none}
 .formal-mode .api-key-fallback{display:none!important}
-aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:24px 14px;position:fixed;top:0;bottom:0;border-right:1px solid var(--line);display:flex;flex-direction:column}
-.logo{display:flex;align-items:center;gap:11px;padding:0 8px 18px;border-bottom:2px dashed #ecdce6;margin-bottom:14px}
-.logo .mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--pink),var(--lav));display:grid;place-items:center;font-size:23px}
-.logo b{font-size:17.5px;display:block;line-height:1.25}
-.logo small{font-size:13px;color:var(--muted)}
+aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:14px;position:fixed;top:0;bottom:0;border-right:1px solid var(--line);display:flex;flex-direction:column}
+.logo{display:flex;align-items:center;gap:12px;padding:14px 12px;margin-bottom:10px;border:1px solid rgba(194,85,127,.12);border-radius:8px;background:rgba(255,255,255,.68)}
+.logo .mark{width:42px;height:42px;flex:0 0 auto;border:1px solid #d8c8dd;border-radius:7px;background:#fff;display:grid;place-items:center;color:var(--pink-d);font-size:21px}
+.logo-copy{min-width:0}.logo b{font-size:17.5px;display:block;line-height:1.3;white-space:nowrap}
+.logo small{display:block;margin-top:3px;font-size:12px;color:var(--muted);white-space:nowrap}
 nav{min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#d9ccdf transparent}
 nav button{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border:0;background:none;color:var(--ink);font:inherit;font-size:16.5px;border-radius:14px;cursor:pointer;margin-bottom:5px;text-align:left;font-weight:500}
 nav button:hover{background:#fff}
@@ -48,7 +48,10 @@ nav button.on{background:#fff;color:var(--pink-d);font-weight:900;box-shadow:var
 nav .ic{width:22px;text-align:center;font-size:17px}
 .nav-group{padding:10px 13px 5px;color:#9a8ca0;font-size:12px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:5px}
 .nav-group:first-child{border-top:0;margin-top:0;padding-top:3px}
-.side-foot{flex:0 0 auto;margin-top:10px;padding:10px 2px 0;border-top:1px solid rgba(130,105,130,.12);font-size:12.5px;color:var(--muted);line-height:1.65}
+.side-foot{flex:0 0 auto;margin-top:10px;padding:12px;border:1px solid rgba(194,85,127,.12);border-radius:8px;background:rgba(255,255,255,.68);color:var(--muted)}
+.side-status{display:flex;align-items:center;gap:9px}.side-status-dot{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:var(--mint-d);box-shadow:0 0 0 4px rgba(31,138,109,.12)}
+.side-status b{display:block;color:var(--ink);font-size:12.5px;line-height:1.35}.side-status small{display:block;margin-top:2px;font-size:11.5px;line-height:1.35}
+.side-foot-meta{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.55}
 main{margin-left:230px;width:calc(100% - 230px);min-width:0;min-height:100vh;display:flex;flex:1;flex-direction:column;padding:22px 26px 60px;max-width:none}
 h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .sub{font-size:15.5px;color:var(--muted);margin-bottom:16px}
@@ -165,14 +168,14 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .auth-status[data-kind="error"]{color:#a5384b;font-weight:800}
 .auth-admin-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .auth-admin-actions[hidden]{display:none}
-.admin-dock{display:none;position:sticky;top:12px;z-index:30;width:min(980px,calc(100% - 24px));margin:0 0 20px auto;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(72,55,78,.10)}
+.admin-dock{display:none;position:sticky;top:12px;z-index:30;width:100%;margin:0 0 20px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(72,55,78,.10)}
 body.school-admin-mode .admin-dock{display:block}
 body.platform-admin-mode .admin-dock{display:none!important}
 .admin-dock summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:12px 14px;cursor:pointer;list-style:none}
 .admin-dock summary::-webkit-details-marker{display:none}
-.admin-dock-copy{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:3px 10px;min-width:0}
-.admin-dock-copy strong{color:var(--ink);font-size:15px}.admin-dock-copy b{overflow-wrap:anywhere;color:var(--ink);font-size:14.5px}
-.admin-dock-copy .auth-status{grid-column:1/-1;margin:0;font-size:13px}
+.admin-dock-copy{display:grid;grid-template-columns:auto minmax(260px,max-content) minmax(260px,1fr);align-items:center;gap:10px 14px;min-width:0}
+.admin-dock-copy strong{padding-right:14px;border-right:1px solid var(--line);color:var(--ink);font-size:15px}.admin-dock-copy b{overflow-wrap:anywhere;color:var(--ink);font-size:14.5px}
+.admin-dock-copy .auth-status{grid-column:auto;margin:0;padding:7px 10px;border-left:3px solid var(--mint-d);border-radius:4px;background:#f2fbf7;font-size:12.5px;line-height:1.4}
 .admin-dock-toggle{padding:7px 11px;border:1px solid var(--line);border-radius:6px;background:#f7f4f8;color:var(--lav-d);font-size:13px;font-weight:900}
 .admin-dock-toggle::before{content:"管理"}.admin-dock[open] .admin-dock-toggle::before{content:"收合"}
 .admin-dock-body{padding:14px;border-top:1px solid var(--line);background:#fbfafc}
@@ -237,7 +240,7 @@ body.server-teacher-mode .server-teacher-only{display:flex}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
 @media(max-width:800px){
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
-  .logo{margin-bottom:8px;padding-bottom:10px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
+  .logo{margin-bottom:8px;padding:10px 12px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
@@ -248,7 +251,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
-  .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
+  .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{align-items:stretch;flex-direction:column}.formal-request-link{text-align:center}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
@@ -291,8 +294,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 
 <aside>
   <div class="logo">
-    <div class="mark">🍡</div>
-    <div><b id="appBrandName">智慧排課 DEMO</b><small id="appBrandMeta">示範資料・已匿名化</small></div>
+    <div class="mark" aria-hidden="true">▦</div>
+    <div class="logo-copy"><b id="appBrandName">智慧排課 DEMO</b><small id="appBrandMeta">示範資料・已匿名化</small></div>
   </div>
   <nav>
     <div class="nav-group">資料準備</div>
@@ -312,7 +315,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="auth-teacher-nav" data-v="my"><span class="ic">▦</span>我的課表</button>
     <button data-v="tutor"><span class="ic">✏️</span>導師自排</button>
   </nav>
-  <div class="side-foot" id="appSideFoot">DEMO 公開版・瀏覽器內真實求解<br>16 班・示範教師資料（匿名）<br>正式版引擎為 CP-SAT，品質更佳</div>
+  <div class="side-foot" id="appSideFoot">
+    <div class="side-status"><span class="side-status-dot"></span><div><b>示範服務運作中</b><small>瀏覽器內真實求解</small></div></div>
+    <div class="side-foot-meta">16 班匿名資料<br>正式版使用 CP-SAT 引擎</div>
+  </div>
 </aside>
 
 <main>
@@ -2383,7 +2389,7 @@ function configureAppMode(){
   document.title='智慧排課系統｜正式版';
   document.getElementById('appBrandName').textContent='智慧排課系統';
   document.getElementById('appBrandMeta').textContent='正式排課・Google 驗證';
-  document.getElementById('appSideFoot').innerHTML='正式排課系統<br>CP-SAT 求解・雲端暫存<br>教師存檔手動讀取';
+  document.getElementById('appSideFoot').innerHTML='<div class="side-status"><span class="side-status-dot"></span><div><b>正式服務運作中</b><small>CP-SAT 排課引擎</small></div></div><div class="side-foot-meta">雲端暫存已啟用<br>教師存檔由管理員讀取</div>';
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
   document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
