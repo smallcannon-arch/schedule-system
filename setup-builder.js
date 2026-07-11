@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
 
-  const ROLES = ["導師", "科任", "組長", "主任", "資源班教師", "鐘點教師", "其他"];
+  const ROLES = ["導師", "科任", "組長", "主任", "資源班教師", "教支人員", "鐘點教師", "其他"];
   const CLASS_SEQUENCE = "甲乙丙丁戊己庚辛壬癸";
   const DAYS = ["一", "二", "三", "四", "五"];
   let adapter = null;
@@ -159,7 +159,7 @@
           const mainTeacher = String(group.t || "").trim();
           if (!mainTeacher) hard.push(`${grade}年級本土語分組尚未填寫授課教師`);
           else if (!teacherNames.has(mainTeacher)) hard.push(`${groupName || `${grade}年級分組`}的授課教師不在教師名冊：${mainTeacher}`);
-          else if (!nativeSkillMatches(group.lang, d.teacherNativeLangs[mainTeacher])) warnings.push(`${mainTeacher}尚未標示「${group.lang}」專長`);
+          else if (!nativeSkillMatches(group.lang, d.teacherNativeLangs[mainTeacher])) warnings.push(`${mainTeacher}尚未標示可授「${group.lang}」`);
           const assistant = String(group.assistant || "").trim();
           if (assistant && !teacherNames.has(assistant)) hard.push(`${groupName || `${grade}年級分組`}的協同教師不在教師名冊：${assistant}`);
           for (const teacher of [group.t, group.assistant].map((name) => String(name || "").trim()).filter(Boolean)) {
@@ -207,8 +207,8 @@
 
     for (const name of teacherNames) {
       const email = String(d.teacherAccounts[name] || "").trim();
-      if (!email) warnings.push(`${name}尚未填 Google 帳號`);
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) warnings.push(`${name}的 Google 帳號格式不正確`);
+      if (!email && d.roster[name] !== "教支人員") warnings.push(`${name}尚未填 Google 帳號`);
+      else if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) warnings.push(`${name}的 Google 帳號格式不正確`);
     }
 
     return {
@@ -271,7 +271,7 @@
     const target = document.getElementById("setupTeachersTable");
     if (!target) return;
     const names = Object.keys(d.roster);
-    target.innerHTML = `<thead><tr><th>教師姓名</th><th>角色</th><th>學校 Google 帳號<br><small>課表登入用</small></th><th>本土語專長</th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
+    target.innerHTML = `<thead><tr><th>教師姓名</th><th>身分</th><th>學校 Google 帳號<br><small>教支人員可選填</small></th><th>可授本土語別<br><small>可複選</small></th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
       const cap = d.tcap[name] || {cap: 0, minus: 0};
       return `<tr>
         <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
@@ -284,7 +284,7 @@
       </tr>`;
     }).join("")}</tbody>`;
     const status = document.getElementById("setupTeacherSyncStatus");
-    if (status) status.textContent = syncMessage || "學校 Google 帳號填妥後，可一次同步到教師登入名冊。";
+    if (status) status.textContent = syncMessage || "學校 Google 帳號填妥後，可一次同步到教師登入名冊；教支人員若不需登入可留空。";
   }
 
   function renderSubjects() {
@@ -506,15 +506,19 @@
 
   async function syncTeachers() {
     const d = data();
-    const records = Object.keys(d.roster).map((name) => {
+    const allRecords = Object.keys(d.roster).map((name) => {
       const classCodes = d.classes.filter((item) => item.tutor === name).map((item) => item.code);
       return {
         name,
         email: String(d.teacherAccounts[name] || "").trim().toLowerCase(),
         role: classCodes.length ? "導師" : portalRole(d.roster[name] || ""),
         class_codes: classCodes,
+        sourceRole: d.roster[name] || "",
       };
     });
+    const records = allRecords.filter((record) => record.email || record.sourceRole !== "教支人員")
+      .map(({sourceRole, ...record}) => record);
+    const skipped = allRecords.length - records.length;
     const invalid = records.find((record) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email));
     if (invalid) {
       syncMessage = `${invalid.name}尚未填寫有效的 Google 帳號。`;
@@ -524,7 +528,7 @@
     try {
       syncMessage = "正在同步教師登入名冊…"; renderTeachers();
       const result = await adapter.syncTeachers(records);
-      syncMessage = `已同步 ${result.imported} 位教師，可使用學校 Google 帳號登入。`;
+      syncMessage = `已同步 ${result.imported} 位教師，可使用學校 Google 帳號登入。${skipped ? `另有 ${skipped} 位未填帳號的教支人員未建立登入權限。` : ""}`;
     } catch (error) {
       syncMessage = `同步失敗：${error.message}`;
     }
