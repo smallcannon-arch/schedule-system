@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>智慧排課系統 DEMO｜示範資料（已匿名化）</title>
-<script src="app-config.js"></script>
+<script src="app-config.js?v=20260712-1"></script>
 <script src="vendor/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -209,6 +209,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-grade-counts{display:grid;grid-template-columns:repeat(6,minmax(82px,1fr));gap:8px;max-width:760px}
 .setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:13px;font-weight:900}
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.policy-panel{margin-bottom:18px;border-left:4px solid var(--mint-d)}.policy-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.policy-heading h2{margin-bottom:4px}.policy-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:14px}.policy-grid label{display:grid;gap:4px;font-size:13px;font-weight:900;color:var(--ink)}.policy-grid small{font-size:11px;font-weight:500;color:var(--muted)}.policy-grid input,.policy-approvals input[type=date]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}.policy-actions{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}.policy-approvals{display:grid;grid-template-columns:minmax(300px,1fr) 170px minmax(280px,1fr) 170px;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.policy-approvals label{font-size:13px;font-weight:800}.policy-status{display:flex;gap:12px;margin-top:12px;padding:9px 11px;border-left:3px solid var(--mint-d);background:#f2fbf7}.policy-status.bad{border-color:var(--pink-d);background:#fff4f7}.policy-status span{color:var(--muted);font-size:13px}
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}
 .native-band-table{min-width:620px}.native-table{min-width:1580px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:140px;text-align:left}.native-table input[data-native="sources"]{min-width:170px;text-align:left}.native-table input[data-native="group"]{min-width:150px;text-align:left}.native-table td:nth-child(6) select,.native-table td:nth-child(7) select{min-width:230px}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
@@ -240,6 +241,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
+  .policy-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.policy-approvals{grid-template-columns:1fr 170px}
+  .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
   .step-help ol{grid-template-columns:1fr;gap:8px}.step-help li{padding-right:0}
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
   .app-footer{align-items:flex-start;flex-direction:column;gap:10px}.app-footer-meta{text-align:left}.app-footer-session{margin-left:0;padding:10px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);width:100%}
@@ -398,6 +401,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <h2>📊 資料概況</h2>
     <div class="sub" style="margin-bottom:0" id="statLine"></div>
   </div>
+  <section class="panel policy-panel setup-ready-only" id="setupPolicyPanel"></section>
   <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
     <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">班級</button>
     <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">教師</button>
@@ -505,7 +509,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="panel tbl" style="margin:0"><table id="allocTable"></table></div>
     <div class="panel" style="margin:0">
       <h2>⏱️ 教師節數檢核</h2>
-      <div class="sub" style="margin-bottom:8px;font-size:12.5px">實配 vs（上限−減課）；含導師課</div>
+      <div class="sub" style="margin-bottom:8px;font-size:12.5px">實配 vs（角色基準＋超鐘點−減課）；含導師課</div>
       <ul class="loadbox" id="tloadBox"></ul>
     </div>
   </div>
@@ -850,7 +854,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="data.js"></script>
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
-<script src="setup-builder.js?v=20260711-5"></script>
+<script src="schedule-policy.js?v=20260712-1"></script>
+<script src="setup-builder.js?v=20260712-1"></script>
 <script src="schedule-exports.js?v=20260711-1"></script>
 <script>
 /* ═══ 通用 ═══ */
@@ -1347,8 +1352,7 @@ function invalidateSchedule(){
   const btn=document.getElementById('runBtn');if(btn)btn.textContent='⚡ 開始排課';
   fillTT();fillTutor();
 }
-/* 教師節數檢核（實配 vs 上限−減課）*/
-const ROLE_CAP={'導師':16,'科任':20,'組長':9,'主任':3,'資源班教師':20,'教支人員':0,'鐘點教師':0,'其他':0,'':0};
+/* 教師節數檢核（角色基準＋超鐘點−減課）*/
 function renderTLoad(){
   const box=document.getElementById('tloadBox');if(!box)return;
   const load={};
@@ -1364,24 +1368,28 @@ function renderTLoad(){
     for(const t of [group.t,group.assistant])if(t&&t!=='待聘(鐘點)')load[t]=(load[t]||0)+1;
   }
   const tc=DATA.tcap||{};
-  box.innerHTML=Object.entries(load).sort((a,b)=>b[1]-a[1]).map(([t,n])=>{
+  const loadRows=[...new Set([...Object.keys(DATA.roster||{}),...Object.keys(load)])]
+    .map(t=>[t,load[t]||0]).filter(([t,n])=>n>0||SchedulePolicy.hasWeeklyTarget(DATA.roster[t]||''));
+  box.innerHTML=loadRows.sort((a,b)=>b[1]-a[1]).map(([t,n])=>{
     const role=DATA.roster[t]||'';
-    const cap=(tc[t]&&tc[t].cap)||ROLE_CAP[role]||0;
-    const minus=(tc[t]&&tc[t].minus)||0;
-    const quota=cap?cap-minus:0;
+    const base=SchedulePolicy.weeklyTarget(DATA,role);
+    const extra=(tc[t]&&+tc[t].extra)||0;
+    const minus=(tc[t]&&+tc[t].minus)||0;
+    const quota=SchedulePolicy.teacherTarget(DATA,t);
+    const hasTarget=SchedulePolicy.hasWeeklyTarget(role);
     let badge;
-    if(!cap)badge=`<span class="chip" style="background:#f1ebe6;color:#94836f;padding:2px 10px">${n}節</span>`;
+    if(!hasTarget)badge=`<span class="chip" style="background:#f1ebe6;color:#94836f;padding:2px 10px">${n}節</span>`;
     else if(n>quota)badge=`<span class="chip bad" style="padding:2px 10px">超${n-quota}節</span>`;
     else if(n<quota)badge=`<span class="chip warn" style="padding:2px 10px">缺${quota-n}節</span>`;
     else badge='<span class="chip ok" style="padding:2px 10px">✓</span>';
-    const pct=cap?Math.min(100,n/quota*100):50;
-    return `<li><span class="n" style="width:66px">${esc(t)}</span><span class="bar"><i class="${cap&&n>quota?'over':''}" style="width:${pct}%"></i></span><span class="t" style="width:64px">${n}${cap?'/'+quota:''}</span>${badge}</li>`;
+    const pct=hasTarget?Math.min(100,n/Math.max(1,quota)*100):50;
+    return `<li><span class="n" style="width:66px">${esc(t)}</span><span class="bar"><i class="${hasTarget&&n>quota?'over':''}" style="width:${pct}%"></i></span><span class="t" style="width:64px">${n}${hasTarget?'/'+quota:''}</span>${badge}</li>`;
   }).join('')||'<li style="color:var(--muted)">尚無配課資料</li>';
 }
 
 /* ═══ 瀏覽器內排課（貪婪＋隨機重啟）═══ */
 let SOL=null, tutorPlaced={};  // tutorPlaced[code]['day|p']=subj
-const DAILY_HARD_CAP={'科任':6,'導師':5,'組長':6,'主任':6,'資源班教師':6,'教支人員':7,'鐘點教師':7,'其他':7,'':7};
+const DAILY_HARD_CAP={'科任':6,'導師':6,'組長':6,'主任':6,'導師兼組長':6,'導師兼主任':6,'資源班教師':6,'資源班導師':6,'專任輔導教師':6,'教支人員':6,'鐘點教師':6,'其他':6,'':6};
 function buildTasks(){
   const tasks=[];
   for(const c of DATA.classes){
@@ -1406,7 +1414,7 @@ function trySolve(tasks){
     if(!ruleOn('H03'))return true;
     return (rm[`${r}|${d}|${p}`]||0)+need<=(DATA.rooms[r]||1);
   };
-  const dailyFree=(t,d)=>!t||(dayLoad[`${t}|${d}`]||0)<(DAILY_HARD_CAP[DATA.roster[t]||'']||7);
+  const dailyFree=(t,d)=>!t||(dayLoad[`${t}|${d}`]||0)<(DAILY_HARD_CAP[DATA.roster[t]||'']||6);
   const ok=(tk,d,p)=>DATA.gslot[tk.g][DAYS.indexOf(d)][p-1]
     &&(!ruleOn('H06')||!tk.banned.has(p))
     &&!GLIM.has(`${tk.g}|${d}|${p}`)&&!CLIM.has(`${tk.code}|${d}|${p}`)
@@ -1523,7 +1531,7 @@ function validateSchedule(){
     if(list.length>cap)add('H03',`${e.room} 週${e.d}第${e.p}節超過容量 ${cap}`);
   }
   for(const list of Object.values(tday)){
-    const e=list[0],cap=DAILY_HARD_CAP[DATA.roster[e.t]||'']||7;
+    const e=list[0],cap=DAILY_HARD_CAP[DATA.roster[e.t]||'']||6;
     if(list.length>cap)add('每日上限',`${e.t} 週${e.d}共 ${list.length} 節，超過上限 ${cap}`);
   }
   if(ruleOn('H10'))for(const lk of DATA.locks){
@@ -1717,7 +1725,7 @@ function editorCanPlace(source,day,period){
   if(ruleOn('H07')&&source.t&&TLIM.has(`${source.t}|${day}|${period}`))return `${source.t} 此時段不可排課`;
   const others=scheduleEntries(true).filter(entry=>!editorSameEntry(entry,source));
   if(ruleOn('H01')&&source.t&&others.some(entry=>entry.t===source.t&&entry.d===day&&+entry.p===+period))return `${source.t} 此時段已有課程`;
-  if(source.t){const cap=DAILY_HARD_CAP[DATA.roster[source.t]||'']||7;
+  if(source.t){const cap=DAILY_HARD_CAP[DATA.roster[source.t]||'']||6;
     if(others.filter(entry=>entry.t===source.t&&entry.d===day).length>=cap)return `${source.t} 週${day}已達每日 ${cap} 節上限`;
   }
   const room=source.room||roomOf(source.code,source.s)||'R00';
@@ -1842,6 +1850,7 @@ async function runFormal(){
     const missing=response.headers.get('X-Missing-Lessons')||'0';
     const pool=response.headers.get('X-Tutor-Pool')||'0';
     const weekly=response.headers.get('X-Weekly-Cap-Issues')||'0';
+    const compliance=response.headers.get('X-Compliance-Issues')||'0';
     const ai=response.headers.get('X-OpenAI-Status')||'disabled';
     applyData(localData,(localData._school?localData._school+'（':'')+'正式 CP-SAT 結果'+(localData._school?'）':''));
     FORMAL_AUTO_TUTOR=document.getElementById('formalAutoTutor').checked;
@@ -1849,9 +1858,9 @@ async function runFormal(){
     for(const row of result.schedule)SOL[`${row.code}|${row.day}|${row.period}`]={s:row.subject,t:row.teacher||'',room:row.room||'R00'};
     OVL=(result.overlay||[]).map(row=>({grp:row.group,code:row.code,subj:row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
     tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};renderAll();saveLS();
-    formalMessage(completeness==='complete'&&weekly==='0'?'ok':'warn',
+    formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
       completeness==='complete'?'正式課表已下載':'部分課表已下載',
-      `未配教師 ${missing} 節；導師待排 ${pool} 節；週上限問題 ${weekly} 項；OpenAI ${ai}`+
+      `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；新竹市規則問題 ${compliance} 項；OpenAI ${ai}`+
       (FORMAL_AUTO_TUTOR?'':'；固定課已載入，可前往導師自排發出教師調整檔'));
   }catch(error){
     formalMessage('bad','無法連線正式 API','請確認 API 網址、CORS 與服務是否已啟動。');
@@ -2339,7 +2348,7 @@ function canPlaceTutor(code,s,d,p){
   if(ruleOn('H07')&&t&&TLIM.has(`${t}|${d}|${p}`))return `${t} 此時段不可排課`;
   if(ruleOn('H01')&&t&&scheduleEntries(true).some(e=>e.t===t&&e.d===d&&e.p===p))return `${t} 此時段已有其他課程`;
   if(t){
-    const cap=DAILY_HARD_CAP[DATA.roster[t]||'']||7;
+    const cap=DAILY_HARD_CAP[DATA.roster[t]||'']||6;
     const n=scheduleEntries(true).filter(e=>e.t===t&&e.d===d).length;
     if(n>=cap)return `${t} 週${d}已達每日 ${cap} 節上限`;
   }
@@ -2408,7 +2417,7 @@ function emptyFormalData(){
   const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
     rules:TeacherWorkflow.clone(DEMO0.rules||[]),blocked:[],gslot,rooms:{R00:99},roster:{},
-    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},exportMappings:{}};
+    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},exportMappings:{},policy:{profileId:'hsinchu-elementary-115'}};
 }
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
@@ -2448,6 +2457,7 @@ function initDerived(){
   DATA.tcap=DATA.tcap||{};
   DATA.teacherAccounts=DATA.teacherAccounts||{};
   DATA.teacherNativeLangs=DATA.teacherNativeLangs||{};
+  if(window.SchedulePolicy)SchedulePolicy.normalize(DATA);
   if(typeof DATA.nativeLockEnabled!=='boolean')DATA.nativeLockEnabled=
     (Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length>0)||(DATA.locks||[]).some(lock=>lock.s==='本土語文');
   if(!Array.isArray(DATA.nativeGroups))DATA.nativeGroups=null;
@@ -2459,6 +2469,11 @@ function initDerived(){
   BLK=new Set(DATA.blocked.map(x=>x.join('|')));
   LIMITS=DATA.limits.map(r=>[...r]);
   RULES=DATA.rules.map(r=>[...r]);
+  for(const row of RULES){
+    if(row[0]==='S08')row[3]='教師每日以 5 節為負荷偏好，任何教師均不得排滿 7 節';
+    if(row[0]==='S09')row[3]='導師每日以 4 節為負荷偏好，硬上限為 6 節';
+  }
+  DATA.rules=RULES.map(r=>[...r]);
   ENG_SUBJ=Object.keys(DATA.subjects).filter(s=>!DATA.subjects[s].self&&s!=='本土語文');
   TEACHERS=['',...Object.keys(DATA.roster)];
   SOL=null;tutorPlaced={};pickSubj=null;editorResetHistory();
@@ -2873,7 +2888,7 @@ window.setFormalStorageIdentity=setFormalStorageIdentity;
 window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260712-5"></script>
+<script src="schedule-auth.js?v=20260712-6"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

@@ -287,6 +287,10 @@
     try {
       const snapshot = root.getScheduleAuthSnapshot();
       if (!snapshot || !snapshot.sol) throw new Error("請先完成排課，再發布正式課表");
+      if (root.SchedulePolicy) {
+        const compliance = root.SchedulePolicy.validate(snapshot.data, {requireApproval: true});
+        if (compliance.blocking.length) throw new Error(compliance.blocking.slice(0, 3).join("；"));
+      }
       status("正在發布教師課表…", "working");
       const result = await request("/admin/publish", {
         method: "POST", headers: {"Content-Type": "application/json"},

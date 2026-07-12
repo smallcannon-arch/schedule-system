@@ -1,7 +1,10 @@
 (function (root) {
   "use strict";
 
-  const ROLES = ["導師", "科任", "組長", "主任", "資源班教師", "教支人員", "鐘點教師", "其他"];
+  const ROLES = ["導師", "科任", "組長", "主任", "導師兼組長", "導師兼主任",
+    "資源班教師", "資源班導師", "專任輔導教師", "教支人員", "鐘點教師", "其他"];
+  const REDUCTION_REASONS = ["", "兼任輔導教師", "英語種子教師", "導師兼行政職務",
+    "特教教師節數規定", "協助行政工作", "其他核定"];
   const CLASS_SEQUENCE = "甲乙丙丁戊己庚辛壬癸";
   const DAYS = ["一", "二", "三", "四", "五"];
   let adapter = null;
@@ -26,6 +29,7 @@
     value.exportMappings = value.exportMappings && typeof value.exportMappings === "object" ? value.exportMappings : {};
     value.rooms = value.rooms || {};
     if (!Object.prototype.hasOwnProperty.call(value.rooms, "R00")) value.rooms.R00 = 99;
+    if (root.SchedulePolicy) root.SchedulePolicy.normalize(value);
     return value;
   }
 
@@ -211,6 +215,12 @@
       else if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) warnings.push(`${name}的 Google 帳號格式不正確`);
     }
 
+    if (root.SchedulePolicy) {
+      const policyResult = root.SchedulePolicy.validate(d);
+      hard.push(...policyResult.blocking);
+      warnings.push(...policyResult.warnings);
+    }
+
     return {
       hard: [...new Set(hard)], warnings: [...new Set(warnings)],
       counts: {
@@ -266,20 +276,48 @@
     }
   }
 
+  function renderPolicy() {
+    const d = data();
+    const target = document.getElementById("setupPolicyPanel");
+    if (!target || !root.SchedulePolicy) return;
+    const profile = root.SchedulePolicy.profile;
+    const config = root.SchedulePolicy.normalize(d);
+    const count = root.SchedulePolicy.officialClassCount(d);
+    const resolved = Object.fromEntries(["導師", "科任", "組長", "主任"].map((role) =>
+      [role, root.SchedulePolicy.weeklyTarget(d, role)]));
+    const result = root.SchedulePolicy.validate(d);
+    target.innerHTML = `<div class="policy-heading"><div><h2>適用規則</h2><div class="sub">${esc(profile.label)}｜每節 ${profile.periodMinutes} 分鐘｜每日最多 ${profile.dailyHardCap} 節（系統硬規則）</div></div><span class="chip ok">${esc(profile.id)}</span></div>
+      <div class="policy-grid">
+        <label>校務核定班級數<small>留 0 依目前班級自動計算</small><input type="number" min="0" max="99" value="${Number(config.officialClassCount) || 0}" onchange="ScheduleSetup.setPolicy('officialClassCount',this.value)"></label>
+        ${["導師", "科任", "組長", "主任"].map((role) => `<label>${role}每週基準節數<small>${role === "組長" || role === "主任" ? `目前 ${count} 班的建議值` : "新竹市固定基準"}</small><input type="number" min="0" max="30" value="${resolved[role]}" onchange="ScheduleSetup.setWeeklyTarget('${role}',this.value)"></label>`).join("")}
+      </div>
+      <div class="policy-actions"><button class="btn soft sm" type="button" onclick="ScheduleSetup.applySuggestedPolicy()">套用新竹市建議值</button><span>教師個別差異請在教師頁填寫「超鐘點」或「減課」。</span></div>
+      <div class="policy-approvals">
+        <label><input type="checkbox" ${config.staffingPrinciplesApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('staffingPrinciplesApproved',this.checked)"> 授課節數編配原則已經校務會議審議通過</label>
+        <input type="date" value="${esc(config.staffingMeetingDate)}" aria-label="授課節數編配原則會議日期" onchange="ScheduleSetup.setPolicy('staffingMeetingDate',this.value)">
+        <label><input type="checkbox" ${config.schedulePlanApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('schedulePlanApproved',this.checked)"> 學生作息與課表已納入課程計畫</label>
+        <input type="date" value="${esc(config.schedulePlanMeetingDate)}" aria-label="課程計畫通過日期" onchange="ScheduleSetup.setPolicy('schedulePlanMeetingDate',this.value)">
+      </div>
+      <div class="policy-status ${result.blocking.length ? "bad" : "ok"}"><b>${result.blocking.length ? `${result.blocking.length} 項規則必須修正` : "新竹市節數規則檢核通過"}</b><span>${esc(result.blocking[0] || result.warnings[0] || "發布時會再次由後端驗證。")}</span></div>`;
+  }
+
   function renderTeachers() {
     const d = data();
     const target = document.getElementById("setupTeachersTable");
     if (!target) return;
     const names = Object.keys(d.roster);
-    target.innerHTML = `<thead><tr><th>教師姓名</th><th>身分</th><th>學校 Google 帳號<br><small>教支人員可選填</small></th><th>可授本土語別<br><small>可複選</small></th><th>週上限</th><th>減課</th><th></th></tr></thead><tbody>${names.map((name, index) => {
-      const cap = d.tcap[name] || {cap: 0, minus: 0};
+    target.innerHTML = `<thead><tr><th>教師姓名</th><th>身分</th><th>學校 Google 帳號<br><small>教支人員可選填</small></th><th>可授本土語別<br><small>可複選</small></th><th>角色基準</th><th>超鐘點</th><th>減課</th><th>減課原因</th><th></th></tr></thead><tbody>${names.map((name, index) => {
+      const cap = d.tcap[name] || {extra: 0, minus: 0, reason: ""};
+      const base = root.SchedulePolicy ? root.SchedulePolicy.weeklyTarget(d, d.roster[name] || "") : 0;
       return `<tr>
         <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
         <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setTeacher(${index},'role',this.value)">${ROLES.map((role) => `<option ${d.roster[name] === role ? "selected" : ""}>${role}</option>`).join("")}</select></td>
         <td><input type="email" value="${esc(d.teacherAccounts[name] || "")}" placeholder="name@school.edu.tw" onchange="ScheduleSetup.setTeacher(${index},'email',this.value)"></td>
         <td><input value="${esc(nativeValues(d.teacherNativeLangs[name]).join("、"))}" placeholder="例：閩南語、客語" onchange="ScheduleSetup.setTeacher(${index},'nativeLangs',this.value)"></td>
-        <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.cap) || 0}" onchange="ScheduleSetup.setTeacher(${index},'cap',this.value)"></td>
+        <td><b>${base || "依聘任"}</b></td>
+        <td><input class="numin" type="number" min="0" max="20" value="${Number(cap.extra) || 0}" onchange="ScheduleSetup.setTeacher(${index},'extra',this.value)"></td>
         <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.minus) || 0}" onchange="ScheduleSetup.setTeacher(${index},'minus',this.value)"></td>
+        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setTeacher(${index},'reason',this.value)">${REDUCTION_REASONS.map((reason) => `<option value="${esc(reason)}" ${String(cap.reason || "") === reason ? "selected" : ""}>${esc(reason || "未指定")}</option>`).join("")}</select></td>
         <td><button class="icon-btn" type="button" title="刪除教師" aria-label="刪除教師" onclick="ScheduleSetup.removeTeacher(${index})">×</button></td>
       </tr>`;
     }).join("")}</tbody>`;
@@ -326,11 +364,34 @@
   function render() {
     if (!adapter || typeof document === "undefined") return;
     renderSummary();
+    renderPolicy();
     renderClasses();
     renderTeachers();
     renderSubjects();
     renderAssignments();
     show(activeTab);
+  }
+
+  function setPolicy(key, value) {
+    const d = data();
+    const config = root.SchedulePolicy.normalize(d);
+    if (key === "officialClassCount") config[key] = Math.max(0, Number(value) || 0);
+    else if (key === "staffingPrinciplesApproved" || key === "schedulePlanApproved") config[key] = !!value;
+    else config[key] = String(value || "");
+    commit("新竹市案件規則已更新。");
+  }
+
+  function setWeeklyTarget(role, value) {
+    const d = data();
+    const config = root.SchedulePolicy.normalize(d);
+    config.weeklyTargets[role] = Math.max(0, Number(value) || 0);
+    commit(`${role}每週基準節數已更新。`);
+  }
+
+  function applySuggestedPolicy() {
+    const d = data();
+    root.SchedulePolicy.setSuggestedWeeklyTargets(d);
+    commit("已依目前校務核定班級數套用新竹市建議節數。");
   }
 
   function show(name) {
@@ -365,7 +426,7 @@
         d.roster[tutor] = "導師";
         d.teacherAccounts[tutor] = "";
         d.teacherNativeLangs[tutor] = [];
-        d.tcap[tutor] = {cap: 0, minus: 0};
+        d.tcap[tutor] = {extra: 0, minus: 0, reason: ""};
       }
       d.assign[item.code] = d.assign[item.code] || {};
       for (const [subject, info] of Object.entries(d.subjects)) {
@@ -442,7 +503,7 @@
     d.roster[name] = "科任";
     d.teacherAccounts[name] = "";
     d.teacherNativeLangs[name] = [];
-    d.tcap[name] = {cap: 20, minus: 0};
+    d.tcap[name] = {extra: 0, minus: 0, reason: ""};
     commit(`已新增 ${name}。`);
   }
 
@@ -450,10 +511,11 @@
     const d = data();
     const name = Object.keys(d.roster)[index];
     if (!name) return;
-    d.tcap[name] = d.tcap[name] || {cap: 0, minus: 0};
+    d.tcap[name] = d.tcap[name] || {extra: 0, minus: 0, reason: ""};
     if (key === "role") d.roster[name] = value;
     else if (key === "email") d.teacherAccounts[name] = String(value || "").trim().toLowerCase();
     else if (key === "nativeLangs") d.teacherNativeLangs[name] = nativeValues(value);
+    else if (key === "reason") d.tcap[name].reason = String(value || "");
     else d.tcap[name][key] = Math.max(0, Number(value) || 0);
     commit(`${name}的教師資料已更新。`);
   }
@@ -466,7 +528,7 @@
     if (!next) return alert("教師姓名不可空白。");
     if (Object.prototype.hasOwnProperty.call(d.roster, next)) return alert(`教師「${next}」已存在。`);
     d.roster[next] = d.roster[old]; delete d.roster[old];
-    d.tcap[next] = d.tcap[old] || {cap: 0, minus: 0}; delete d.tcap[old];
+    d.tcap[next] = d.tcap[old] || {extra: 0, minus: 0, reason: ""}; delete d.tcap[old];
     d.teacherAccounts[next] = d.teacherAccounts[old] || ""; delete d.teacherAccounts[old];
     d.teacherNativeLangs[next] = nativeValues(d.teacherNativeLangs[old]); delete d.teacherNativeLangs[old];
     d.classes.forEach((item) => { if (item.tutor === old) item.tutor = next; });
@@ -632,6 +694,7 @@
 
   root.ScheduleSetup = {
     init, render, validate, show, showIssues, startBlank,
+    setPolicy, setWeeklyTarget, applySuggestedPolicy,
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
     addTeacher, setTeacher, renameTeacher, removeTeacher, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,
