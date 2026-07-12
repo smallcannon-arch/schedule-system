@@ -18,9 +18,11 @@
     value.roster = value.roster || {};
     value.teacherAccounts = value.teacherAccounts || {};
     value.teacherNativeLangs = value.teacherNativeLangs || {};
+    value.teacherSubjects = value.teacherSubjects || {};
     value.tcap = value.tcap || {};
     value.subjects = value.subjects || {};
     value.assign = value.assign || {};
+    value.assignmentModes = value.assignmentModes || {};
     value.override = value.override || {};
     value.locks = value.locks || [];
     value.resGroups = value.resGroups || [];
@@ -36,6 +38,38 @@
   function nativeValues(value) {
     const source = Array.isArray(value) ? value : String(value || "").split(/[、,，;；\s]+/);
     return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
+  }
+
+  function subjectValues(value) {
+    const source = Array.isArray(value) ? value : String(value || "").split(/[、,，;；\n]+/);
+    return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
+  }
+
+  function isTutorArrangeable(d, item, subject) {
+    const assigned = (d.assign[item.code] || {})[subject] || "";
+    if (!item.tutor || assigned !== item.tutor) return false;
+    if (subject === "本土語文" && d.nativeLockEnabled === true) return false;
+    if (item.res && ["國語文", "數學"].includes(subject)) return false;
+    if ((d.resGroups || []).some((group) => group.code === item.code && group.subj === subject)) return false;
+    const configured = (d.assignmentModes[item.code] || {})[subject];
+    return configured ? configured === "tutor" : !!(d.subjects[subject] || {}).self;
+  }
+
+  function teachingSummary(d, name) {
+    const result = {retained: 0, released: 0, cross: 0, total: 0};
+    for (const item of d.classes) {
+      for (const [subject, info] of Object.entries(d.subjects)) {
+        const hours = Math.max(0, Number((info.hours || [])[item.g - 1]) || 0);
+        if (!hours || (subject === "本土語文" && d.nativeLockEnabled === true)) continue;
+        const assigned = (d.assign[item.code] || {})[subject] || "";
+        if (item.tutor === name) {
+          if (assigned === name) result.retained += hours;
+          else if (assigned) result.released += hours;
+        } else if (assigned === name) result.cross += hours;
+      }
+    }
+    result.total = result.retained + result.cross;
+    return result;
   }
 
   function nativeSkillMatches(language, skills) {
@@ -63,11 +97,17 @@
     return `${base}${number}`;
   }
 
-  function teacherOptions(selected, includeBlank) {
-    const names = Object.keys(data().roster);
+  function teacherOptions(selected, includeBlank, subject) {
+    const d = data();
+    const names = Object.keys(d.roster);
     const blank = includeBlank ? '<option value="">尚未指定</option>' : "";
-    return blank + names.map((name) =>
-      `<option value="${esc(name)}" ${name === selected ? "selected" : ""}>${esc(name)}</option>`).join("");
+    const option = (name) => `<option value="${esc(name)}" ${name === selected ? "selected" : ""}>${esc(name)}</option>`;
+    if (!subject) return blank + names.map(option).join("");
+    const qualified = names.filter((name) => subjectValues(d.teacherSubjects[name]).includes(subject));
+    const other = names.filter((name) => !qualified.includes(name));
+    return blank
+      + (qualified.length ? `<optgroup label="可授 ${esc(subject)}">${qualified.map(option).join("")}</optgroup>` : "")
+      + (other.length ? `<optgroup label="其他教師">${other.map(option).join("")}</optgroup>` : "");
   }
 
   function validate() {
@@ -117,6 +157,9 @@
           hard.push(`${code} ${subject}尚未配課`);
         } else if (!teacherNames.has(teacher)) {
           hard.push(`${code} ${subject}的教師不在名冊：${teacher}`);
+        } else {
+          const skills = subjectValues(d.teacherSubjects[teacher]);
+          if (skills.length && !skills.includes(subject)) warnings.push(`${teacher}尚未將「${subject}」列入可授科目`);
         }
       }
     }
@@ -306,14 +349,18 @@
     const target = document.getElementById("setupTeachersTable");
     if (!target) return;
     const names = Object.keys(d.roster);
-    target.innerHTML = `<thead><tr><th>教師姓名</th><th>身分</th><th>學校 Google 帳號<br><small>教支人員可選填</small></th><th>可授本土語別<br><small>可複選</small></th><th>角色基準</th><th>超鐘點</th><th>減課</th><th>減課原因</th><th></th></tr></thead><tbody>${names.map((name, index) => {
+    target.innerHTML = `<thead><tr><th>教師姓名</th><th>身分</th><th>學校 Google 帳號<br><small>教支人員可選填</small></th><th>可授一般科目<br><small>以頓號分隔</small></th><th>可授本土語別<br><small>可複選</small></th><th>授課概況<br><small>本班／跨班／釋出</small></th><th>角色基準</th><th>超鐘點</th><th>減課</th><th>減課原因</th><th></th></tr></thead><tbody>${names.map((name, index) => {
       const cap = d.tcap[name] || {extra: 0, minus: 0, reason: ""};
       const base = root.SchedulePolicy ? root.SchedulePolicy.weeklyTarget(d, d.roster[name] || "") : 0;
+      const load = teachingSummary(d, name);
+      const targetHours = root.SchedulePolicy ? root.SchedulePolicy.teacherTarget(d, name) : 0;
       return `<tr>
         <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
         <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setTeacher(${index},'role',this.value)">${ROLES.map((role) => `<option ${d.roster[name] === role ? "selected" : ""}>${role}</option>`).join("")}</select></td>
         <td><input type="email" value="${esc(d.teacherAccounts[name] || "")}" placeholder="name@school.edu.tw" onchange="ScheduleSetup.setTeacher(${index},'email',this.value)"></td>
+        <td><input class="setup-subject-skills" value="${esc(subjectValues(d.teacherSubjects[name]).join("、"))}" placeholder="例：自然科學、音樂" onchange="ScheduleSetup.setTeacher(${index},'subjects',this.value)"></td>
         <td><input value="${esc(nativeValues(d.teacherNativeLangs[name]).join("、"))}" placeholder="例：閩南語、客語" onchange="ScheduleSetup.setTeacher(${index},'nativeLangs',this.value)"></td>
+        <td><span class="teaching-load"><b>${load.total}${targetHours ? `／${targetHours}` : ""} 節</b><small>本班 ${load.retained}｜跨班 ${load.cross}｜釋出 ${load.released}</small></span></td>
         <td><b>${base || "依聘任"}</b></td>
         <td><input class="numin" type="number" min="0" max="20" value="${Number(cap.extra) || 0}" onchange="ScheduleSetup.setTeacher(${index},'extra',this.value)"></td>
         <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.minus) || 0}" onchange="ScheduleSetup.setTeacher(${index},'minus',this.value)"></td>
@@ -357,7 +404,12 @@
         if (!hours) return '<td class="na">–</td>';
         if (subject === "本土語文" && d.nativeLockEnabled === true) return '<td class="na">由本土語課鎖定管理</td>';
         const selected = (d.assign[item.code] || {})[subject] || "";
-        return `<td><select class="${selected ? "" : "empty"}" data-code="${esc(item.code)}" data-subject="${esc(subject)}" onchange="ScheduleSetup.setAssignment(this.dataset.code,this.dataset.subject,this.value)">${teacherOptions(selected, true)}</select><small class="setup-hours">${hours} 節</small></td>`;
+        const retained = selected && selected === item.tutor;
+        const arrangeable = retained && isTutorArrangeable(d, item, subject);
+        const state = !selected ? "待配課" : retained ? "本班保留" : "已釋出";
+        return `<td class="assignment-cell"><select class="${selected ? "" : "empty"}" data-code="${esc(item.code)}" data-subject="${esc(subject)}" onchange="ScheduleSetup.setAssignment(this.dataset.code,this.dataset.subject,this.value)">${teacherOptions(selected, true, subject)}</select>
+          <small class="assignment-state ${!selected ? "missing" : retained ? "retained" : "released"}">${hours} 節｜${state}</small>
+          ${retained ? `<label class="assignment-mode"><input type="checkbox" data-code="${esc(item.code)}" data-subject="${esc(subject)}" ${arrangeable ? "checked" : ""} onchange="ScheduleSetup.setAssignmentMode(this.dataset.code,this.dataset.subject,this.checked)"> 導師自排</label>` : ""}</td>`;
       }).join("")}</tr>`).join("")}</tbody>`;
   }
 
@@ -409,6 +461,7 @@
     const code = uniqueName(`${grade}${CLASS_SEQUENCE[index - 1] || index}`, d.classes.map((item) => item.code));
     d.classes.push({g: grade, i: index, code, tutor: "", res: false});
     d.assign[code] = {};
+    d.assignmentModes[code] = {};
     commit(`已新增班級 ${code}。`);
   }
 
@@ -426,6 +479,7 @@
         d.roster[tutor] = "導師";
         d.teacherAccounts[tutor] = "";
         d.teacherNativeLangs[tutor] = [];
+        d.teacherSubjects[tutor] = [];
         d.tcap[tutor] = {extra: 0, minus: 0, reason: ""};
       }
       d.assign[item.code] = d.assign[item.code] || {};
@@ -447,8 +501,9 @@
     const old = item.code;
     item.code = next;
     d.assign[next] = d.assign[old] || {};
+    d.assignmentModes[next] = d.assignmentModes[old] || {};
     d.override[next] = d.override[old] || {};
-    delete d.assign[old]; delete d.override[old];
+    delete d.assign[old]; delete d.assignmentModes[old]; delete d.override[old];
     d.locks.forEach((lock) => { if (lock.c === old) lock.c = next; });
     d.resGroups.forEach((group) => { if (group.code === old) group.code = next; });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).map((code) => code === old ? next : code); });
@@ -461,7 +516,7 @@
     const item = d.classes[index];
     if (!item || !confirm(`確定刪除班級 ${item.code}？該班配課與資源班設定也會移除。`)) return;
     d.classes.splice(index, 1);
-    delete d.assign[item.code]; delete d.override[item.code];
+    delete d.assign[item.code]; delete d.assignmentModes[item.code]; delete d.override[item.code];
     d.locks = d.locks.filter((lock) => lock.c !== item.code);
     d.resGroups = d.resGroups.filter((group) => group.code !== item.code);
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => code !== item.code); });
@@ -478,18 +533,21 @@
     if (d.classes.length && !confirm("套用班級數會重建班級清單；代碼相同的導師與配課會保留。確定繼續？")) return;
     const oldClasses = Object.fromEntries(d.classes.map((item) => [item.code, item]));
     const oldAssign = d.assign;
+    const oldModes = d.assignmentModes;
     const nextClasses = [];
     const nextAssign = {};
+    const nextModes = {};
     counts.forEach((count, gradeIndex) => {
       const grade = gradeIndex + 1;
       for (let order = 1; order <= count; order += 1) {
         const code = `${grade}${CLASS_SEQUENCE[order - 1] || order}`;
         nextClasses.push(oldClasses[code] || {g: grade, i: order, code, tutor: "", res: false});
         nextAssign[code] = oldAssign[code] || {};
+        nextModes[code] = oldModes[code] || {};
       }
     });
     const codes = new Set(nextClasses.map((item) => item.code));
-    d.classes = nextClasses; d.assign = nextAssign;
+    d.classes = nextClasses; d.assign = nextAssign; d.assignmentModes = nextModes;
     d.override = Object.fromEntries(Object.entries(d.override).filter(([code]) => codes.has(code)));
     d.locks = d.locks.filter((lock) => codes.has(lock.c));
     d.resGroups = d.resGroups.filter((group) => codes.has(group.code));
@@ -503,6 +561,7 @@
     d.roster[name] = "科任";
     d.teacherAccounts[name] = "";
     d.teacherNativeLangs[name] = [];
+    d.teacherSubjects[name] = [];
     d.tcap[name] = {extra: 0, minus: 0, reason: ""};
     commit(`已新增 ${name}。`);
   }
@@ -514,6 +573,7 @@
     d.tcap[name] = d.tcap[name] || {extra: 0, minus: 0, reason: ""};
     if (key === "role") d.roster[name] = value;
     else if (key === "email") d.teacherAccounts[name] = String(value || "").trim().toLowerCase();
+    else if (key === "subjects") d.teacherSubjects[name] = subjectValues(value);
     else if (key === "nativeLangs") d.teacherNativeLangs[name] = nativeValues(value);
     else if (key === "reason") d.tcap[name].reason = String(value || "");
     else d.tcap[name][key] = Math.max(0, Number(value) || 0);
@@ -531,6 +591,7 @@
     d.tcap[next] = d.tcap[old] || {extra: 0, minus: 0, reason: ""}; delete d.tcap[old];
     d.teacherAccounts[next] = d.teacherAccounts[old] || ""; delete d.teacherAccounts[old];
     d.teacherNativeLangs[next] = nativeValues(d.teacherNativeLangs[old]); delete d.teacherNativeLangs[old];
+    d.teacherSubjects[next] = subjectValues(d.teacherSubjects[old]); delete d.teacherSubjects[old];
     d.classes.forEach((item) => { if (item.tutor === old) item.tutor = next; });
     Object.values(d.assign).forEach((row) => Object.keys(row).forEach((subject) => { if (row[subject] === old) row[subject] = next; }));
     d.resGroups.forEach((group) => { if (group.t === old) group.t = next; });
@@ -547,7 +608,7 @@
     const d = data();
     const name = Object.keys(d.roster)[index];
     if (!name || !confirm(`確定刪除教師 ${name}？相關導師與配課欄位會改為未指定。`)) return;
-    delete d.roster[name]; delete d.tcap[name]; delete d.teacherAccounts[name]; delete d.teacherNativeLangs[name];
+    delete d.roster[name]; delete d.tcap[name]; delete d.teacherAccounts[name]; delete d.teacherNativeLangs[name]; delete d.teacherSubjects[name];
     d.classes.forEach((item) => { if (item.tutor === name) item.tutor = ""; });
     Object.values(d.assign).forEach((row) => Object.keys(row).forEach((subject) => { if (row[subject] === name) row[subject] = ""; }));
     d.resGroups.forEach((group) => { if (group.t === name) group.t = ""; });
@@ -633,6 +694,10 @@
     d.subjects[next] = d.subjects[old]; delete d.subjects[old];
     if (d.exportMappings[old]) { d.exportMappings[next] = d.exportMappings[old]; delete d.exportMappings[old]; }
     Object.values(d.assign).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
+    Object.values(d.assignmentModes).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
+    Object.keys(d.teacherSubjects).forEach((teacher) => {
+      d.teacherSubjects[teacher] = subjectValues(d.teacherSubjects[teacher]).map((subject) => subject === old ? next : subject);
+    });
     Object.values(d.override).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
     d.locks.forEach((lock) => { if (lock.s === old) lock.s = next; });
     d.resGroups.forEach((group) => { if (group.subj === old) group.subj = next; });
@@ -646,6 +711,10 @@
     delete d.subjects[name];
     delete d.exportMappings[name];
     Object.values(d.assign).forEach((row) => delete row[name]);
+    Object.values(d.assignmentModes).forEach((row) => delete row[name]);
+    Object.keys(d.teacherSubjects).forEach((teacher) => {
+      d.teacherSubjects[teacher] = subjectValues(d.teacherSubjects[teacher]).filter((subject) => subject !== name);
+    });
     Object.values(d.override).forEach((row) => delete row[name]);
     d.locks = d.locks.filter((lock) => lock.s !== name);
     d.resGroups = d.resGroups.filter((group) => group.subj !== name);
@@ -656,7 +725,23 @@
     const d = data();
     d.assign[code] = d.assign[code] || {};
     d.assign[code][subject] = teacher;
+    d.assignmentModes[code] = d.assignmentModes[code] || {};
+    const classroom = d.classes.find((item) => item.code === code);
+    if (!teacher || !classroom || teacher !== classroom.tutor) d.assignmentModes[code][subject] = "engine";
+    else delete d.assignmentModes[code][subject];
     commit(`${code} ${subject}已配給${teacher || "未指定教師"}。`);
+  }
+
+  function setAssignmentMode(code, subject, tutorArrangeable) {
+    const d = data();
+    const classroom = d.classes.find((item) => item.code === code);
+    const assigned = (d.assign[code] || {})[subject] || "";
+    if (!classroom || !classroom.tutor || assigned !== classroom.tutor) {
+      return alert("只有由本班導師授課的課程可以交由導師自排。");
+    }
+    d.assignmentModes[code] = d.assignmentModes[code] || {};
+    d.assignmentModes[code][subject] = tutorArrangeable ? "tutor" : "engine";
+    commit(`${code} ${subject}已改為${tutorArrangeable ? "導師自排" : "系統排課"}。`);
   }
 
   function autofillTutors() {
@@ -698,6 +783,6 @@
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
     addTeacher, setTeacher, renameTeacher, removeTeacher, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,
-    setAssignment, autofillTutors,
+    setAssignment, setAssignmentMode, autofillTutors,
   };
 }(typeof globalThis !== "undefined" ? globalThis : window));

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>智慧排課系統 DEMO｜示範資料（已匿名化）</title>
-<script src="app-config.js?v=20260712-1"></script>
+<script src="app-config.js?v=20260712-2"></script>
 <script src="vendor/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -210,11 +210,11 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:13px;font-weight:900}
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .policy-panel{margin-bottom:18px;border-left:4px solid var(--mint-d)}.policy-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.policy-heading h2{margin-bottom:4px}.policy-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:14px}.policy-grid label{display:grid;gap:4px;font-size:13px;font-weight:900;color:var(--ink)}.policy-grid small{font-size:11px;font-weight:500;color:var(--muted)}.policy-grid input,.policy-approvals input[type=date]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}.policy-actions{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}.policy-approvals{display:grid;grid-template-columns:minmax(300px,1fr) 170px minmax(280px,1fr) 170px;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.policy-approvals label{font-size:13px;font-weight:800}.policy-status{display:flex;gap:12px;margin-top:12px;padding:9px 11px;border-left:3px solid var(--mint-d);background:#f2fbf7}.policy-status.bad{border-color:var(--pink-d);background:#fff4f7}.policy-status span{color:var(--muted);font-size:13px}
-.setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}
+.setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}.setup-subject-skills{min-width:190px;text-align:left}.teaching-load{display:grid;gap:3px;min-width:165px}.teaching-load b{white-space:nowrap}.teaching-load small{color:var(--muted);font-size:11px;white-space:nowrap}
 .native-band-table{min-width:620px}.native-table{min-width:1580px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:140px;text-align:left}.native-table input[data-native="sources"]{min-width:170px;text-align:left}.native-table input[data-native="group"]{min-width:150px;text-align:left}.native-table td:nth-child(6) select,.native-table td:nth-child(7) select{min-width:230px}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
 .export-panel{margin-top:16px}.export-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.export-settings{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}.export-settings summary{cursor:pointer;color:var(--sky-d);font-weight:900}.export-settings-body{padding-top:14px}.export-identity{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.export-map-table{min-width:1120px}.export-map-table input{min-width:130px;text-align:left}.export-map-table input[data-export="schoolName"]{min-width:190px}.export-status{margin-top:12px;color:var(--muted);font-size:13px}.export-status.bad{color:var(--bad);font-weight:800}
-.setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}.assignment-cell{min-width:138px}.assignment-state{display:block;margin-top:4px;font-size:11px;font-weight:900;white-space:nowrap}.assignment-state.retained{color:var(--mint-d)}.assignment-state.released{color:var(--sky-d)}.assignment-state.missing{color:var(--bad)}.assignment-mode{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--muted);font-size:11px;white-space:nowrap}.assignment-mode input{width:15px;height:15px;margin:0}
 .icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
 .current-data-source{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fbfaf9}
 .app-footer{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;margin-top:auto;padding:22px 2px 4px;border-top:1px solid #dfd7d9;color:var(--muted)}
@@ -463,6 +463,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </section>
 
   <section class="setup-pane" id="setup-assign">
+    <div class="sub" style="margin-bottom:12px">導師可以保留本班課程、釋出部分科目，也可以跨班授課；系統會自動統計每位教師的實際節數。只有標示「導師自排」的本班保留課可由導師登入後調整。</div>
     <div class="setup-actions">
       <button class="btn soft sm" type="button" onclick="ScheduleSetup.autofillTutors()">自動帶入導師課</button>
       <button class="btn mint sm" type="button" onclick="go('run')">前往執行排課</button>
@@ -855,7 +856,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
 <script src="schedule-policy.js?v=20260712-1"></script>
-<script src="setup-builder.js?v=20260712-1"></script>
+<script src="setup-builder.js?v=20260712-2"></script>
 <script src="schedule-exports.js?v=20260711-1"></script>
 <script>
 /* ═══ 通用 ═══ */
@@ -1299,16 +1300,17 @@ function isResourceLockedSlot(code,d,p){return TeacherWorkflow.isResourceLockedS
 function isEngine(code,s){
   const sub=DATA.subjects[s], t=DATA.assign[code]&&DATA.assign[code][s], c=CODE2C[code];
   if(s==='本土語文'&&DATA.nativeLockEnabled)return true;
-  if(!sub.self)return true;
   if(isResourceBound(code,s))return true;            // 資源班綁課
-  return !!(t&&t!==c.tutor);   // 導師科目但他師授課 → 引擎
+  if(!c||!c.tutor||t!==c.tutor)return true;          // 釋出或跨班授課 → 引擎
+  const mode=DATA.assignmentModes?.[code]?.[s];
+  return mode?mode!=='tutor':!sub.self;
 }
 function poolOf(code){
   if(FORMAL_AUTO_TUTOR)return [];
   const c=CODE2C[code], out=[];
   for(const s in DATA.subjects){
     const h=hoursOf(s,c.g);
-    if(h>0&&DATA.subjects[s].self&&!isEngine(code,s))out.push([s,h]);
+    if(h>0&&!isEngine(code,s))out.push([s,h]);
   }
   return out;
 }
@@ -2096,6 +2098,7 @@ function buildTeacherData(code,busySlots){
     limits.push([row[0],row[1],String(row[2]),'不可排','系統推導時段']);
   return {classes:[TeacherWorkflow.clone(c)],subjects:TeacherWorkflow.clone(DATA.subjects),
     assign:{[code]:TeacherWorkflow.clone((DATA.assign&&DATA.assign[code])||{})},
+    assignmentModes:{[code]:TeacherWorkflow.clone((DATA.assignmentModes&&DATA.assignmentModes[code])||{})},
     override:{[code]:TeacherWorkflow.clone((DATA.override&&DATA.override[code])||{})},
     locks:(DATA.locks||[]).filter(item=>item.c===code).map(item=>TeacherWorkflow.clone(item)),
     limits,derived:[],rules:TeacherWorkflow.clone(RULES),blocked:TeacherWorkflow.clone(DATA.blocked||[]),
@@ -2104,7 +2107,8 @@ function buildTeacherData(code,busySlots){
     nativeLockEnabled:!!DATA.nativeLockEnabled,
     nativeBands:(DATA.nativeBands||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
     nativeGroups:(DATA.nativeGroups||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
-    teacherNativeLangs:TeacherWorkflow.clone(DATA.teacherNativeLangs||{})};
+    teacherNativeLangs:TeacherWorkflow.clone(DATA.teacherNativeLangs||{}),
+    teacherSubjects:TeacherWorkflow.clone(DATA.teacherSubjects||{})};
 }
 function openServerTeacherPackage(pkg){
   if(!pkg||pkg.schema!=='schedule-server-teacher-v1'||!pkg.data||!pkg.class_code)
@@ -2417,7 +2421,7 @@ function emptyFormalData(){
   const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
     rules:TeacherWorkflow.clone(DEMO0.rules||[]),blocked:[],gslot,rooms:{R00:99},roster:{},
-    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},exportMappings:{},policy:{profileId:'hsinchu-elementary-115'}};
+    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},assignmentModes:{},exportMappings:{},policy:{profileId:'hsinchu-elementary-115'}};
 }
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
@@ -2457,6 +2461,15 @@ function initDerived(){
   DATA.tcap=DATA.tcap||{};
   DATA.teacherAccounts=DATA.teacherAccounts||{};
   DATA.teacherNativeLangs=DATA.teacherNativeLangs||{};
+  DATA.teacherSubjects=DATA.teacherSubjects||{};
+  DATA.assignmentModes=DATA.assignmentModes||{};
+  const inferredTeacherSubjects={};
+  for(const row of Object.values(DATA.assign))for(const [subject,teacher] of Object.entries(row||{}))if(teacher){
+    inferredTeacherSubjects[teacher]=inferredTeacherSubjects[teacher]||[];
+    if(!inferredTeacherSubjects[teacher].includes(subject))inferredTeacherSubjects[teacher].push(subject);
+  }
+  for(const teacher of Object.keys(DATA.roster))if(!Object.prototype.hasOwnProperty.call(DATA.teacherSubjects,teacher))
+    DATA.teacherSubjects[teacher]=inferredTeacherSubjects[teacher]||[];
   if(window.SchedulePolicy)SchedulePolicy.normalize(DATA);
   if(typeof DATA.nativeLockEnabled!=='boolean')DATA.nativeLockEnabled=
     (Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length>0)||(DATA.locks||[]).some(lock=>lock.s==='本土語文');
@@ -2745,7 +2758,7 @@ function parseV5(wb,S,opt){
   }
   if(!nd.classes.length)throw new Error('「班級」分頁無有效資料（灰色範例列請改成貴校班級）');
   // 教師：v6 由「教師與配課」左側讀取；v5 仍支援獨立「教師」分頁。
-  nd.roster={};nd.tcap={};nd.teacherAccounts={};nd.teacherNativeLangs={};
+  nd.roster={};nd.tcap={};nd.teacherAccounts={};nd.teacherNativeLangs={};nd.teacherSubjects={};
   for(const c of nd.classes){
     if(c.tutor){nd.roster[c.tutor]='導師';nd.tcap[c.tutor]={cap:0,minus:0}}
   }
@@ -2820,7 +2833,7 @@ function parseV5(wb,S,opt){
     for(const name of [teacher,assistant])if(name){
       nd.derived.push([name,d,p]);
       if(!Object.prototype.hasOwnProperty.call(nd.roster,name)){
-        nd.roster[name]='其他';nd.tcap[name]={cap:0,minus:0};nd.teacherNativeLangs[name]=[];
+        nd.roster[name]='其他';nd.tcap[name]={cap:0,minus:0};nd.teacherNativeLangs[name]=[];nd.teacherSubjects[name]=[];
         nd._warn.push(`本土語教師「${name}」未列在教師名冊，已自動加入名冊`);
       }
     }
@@ -2830,7 +2843,7 @@ function parseV5(wb,S,opt){
   nd.nativeSchemaVersion=2;
   nd.nativeLockEnabled=nd.nativeGroups.length>0;
   // 配課：導師課自動帶入 → 配課列展開覆蓋（含減課/超鐘點之導師課異動）
-  nd.assign={};
+  nd.assign={};nd.assignmentModes={};
   const gOf={};nd.classes.forEach(c=>gOf[c.code]=c);
   for(const c of nd.classes){
     for(const s in nd.subjects){
@@ -2860,6 +2873,11 @@ function parseV5(wb,S,opt){
     if(!nd.subjects[subj]){nd._warn.push(`配課科目「${subj}」不在科目節數表，該列略過`);continue}
     for(const code of expand(r[2],subj))
       ((nd.assign[code]=nd.assign[code]||{})[subj]=t);
+  }
+  for(const [code,row] of Object.entries(nd.assign))for(const [subj,teacher] of Object.entries(row)){
+    if(!teacher)continue;
+    nd.teacherSubjects[teacher]=nd.teacherSubjects[teacher]||[];
+    if(!nd.teacherSubjects[teacher].includes(subj))nd.teacherSubjects[teacher].push(subj);
   }
   nd.override={};nd.limits=[];nd.resGroups=[];
   nd.classes.forEach(c=>{if(c.res){/* 保留旗標，抽離組於系統資源班頁設定 */}});
