@@ -194,6 +194,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
 .platform-school-form input[type="text"],.platform-school-form input[type="email"]{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;color:var(--ink);background:#fff}
 .platform-school-form .btn{white-space:nowrap;padding:9px 13px}
+.platform-school-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
@@ -374,12 +375,13 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <h2>學校管理</h2>
     <div class="sub">建立可使用本系統的學校、Workspace 網域與學校系統管理員。</div>
     <div class="platform-school-form">
-      <label>學校代碼<input id="platformSchoolId" type="text" maxlength="50" placeholder="school-code"></label>
+      <label>教育部學校代碼（6碼）<input id="platformSchoolId" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="例如：183622"></label>
+      <input id="platformSchoolRecordId" type="hidden">
       <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
       <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
       <label>系統管理員帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
       <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
-      <button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button>
+      <div class="platform-school-buttons"><button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button><button class="btn soft sm" type="button" onclick="ScheduleAuth.newSchool()">新增學校</button></div>
     </div>
     <div class="auth-status" id="platformSchoolStatus"></div>
     <table class="platform-school-list" aria-label="已建立學校">

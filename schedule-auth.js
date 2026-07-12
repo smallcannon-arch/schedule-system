@@ -230,7 +230,7 @@
     const target = document.getElementById("platformSchoolList");
     if (!target) return;
     target.innerHTML = state.schools.map((school) => `<tr>
-      <td><b>${root.esc(school.name)}</b><small>${root.esc(school.school_id)}</small></td>
+      <td><b>${root.esc(school.name)}</b><small>教育部代碼 ${root.esc(school.moe_code || "尚未設定")}</small></td>
       <td>${(school.domains || []).map(root.esc).join("<br>")}</td>
       <td>${(school.admin_emails || []).map(root.esc).join("<br>") || "尚未指定"}</td>
       <td><span class="chip ${school.active ? "ok" : "bad"}">${school.active ? "啟用" : "停用"}</span>
@@ -253,7 +253,8 @@
   function editSchool(schoolId) {
     const school = state.schools.find((item) => item.school_id === schoolId);
     if (!school) return;
-    document.getElementById("platformSchoolId").value = school.school_id;
+    document.getElementById("platformSchoolRecordId").value = school.school_id;
+    document.getElementById("platformSchoolId").value = school.moe_code || (/^\d{6}$/.test(school.school_id) ? school.school_id : "");
     document.getElementById("platformSchoolName").value = school.name;
     document.getElementById("platformSchoolDomains").value = (school.domains || []).join(", ");
     document.getElementById("platformSchoolAdmins").value = (school.admin_emails || []).join(", ");
@@ -261,9 +262,22 @@
     document.getElementById("platformSchoolId").focus();
   }
 
+  function newSchool() {
+    document.getElementById("platformSchoolRecordId").value = "";
+    document.getElementById("platformSchoolId").value = "";
+    document.getElementById("platformSchoolName").value = "";
+    document.getElementById("platformSchoolDomains").value = "";
+    document.getElementById("platformSchoolAdmins").value = "";
+    document.getElementById("platformSchoolActive").checked = true;
+    document.getElementById("platformSchoolStatus").textContent = "請輸入教育部六碼學校代碼。";
+    document.getElementById("platformSchoolId").focus();
+  }
+
   async function saveSchool() {
-    const schoolId = document.getElementById("platformSchoolId").value.trim().toLowerCase();
+    const schoolCode = document.getElementById("platformSchoolId").value.trim();
+    const schoolId = document.getElementById("platformSchoolRecordId").value.trim().toLowerCase() || schoolCode;
     const payload = {
+      moe_code: schoolCode,
       name: document.getElementById("platformSchoolName").value.trim(),
       domains: splitValues(document.getElementById("platformSchoolDomains").value),
       admin_emails: splitValues(document.getElementById("platformSchoolAdmins").value),
@@ -271,12 +285,13 @@
     };
     const element = document.getElementById("platformSchoolStatus");
     try {
-      if (!schoolId) throw new Error("請輸入學校代碼");
+      if (!/^\d{6}$/.test(schoolCode)) throw new Error("教育部學校代碼須為 6 位數字");
       element.textContent = "正在儲存學校…";
       await request(`/platform/schools/${encodeURIComponent(schoolId)}`, {
         method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
       });
-      element.textContent = `${payload.name} 已儲存。`;
+      document.getElementById("platformSchoolRecordId").value = schoolId;
+      element.textContent = `${payload.name}（${schoolCode}）已儲存。`;
       await loadSchools();
     } catch (error) {
       element.textContent = error.message;
@@ -428,5 +443,5 @@
   }
 
   root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft,
-    syncTeacherUpdates, savePlacements, loadSchools, saveSchool, editSchool, logout};
+    syncTeacherUpdates, savePlacements, loadSchools, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));
