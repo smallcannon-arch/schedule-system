@@ -101,10 +101,11 @@
 
   function classLabel(item) {
     if (!item) return "未知班級";
-    return `${Number(item.g) || ""}年${text(item.code).replace(/^\d+/, "") || Number(item.i) || ""}班`;
+    const grade = Number(item.g) || "";
+    return `${NUMBER_TEXT[grade] || grade}年${text(item.code).replace(/^\d+/, "") || Number(item.i) || ""}班`;
   }
 
-  function timetableRows(title, items, cellText) {
+  function timetableRows(title, subtitle, items, cellText) {
     const cells = new Map();
     for (const item of items) {
       const key = `${item.d}|${item.p}`;
@@ -112,7 +113,7 @@
       const value = cellText(item);
       if (value && !cells.get(key).includes(value)) cells.get(key).push(value);
     }
-    const rows = [[title], ["節次", ...DAYS.map((day) => `星期${day}`)]];
+    const rows = [[title], [subtitle], ["節次", ...DAYS.map((day) => `星期${day}`)]];
     for (const period of PERIODS) rows.push([
       `第${NUMBER_TEXT[period]}節`,
       ...DAYS.map((day) => (cells.get(`${day}|${period}`) || []).join("\n")),
@@ -135,7 +136,9 @@
   function classSheets(data, entries) {
     const used = new Set();
     return (data.classes || []).map((item) => {
-      const rows = timetableRows(`${classLabel(item)} 班級課表`, entries.filter((entry) => entry.code === text(item.code)), (entry) => {
+      const title = [text(data._school), `${classLabel(item)} 班級課表`].filter(Boolean).join("　");
+      const subtitle = `導師：${text(item.tutor) || "未填"}　｜　班級代碼：${text(item.code)}`;
+      const rows = timetableRows(title, subtitle, entries.filter((entry) => entry.code === text(item.code)), (entry) => {
         const role = entry.assistant ? "（協同）" : "";
         const group = entry.group ? `｜${entry.group}` : "";
         return `${entry.displaySubject || entry.s}${group}\n${entry.t}${role}`.trim();
@@ -149,7 +152,10 @@
     const used = new Set();
     const teachers = [...new Set(entries.map((item) => item.t).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
     return teachers.map((teacher) => {
-      const rows = timetableRows(`${teacher} 教師課表`, entries.filter((entry) => entry.t === teacher), (entry) => {
+      const teacherEntries = entries.filter((entry) => entry.t === teacher);
+      const title = [text(data._school), `${teacher} 教師課表`].filter(Boolean).join("　");
+      const subtitle = `職別：${text((data.roster || {})[teacher]) || "教師"}　｜　每週授課：${teacherEntries.length} 節`;
+      const rows = timetableRows(title, subtitle, teacherEntries, (entry) => {
         const group = entry.group ? `｜${entry.group}` : "";
         const role = entry.assistant ? "（協同）" : "";
         return `${entry.displaySubject || entry.s}${group}${role}\n${classLabel(classes.get(entry.code))}`;
@@ -233,9 +239,149 @@
     return result;
   }
 
+  function html(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function subjectClass(value) {
+    const name = text(value).split("\n")[0];
+    if (/國語|英語|本土|閩南|客語|原住民|閱讀/.test(name)) return "language";
+    if (/數學/.test(name)) return "math";
+    if (/自然|生活課程|科技|資訊/.test(name)) return "science";
+    if (/社會|綜合/.test(name)) return "social";
+    if (/音樂|藝術|表演|視覺/.test(name)) return "arts";
+    if (/健康|體育/.test(name)) return "health";
+    return "general";
+  }
+
+  function subjectFill(value) {
+    return ({
+      language: "EDF4FB", math: "FFF3D7", science: "EAF5E9", social: "F3EDF8",
+      arts: "FBECEF", health: "E7F4F2", general: "FAFAF8",
+    })[subjectClass(value)];
+  }
+
+  function thinBorder(color) {
+    const line = {style: "thin", color: {rgb: color || "C8D3CF"}};
+    return {top: line, bottom: line, left: line, right: line};
+  }
+
+  function styleTimetableWorksheet(xlsx, worksheet, rows) {
+    worksheet["!merges"] = [{s: {r: 0, c: 0}, e: {r: 0, c: 5}}, {s: {r: 1, c: 0}, e: {r: 1, c: 5}}];
+    worksheet["!cols"] = [{wch: 12}, ...DAYS.map(() => ({wch: 23}))];
+    worksheet["!rows"] = [{hpt: 34}, {hpt: 22}, {hpt: 25}, ...PERIODS.map(() => ({hpt: 50}))];
+    const border = thinBorder();
+    const range = xlsx.utils.decode_range(worksheet["!ref"]);
+    for (let row = range.s.r; row <= range.e.r; row += 1) {
+      for (let column = range.s.c; column <= range.e.c; column += 1) {
+        const address = xlsx.utils.encode_cell({r: row, c: column});
+        const cell = worksheet[address] || (worksheet[address] = {t: "s", v: ""});
+        if (row === 0) cell.s = {
+          font: {name: "Microsoft JhengHei", sz: 18, bold: true, color: {rgb: "FFFFFF"}},
+          fill: {patternType: "solid", fgColor: {rgb: "294D45"}},
+          alignment: {horizontal: "center", vertical: "center"},
+        };
+        else if (row === 1) cell.s = {
+          font: {name: "Microsoft JhengHei", sz: 10, color: {rgb: "53635F"}},
+          fill: {patternType: "solid", fgColor: {rgb: "EDF2F0"}},
+          alignment: {horizontal: "right", vertical: "center"},
+          border: {bottom: {style: "medium", color: {rgb: "2F7765"}}},
+        };
+        else if (row === 2) cell.s = {
+          font: {name: "Microsoft JhengHei", sz: 11, bold: true, color: {rgb: "FFFFFF"}},
+          fill: {patternType: "solid", fgColor: {rgb: "3D665C"}},
+          alignment: {horizontal: "center", vertical: "center"}, border,
+        };
+        else if (column === 0) cell.s = {
+          font: {name: "Microsoft JhengHei", sz: 10, bold: true, color: {rgb: "35564E"}},
+          fill: {patternType: "solid", fgColor: {rgb: "EDF2F0"}},
+          alignment: {horizontal: "center", vertical: "center", wrapText: true}, border,
+        };
+        else cell.s = {
+          font: {name: "Microsoft JhengHei", sz: 11, color: {rgb: "24332F"}},
+          fill: {patternType: "solid", fgColor: {rgb: subjectFill(cell.v)}},
+          alignment: {horizontal: "center", vertical: "center", wrapText: true}, border,
+        };
+        if (row === 7 && cell.s && cell.s.border) {
+          cell.s.border.top = {style: "medium", color: {rgb: "7D948D"}};
+        }
+      }
+    }
+    worksheet["!margins"] = {left: .3, right: .3, top: .35, bottom: .35, header: .15, footer: .15};
+    worksheet["!pageSetup"] = {
+      orientation: "landscape", paperSize: 9, fitToWidth: 1, fitToHeight: 1,
+      horizontalCentered: true, verticalCentered: false,
+    };
+    worksheet["!sheetPr"] = {pageSetUpPr: {fitToPage: true}};
+    worksheet["!printArea"] = `A1:F${rows.length}`;
+  }
+
+  function styleUploadWorksheet(xlsx, worksheet, rows) {
+    worksheet["!cols"] = UPLOAD_HEADERS.map((header, index) =>
+      ({wch: index === 5 ? 16 : Math.max(12, header.length * 2 + 2)}));
+    worksheet["!autofilter"] = {ref: `A1:L${Math.max(1, rows.length)}`};
+    for (let column = 0; column < UPLOAD_HEADERS.length; column += 1) {
+      const cell = worksheet[xlsx.utils.encode_cell({r: 0, c: column})];
+      if (!cell) continue;
+      cell.s = {
+        font: {name: "Microsoft JhengHei", sz: 10, bold: true, color: {rgb: "FFFFFF"}},
+        fill: {patternType: "solid", fgColor: {rgb: "3D665C"}},
+        alignment: {horizontal: "center", vertical: "center", wrapText: true},
+        border: thinBorder("AEBDB8"),
+      };
+    }
+    worksheet["!rows"] = [{hpt: 28}];
+  }
+
+  function makeWorksheet(xlsx, rows, kind) {
+    const worksheet = xlsx.utils.aoa_to_sheet(rows);
+    if (kind === "timetable") styleTimetableWorksheet(xlsx, worksheet, rows);
+    else styleUploadWorksheet(xlsx, worksheet, rows);
+    return worksheet;
+  }
+
+  function printCell(value) {
+    const lines = String(value == null ? "" : value).split("\n").filter(Boolean);
+    if (!lines.length) return "";
+    return `<strong>${html(lines[0])}</strong>${lines.slice(1).map((line) => `<span>${html(line)}</span>`).join("")}`;
+  }
+
+  function printDocument(sheets, documentTitle) {
+    const pages = (sheets || []).map((sheet, index) => {
+      const rows = sheet.rows || [];
+      const headers = rows[2] || [];
+      const body = rows.slice(3).map((row, rowIndex) =>
+        `<tr class="${rowIndex === 4 ? "afternoon" : ""}"><th>${html(row[0])}</th>${DAYS.map((_, column) => {
+          const value = row[column + 1] || "";
+          return `<td class="${subjectClass(value)}">${printCell(value)}</td>`;
+        }).join("")}</tr>`).join("");
+      return `<section class="page">
+        <header><p>學校正式課表</p><h1>${html((rows[0] || [sheet.name])[0])}</h1><div>${html((rows[1] || [""])[0])}</div></header>
+        <table><thead><tr>${headers.map((value) => `<th>${html(value)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
+        <footer><span>智慧排課系統</span><span>${index + 1} / ${sheets.length}</span></footer>
+      </section>`;
+    }).join("");
+    return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${html(documentTitle || "正式課表")}</title><style>
+      @page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}html,body{margin:0;background:#eef1ef;color:#24332f;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif}
+      .page{width:279mm;min-height:192mm;margin:8mm auto;padding:8mm 9mm 6mm;background:#fff;display:flex;flex-direction:column;break-after:page;page-break-after:always;box-shadow:0 2mm 7mm rgba(24,48,41,.12)}
+      .page:last-child{break-after:auto;page-break-after:auto}header{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8mm;padding:0 0 4mm;border-bottom:1.2mm solid #2f7765}header p{grid-column:1;grid-row:1;margin:0 0 1mm;color:#2f7765;font-size:9pt;font-weight:700}
+      h1{grid-column:1;grid-row:2;margin:0;font-size:20pt;line-height:1.25;letter-spacing:0}header div{grid-column:2;grid-row:1/3;align-self:end;max-width:95mm;color:#5d6b67;font-size:10pt;text-align:right}
+      table{width:100%;height:140mm;margin-top:5mm;border-collapse:separate;border-spacing:0;table-layout:fixed;border:0.35mm solid #aebdb8}
+      th,td{border-right:0.25mm solid #c8d3cf;border-bottom:0.25mm solid #c8d3cf;text-align:center;vertical-align:middle;padding:2mm 1.5mm;overflow-wrap:anywhere}
+      tr>*:last-child{border-right:0}tbody tr:last-child>*{border-bottom:0}thead th{height:10mm;background:#294d45;color:#fff;font-size:11pt;font-weight:700}
+      thead th:first-child,tbody th{width:19mm}tbody th{background:#edf2f0;color:#35564e;font-size:10pt}tbody td{font-size:10.5pt;line-height:1.35}
+      tbody td strong{display:block;font-size:11.5pt}tbody td span{display:block;margin-top:.6mm;color:#53635f;font-size:8.5pt}
+      tr.afternoon>*{border-top:0.65mm solid #7d948d}.language{background:#edf4fb}.math{background:#fff3d7}.science{background:#eaf5e9}.social{background:#f3edf8}.arts{background:#fbecef}.health{background:#e7f4f2}.general{background:#fafaf8}
+      footer{display:flex;justify-content:space-between;margin-top:auto;padding-top:3mm;color:#77837f;font-size:8pt}
+      @media print{html,body{background:#fff}.page{width:auto;min-height:0;height:190mm;margin:0;padding:0;box-shadow:none}header{padding-top:0}}
+    </style></head><body>${pages}</body></html>`;
+  }
+
   return {
     DAYS, PERIODS, UPLOAD_HEADERS,
     defaultMapping, ensureMappings, buildEntries, classSheets, teacherSheets,
-    uploadRows, validateUpload, parseTeacherIdRows, classLabel,
+    uploadRows, validateUpload, parseTeacherIdRows, classLabel, printDocument, makeWorksheet,
   };
 }));

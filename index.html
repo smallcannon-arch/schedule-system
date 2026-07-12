@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>智慧排課系統 DEMO｜示範資料（已匿名化）</title>
 <script src="app-config.js?v=20260712-2"></script>
-<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>
 :root{
   --ink:#4a4458; --muted:#8d829e; --line:#efe8ea; --bg:#fdf8f4;
@@ -213,7 +213,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}.setup-subject-skills{min-width:190px;text-align:left}.teaching-load{display:grid;gap:3px;min-width:165px}.teaching-load b{white-space:nowrap}.teaching-load small{color:var(--muted);font-size:11px;white-space:nowrap}
 .native-band-table{min-width:620px}.native-table{min-width:1580px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:140px;text-align:left}.native-table input[data-native="sources"]{min-width:170px;text-align:left}.native-table input[data-native="group"]{min-width:150px;text-align:left}.native-table td:nth-child(6) select,.native-table td:nth-child(7) select{min-width:230px}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
-.export-panel{margin-top:16px}.export-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.export-settings{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}.export-settings summary{cursor:pointer;color:var(--sky-d);font-weight:900}.export-settings-body{padding-top:14px}.export-identity{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.export-map-table{min-width:1120px}.export-map-table input{min-width:130px;text-align:left}.export-map-table input[data-export="schoolName"]{min-width:190px}.export-status{margin-top:12px;color:var(--muted);font-size:13px}.export-status.bad{color:var(--bad);font-weight:800}
+.export-panel{margin-top:16px}.export-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.export-group{padding:16px 18px;border-right:1px solid var(--line)}.export-group:last-child{border-right:0}.export-group h3{margin:0 0 5px;font-size:16px}.export-group p{min-height:42px;margin:0 0 12px;color:var(--muted);font-size:12.5px;line-height:1.65}.export-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.export-settings{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}.export-settings summary{cursor:pointer;color:var(--sky-d);font-weight:900}.export-settings-body{padding-top:14px}.export-identity{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.export-map-table{min-width:1120px}.export-map-table input{min-width:130px;text-align:left}.export-map-table input[data-export="schoolName"]{min-width:190px}.export-status{margin-top:12px;color:var(--muted);font-size:13px}.export-status.bad{color:var(--bad);font-weight:800}
 .setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}.assignment-cell{min-width:138px}.assignment-state{display:block;margin-top:4px;font-size:11px;font-weight:900;white-space:nowrap}.assignment-state.retained{color:var(--mint-d)}.assignment-state.released{color:var(--sky-d)}.assignment-state.missing{color:var(--bad)}.assignment-mode{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--muted);font-size:11px;white-space:nowrap}.assignment-mode input{width:15px;height:15px;margin:0}
 .icon-btn{width:32px;height:32px;border:0;border-radius:6px;background:#f3ecf4;color:var(--lav-d);font:inherit;font-size:20px;cursor:pointer}
 .current-data-source{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fbfaf9}
@@ -251,6 +251,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
+  .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{align-items:stretch;flex-direction:column}.formal-request-link{text-align:center}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
@@ -758,12 +759,32 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <div class="sub">集中下載校內課表，以及人力資源網與校務系統上傳檔案。</div>
   <div class="panel export-panel">
     <h2>匯出格式</h2>
-    <div class="sub">班級與教師課表供校內使用；系統上傳檔會先檢查科目對應及教師識別資料。</div>
-    <div class="export-actions">
-      <button class="btn soft sm" type="button" onclick="exportClassTimetables()">匯出班級課表</button>
-      <button class="btn soft sm" type="button" onclick="exportTeacherTimetables()">匯出教師課表</button>
-      <button class="btn mint sm" type="button" onclick="exportUploadWorkbook('human')">匯出人力資源網上傳檔案</button>
-      <button class="btn pink sm" type="button" onclick="exportUploadWorkbook('school')">匯出校務系統上傳檔案</button>
+    <div class="sub">PDF 適合列印與發放；Excel 保留編修與核對；系統上傳檔維持規定欄位。</div>
+    <div class="export-groups">
+      <section class="export-group">
+        <h3>正式課表 PDF</h3>
+        <p>A4 橫式排版，每班或每位教師一頁；在列印視窗選擇「另存為 PDF」。</p>
+        <div class="export-actions">
+          <button class="btn mint sm" type="button" onclick="printTimetables('class')">班級課表 PDF</button>
+          <button class="btn mint sm" type="button" onclick="printTimetables('teacher')">教師課表 PDF</button>
+        </div>
+      </section>
+      <section class="export-group">
+        <h3>可編輯 Excel</h3>
+        <p>保留正式版面、科目色彩與列印設定，供承辦人後續編修或核對。</p>
+        <div class="export-actions">
+          <button class="btn soft sm" type="button" onclick="exportClassTimetables()">班級課表 Excel</button>
+          <button class="btn soft sm" type="button" onclick="exportTeacherTimetables()">教師課表 Excel</button>
+        </div>
+      </section>
+      <section class="export-group">
+        <h3>系統上傳 Excel</h3>
+        <p>輸出前檢查科目對應與教師識別資料，不加入可能影響上傳的版面內容。</p>
+        <div class="export-actions">
+          <button class="btn soft sm" type="button" onclick="exportUploadWorkbook('human')">人力資源網</button>
+          <button class="btn pink sm" type="button" onclick="exportUploadWorkbook('school')">校務系統</button>
+        </div>
+      </section>
     </div>
     <details class="export-settings">
       <summary>人力網／校務系統對應設定</summary>
@@ -857,7 +878,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="schedule-editor.js"></script>
 <script src="schedule-policy.js?v=20260712-1"></script>
 <script src="setup-builder.js?v=20260712-2"></script>
-<script src="schedule-exports.js?v=20260711-1"></script>
+<script src="schedule-exports.js?v=20260712-2"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -1949,16 +1970,7 @@ function exportEntries(){
 function exportFileDate(){return new Date().toISOString().slice(0,10).replaceAll('-','')}
 function exportSchoolName(){return safeFilePart(DATA._school||'全校')}
 function makeSheet(rows,kind='table'){
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  if(kind==='timetable'){
-    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
-    ws['!cols']=[{wch:12},...DAYS.map(()=>({wch:24}))];
-    ws['!rows']=[{hpt:25},{hpt:22},...PS.map(()=>({hpt:54}))];
-  }else{
-    ws['!cols']=ScheduleExports.UPLOAD_HEADERS.map((header,index)=>({wch:index===5?16:Math.max(12,header.length*2+2)}));
-    ws['!autofilter']={ref:`A1:L${Math.max(1,rows.length)}`};
-  }
-  return ws;
+  return ScheduleExports.makeWorksheet(XLSX,rows,kind);
 }
 function appendSheets(workbook,sheets){
   for(const sheet of sheets)XLSX.utils.book_append_sheet(workbook,makeSheet(sheet.rows,'timetable'),sheet.name);
@@ -1986,6 +1998,22 @@ function exportTeacherTimetables(){
   const wb=XLSX.utils.book_new(),sheets=ScheduleExports.teacherSheets(DATA,exportEntries());
   if(!sheets.length)return alert('沒有可匯出的教師課表。');
   appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_教師課表_${exportFileDate()}.xlsx`);
+}
+function printTimetables(kind){
+  if(!exportScheduleReady())return;
+  const entries=exportEntries(),isTeacher=kind==='teacher';
+  const sheets=isTeacher?ScheduleExports.teacherSheets(DATA,entries):ScheduleExports.classSheets(DATA,entries);
+  if(!sheets.length)return alert(`沒有可列印的${isTeacher?'教師':'班級'}課表。`);
+  const popup=window.open('','_blank');
+  if(!popup)return alert('瀏覽器已封鎖列印視窗，請允許此網站開啟彈出式視窗。');
+  popup.opener=null;
+  popup.document.open();
+  popup.document.write(ScheduleExports.printDocument(sheets,`${exportSchoolName()}_${isTeacher?'教師':'班級'}課表`));
+  popup.document.close();
+  const trigger=()=>{popup.focus();popup.print()};
+  if(popup.document.readyState==='complete')setTimeout(trigger,350);else popup.addEventListener('load',()=>setTimeout(trigger,250),{once:true});
+  const status=document.getElementById('exportStatus');
+  if(status){status.className='export-status';status.textContent=`已開啟 ${sheets.length} 頁${isTeacher?'教師':'班級'}課表；請選擇印表機或另存為 PDF。`}
 }
 function exportUploadWorkbook(kind){
   if(!exportScheduleReady())return;
