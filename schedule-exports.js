@@ -360,7 +360,7 @@
       return `<section class="page">
         <header><p>學校正式課表</p><h1>${html((rows[0] || [sheet.name])[0])}</h1><div>${html((rows[1] || [""])[0])}</div></header>
         <table><thead><tr>${headers.map((value) => `<th>${html(value)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
-        <footer><span>智慧排課系統</span><span>${index + 1} / ${sheets.length}</span></footer>
+        <footer><span>排課輔助系統</span><span>${index + 1} / ${sheets.length}</span></footer>
       </section>`;
     }).join("");
     return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${html(documentTitle || "正式課表")}</title><style>
