@@ -2,8 +2,8 @@
   "use strict";
 
   const state = {credential: "", profile: null, workspace: null, apiBaseUrl: "",
-    activeRevision: "", updateSequence: 0, lastDraftHash: "", automationStarted: false,
-    schools: []};
+    activeRevision: "", updateSequence: 0, draftRevision: "", draftConflict: false,
+    lastDraftHash: "", automationStarted: false, autoSaveTimer: null, schools: []};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -324,20 +324,49 @@
 
   async function refreshDraftStatus() {
     const element = document.getElementById("cloudDraftStatus");
+    const continueButton = document.getElementById("cloudContinueButton");
     try {
       const draft = await request("/admin/draft");
-      element.textContent = `最近雲端暫存：${new Date(draft.saved_at).toLocaleString("zh-TW")}。`;
+      state.draftRevision = draft.draft_revision || "";
+      state.draftConflict = true;
+      if (continueButton) continueButton.hidden = false;
+      const saver = draft.saved_by ? `｜儲存者：${draft.saved_by}` : "";
+      element.textContent = `找到學校雲端案件：${new Date(draft.saved_at).toLocaleString("zh-TW")}${saver}。請先按「繼續上次雲端案件」。`;
+      return draft;
     } catch (error) {
-      element.textContent = error.status === 404 ? "目前尚無雲端暫存；修改後每 30 秒自動保存。" : `無法讀取雲端暫存：${error.message}`;
+      if (error.status === 404) {
+        state.draftRevision = "";
+        state.draftConflict = false;
+        if (continueButton) continueButton.hidden = true;
+        element.textContent = "目前尚無學校雲端案件；開始建置後，停止操作 10 秒會自動存檔。";
+      } else element.textContent = `無法讀取雲端暫存：${error.message}`;
+      return null;
     }
+  }
+
+  function setSaveButtonsBusy(busy) {
+    document.querySelectorAll("[data-cloud-save]").forEach((button) => {
+      button.disabled = busy;
+      button.textContent = busy ? "正在儲存…" : "儲存至學校雲端";
+    });
   }
 
   async function saveDraft(manual) {
     if (!state.profile || !state.profile.is_admin) return;
     const element = document.getElementById("cloudDraftStatus");
+    if (state.draftConflict) {
+      const message = "學校雲端已有案件或較新版本，請先按「繼續上次雲端案件」載入後再編修。";
+      element.textContent = message;
+      if (manual) alert(message);
+      return;
+    }
     try {
       const snapshot = root.getScheduleAuthSnapshot();
       if (!snapshot || !snapshot.data) throw new Error("目前沒有可暫存的排課資料");
+      if (!(snapshot.data.classes || []).length || !Object.keys(snapshot.data.subjects || {}).length) {
+        if (manual) throw new Error("請先建立空白案件或匯入 Excel，再儲存至學校雲端");
+        return;
+      }
       if (!manual && String(snapshot.label || "").includes("示範")) {
         element.textContent = "示範資料不會自動存入正式雲端暫存。";
         return;
@@ -345,15 +374,26 @@
       const hash = JSON.stringify(snapshot);
       if (!manual && hash === state.lastDraftHash) return;
       element.textContent = "正在保存雲端暫存…";
+      setSaveButtonsBusy(true);
       const result = await request("/admin/draft", {
         method: "PUT", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({...snapshot, active_revision: state.activeRevision}),
+        body: JSON.stringify({...snapshot, active_revision: state.activeRevision,
+          expected_draft_revision: state.draftRevision}),
       });
+      state.draftRevision = result.draft_revision || "";
+      state.draftConflict = false;
       state.lastDraftHash = hash;
-      element.textContent = `已自動暫存：${new Date(result.saved_at).toLocaleString("zh-TW")}。`;
+      const continueButton = document.getElementById("cloudContinueButton");
+      if (continueButton) continueButton.hidden = false;
+      element.textContent = `${manual ? "已儲存至學校雲端" : "已自動存檔"}：${new Date(result.saved_at).toLocaleString("zh-TW")}｜${result.saved_by || state.profile.email}。`;
     } catch (error) {
-      element.textContent = `雲端暫存失敗：${error.message}`;
+      if (error.status === 409) {
+        state.draftConflict = true;
+        element.textContent = "另一位管理員已儲存較新的版本；為避免覆蓋，請先載入雲端案件。";
+      } else element.textContent = `雲端暫存失敗：${error.message}`;
       if (manual) alert(element.textContent);
+    } finally {
+      setSaveButtonsBusy(false);
     }
   }
 
@@ -363,13 +403,15 @@
       const draft = await request("/admin/draft");
       if (!confirm(`載入 ${new Date(draft.saved_at).toLocaleString("zh-TW")} 的雲端暫存？目前畫面內容會被取代。`)) return;
       root.applyAdminDraft(draft.snapshot);
+      state.draftRevision = draft.draft_revision || "";
+      state.draftConflict = false;
       state.activeRevision = draft.active_revision || "";
       state.updateSequence = 0;
       if (state.activeRevision) localStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
       else localStorage.removeItem(userStorageKey("schedule_active_revision"));
       localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), "0");
       state.lastDraftHash = JSON.stringify(root.getScheduleAuthSnapshot());
-      document.getElementById("cloudDraftStatus").textContent = `已載入雲端暫存：${new Date(draft.saved_at).toLocaleString("zh-TW")}。`;
+      document.getElementById("cloudDraftStatus").textContent = `已載入學校雲端案件：${new Date(draft.saved_at).toLocaleString("zh-TW")}｜${draft.saved_by || "管理員"}。`;
     } catch (error) {
       alert(`無法載入雲端暫存：${error.message}`);
     }
@@ -407,7 +449,15 @@
   function startAdminAutomation() {
     if (state.automationStarted) return;
     state.automationStarted = true;
-    setInterval(() => saveDraft(false), 30000);
+    setInterval(() => saveDraft(false), 60000);
+  }
+
+  function queueDraftSave() {
+    if (!state.profile || !state.profile.is_admin || state.draftConflict) return;
+    clearTimeout(state.autoSaveTimer);
+    const element = document.getElementById("cloudDraftStatus");
+    if (element) element.textContent = "尚有未存雲端的變更；停止操作 10 秒後自動存檔。";
+    state.autoSaveTimer = setTimeout(() => saveDraft(false), 10000);
   }
 
   async function savePlacements() {
@@ -442,6 +492,6 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft,
+  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft, queueDraftSave,
     syncTeacherUpdates, savePlacements, loadSchools, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

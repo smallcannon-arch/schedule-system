@@ -67,6 +67,8 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .btn.pink{background:var(--pink-d);color:#fff}.btn.pink:hover{filter:brightness(1.1)}
 .btn.soft{background:var(--lav);color:var(--lav-d)}
 .btn.mint{background:var(--mint);color:var(--mint-d)}
+.btn.danger{background:#fff0f2;color:var(--bad);border:1px solid #e3b6bf}
+.btn.danger:hover{background:#f9dce2}
 .btn.big{font-size:17.5px;padding:15px 38px}
 .btn.sm{padding:9px 18px;font-size:15.5px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -183,9 +185,18 @@ body.platform-admin-mode .admin-dock{display:none!important}
 .admin-dock-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--muted);font-size:14px}
 .admin-dock .auth-admin-actions{margin:0;padding:0;border:0}.admin-dock .btn{padding:9px 14px;border-radius:7px;font-size:15px}
 .admin-dock-notes{display:grid;gap:5px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;line-height:1.5}
+.cloud-draft-guide{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;padding:10px 12px;border-left:4px solid var(--mint-d);background:#eef7f4;color:#526861}
+.cloud-draft-guide b{grid-row:1/3;color:#246b59;white-space:nowrap}.cloud-draft-guide span{font-size:13px}
+.cloud-draft-guide small{color:#6f7f79;font-size:12px}
 .setup-source-strip{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;padding:14px 16px;border:1px solid var(--line);border-radius:7px;background:#fbfaf9}
 .setup-source-copy{min-width:0;flex:1}.setup-source-copy .sub{margin:0;font-size:13.5px;line-height:1.55}.setup-source-copy #setupEntryHelp{margin-top:3px}.setup-source-copy #lsMsg{margin-top:5px;color:var(--mint-d)}
 .setup-source-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.setup-source-actions .btn{padding:8px 12px;border-radius:6px;font-size:13.5px;white-space:nowrap}
+.clear-project-dialog{width:min(560px,calc(100% - 32px));padding:0;border:0;border-radius:8px;box-shadow:0 22px 70px rgba(45,35,44,.28);color:var(--ink)}
+.clear-project-dialog::backdrop{background:rgba(38,32,40,.48)}
+.clear-project-head{padding:20px 22px 14px;border-bottom:1px solid var(--line)}.clear-project-head h2{font-size:21px;margin-bottom:5px;color:var(--bad)}.clear-project-head p{color:var(--muted);font-size:14px;line-height:1.6}
+.clear-project-body{padding:18px 22px}.clear-project-body ul{margin:0 0 16px;padding-left:22px;color:#655f68;font-size:14px;line-height:1.8}.clear-project-body li::marker{color:var(--bad)}
+.clear-project-confirm{display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px solid #ecd1d7;background:#fff7f8;font-size:14px;font-weight:800;line-height:1.55}.clear-project-confirm input{width:19px;height:19px;flex:0 0 auto;margin-top:1px}
+.clear-project-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--line);background:#fbfaf9}
 .setup-overview-panel{margin-bottom:18px;border:1px solid var(--line);box-shadow:none;background:#fbfaf9}.setup-overview-panel #statLine{white-space:nowrap;overflow-x:auto;padding-bottom:2px}
 .setup-class-format{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.setup-class-format h3{font-size:17px;margin-bottom:10px}
 .platform-school-actions{margin-bottom:0}
@@ -298,7 +309,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.9</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.10</span></div>
   </div>
 </section>
 
@@ -347,11 +358,12 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="auth-admin-actions" id="googleAdminActions" hidden>
       <label class="btn soft sm" style="cursor:pointer">匯入教師帳號 CSV<input type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
       <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.loadDraft()">載入雲端暫存</button>
+      <button class="btn mint sm" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
+      <button class="btn soft sm" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
     </div>
     <div class="admin-dock-notes">
+      <div class="cloud-draft-guide"><b>學校共用暫存</b><span>同校主任與組長讀取同一案件，換電腦登入後也能繼續。</span><small>停止操作 10 秒後自動存檔；若其他管理員已有較新版本，系統會阻擋覆蓋並要求先載入。</small></div>
       <span>CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
       <span id="cloudDraftStatus">雲端暫存尚未啟動。</span>
       <span id="teacherSyncStatus">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
@@ -368,7 +380,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="step-help-body"><ol>
       <li><b>選擇來源：</b>建立空白案件，或先下載 Excel 母版，填妥後再匯入。</li>
       <li><b>依序建置：</b>完成班級、教師、科目節數與配課，並確認資料概況。</li>
-      <li><b>保存案件：</b>按立即暫存後，再前往配課檢核與排課條件設定。</li>
+      <li><b>保存案件：</b>按「儲存至學校雲端」；換電腦登入後可按「繼續上次雲端案件」。</li>
     </ol><div class="step-help-note">Excel 匯入會取代目前案件資料；匯入前請先確認雲端暫存已更新。</div></div>
   </details>
   <div class="setup-import-hint">Excel 匯入：<b>下載 Excel 母版填寫後再上傳</b>。</div>
@@ -376,7 +388,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="btn soft sm" type="button" onclick="ScheduleSetup.startBlank()">建立空白案件</button>
     <a class="btn soft sm" style="text-decoration:none" href="template.xlsx?v=20260712-2" download="排課母版範本_v6.xlsx">下載 Excel 母版</a>
     <label class="btn soft sm" style="cursor:pointer">上傳填妥的 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
-    <button class="btn mint sm formal-only" type="button" onclick="ScheduleAuth.saveDraft(true)">立即暫存</button>
+    <button class="btn mint sm formal-only" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
   </div>
   <section class="panel platform-school-actions" id="platformSchoolActions" hidden>
     <h2>學校管理</h2>
@@ -407,7 +419,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <button class="btn soft sm demo-only" type="button" onclick="resetDemo()">還原示範資料</button>
       <button class="btn soft sm demo-only" type="button" onclick="exportJSON()">下載工作進度</button>
       <label class="btn soft sm demo-only" style="cursor:pointer">載入工作進度<input type="file" accept=".json,application/json" hidden onchange="importJSON(this)"></label>
-      <button class="btn soft sm" type="button" onclick="clearBrowserData()">清除目前案件</button>
+      <button class="btn danger sm" type="button" onclick="openClearProjectDialog()">清空目前畫面</button>
     </div>
   </div>
   <div class="panel setup-overview-panel setup-ready-only">
@@ -704,7 +716,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="step-help-body"><ol>
       <li><b>選擇對象：</b>搜尋班級或教師，左右課表會同步顯示目前安排。</li>
       <li><b>移動課程：</b>先點可移動課程，再點目標空格；系統會即時檢查衝突。</li>
-      <li><b>確認變更：</b>查看完整度、操作結果與最近變更，完成後立即暫存。</li>
+      <li><b>確認變更：</b>查看完整度、操作結果與最近變更，完成後儲存至學校雲端。</li>
     </ol><div class="step-help-note">語言分組與資源班綁課、固定課及連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
   </details>
   <div class="editor-toolbar">
@@ -875,6 +887,25 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </section>
 
+<dialog class="clear-project-dialog" id="clearProjectDialog" aria-labelledby="clearProjectTitle">
+  <div class="clear-project-head">
+    <h2 id="clearProjectTitle">清空目前畫面</h2>
+    <p>這是高風險操作。請先確認清除範圍，避免把正在整理的案件誤清空。</p>
+  </div>
+  <div class="clear-project-body">
+    <ul id="clearProjectEffects">
+      <li>清除目前畫面的班級、教師、配課、規則與排課結果。</li>
+      <li>清除這台瀏覽器內的本機備份。</li>
+      <li>不會刪除學校雲端暫存，也不會刪除已發布的教師課表。</li>
+    </ul>
+    <label class="clear-project-confirm"><input id="clearProjectAcknowledge" type="checkbox" onchange="toggleClearProjectConfirm()"><span>我了解目前畫面與本機備份會被清空，尚未存到雲端的變更將無法復原。</span></label>
+  </div>
+  <div class="clear-project-actions">
+    <button class="btn soft sm" type="button" onclick="closeClearProjectDialog()">取消</button>
+    <button class="btn danger sm" id="clearProjectConfirmButton" type="button" onclick="confirmClearProject()" disabled>確認清空目前畫面</button>
+  </div>
+</dialog>
+
 <footer class="app-footer" aria-label="系統版權資訊">
   <div class="app-footer-brand">
     <span class="app-footer-mark" aria-hidden="true">▦</span>
@@ -890,7 +921,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.9</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.10</small>
   </div>
 </footer>
 
@@ -2679,6 +2710,7 @@ function saveLS(label){
     document.getElementById('lsMsg').textContent=APP_MODE==='demo'?
       `已自動保存於此瀏覽器（${new Date().toLocaleString('zh-TW')}），30 天內可回來繼續；也可下載工作進度檔。`:
       `已保存本機備份（${new Date().toLocaleString('zh-TW')}）；登入期間另有雲端自動暫存。`;
+    if(APP_MODE==='formal'&&window.ScheduleAuth&&ScheduleAuth.queueDraftSave)ScheduleAuth.queueDraftSave();
   }catch(e){document.getElementById('lsMsg').textContent='⚠ 瀏覽器儲存失敗：'+e.message}
 }
 function loadLS(){
@@ -2708,8 +2740,25 @@ function resetDemo(){
   applyData(JSON.parse(JSON.stringify(DEMO0)),'內建示範資料（匿名）');
   document.getElementById('lsMsg').textContent='';
 }
-function clearBrowserData(){
-  if(!confirm('確定清除這台瀏覽器內保存的學校排課資料？'))return;
+function openClearProjectDialog(){
+  const dialog=document.getElementById('clearProjectDialog'),ack=document.getElementById('clearProjectAcknowledge');
+  if(!dialog)return;
+  ack.checked=false;toggleClearProjectConfirm();
+  if(typeof dialog.showModal==='function')dialog.showModal();
+  else if(confirm('清空目前畫面與本機備份？雲端暫存及已發布課表不會刪除。'))performClearProject();
+}
+function closeClearProjectDialog(){
+  const dialog=document.getElementById('clearProjectDialog');if(dialog&&dialog.open)dialog.close();
+}
+function toggleClearProjectConfirm(){
+  const ack=document.getElementById('clearProjectAcknowledge'),button=document.getElementById('clearProjectConfirmButton');
+  if(button)button.disabled=!(ack&&ack.checked);
+}
+function confirmClearProject(){
+  const ack=document.getElementById('clearProjectAcknowledge');if(!ack||!ack.checked)return;
+  closeClearProjectDialog();performClearProject();
+}
+function performClearProject(){
   const storageKey=currentLocalStorageKey();
   if(storageKey)localStorage.removeItem(storageKey);
   if(APP_MODE==='demo')localStorage.removeItem(LEGACY_LSKEY);
@@ -2717,8 +2766,12 @@ function clearBrowserData(){
   applyData(APP_MODE==='demo'?TeacherWorkflow.clone(DEMO0):emptyFormalData(),
     APP_MODE==='demo'?'內建示範資料（匿名）':'尚未載入學校資料');
   setSetupStarted(APP_MODE==='demo');
-  document.getElementById('lsMsg').textContent='瀏覽器內的排課資料已清除。';
+  document.getElementById('lsMsg').textContent=APP_MODE==='formal'?
+    '目前畫面與本機備份已清空；學校雲端暫存及已發布課表仍保留。':'瀏覽器內的排課資料已清除。';
+  const cloud=document.getElementById('cloudDraftStatus');
+  if(APP_MODE==='formal'&&cloud)cloud.textContent='目前畫面已清空；可按「繼續上次雲端案件」重新載入。';
 }
+function clearBrowserData(){openClearProjectDialog()}
 function clearFormalSessionData(){
   if(APP_MODE!=='formal')return;
   FORMAL_LSKEY='';
@@ -3068,7 +3121,7 @@ window.setFormalStorageIdentity=setFormalStorageIdentity;
 window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260712-7"></script>
+<script src="schedule-auth.js?v=20260713-2"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
