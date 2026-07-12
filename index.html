@@ -26,8 +26,10 @@ body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(-
 .formal-gate-signin>b{display:block;color:var(--ink);font-size:17px}.formal-gate-signin>small{display:block;margin-top:3px;color:var(--muted);font-size:13.5px}
 #formalGoogleSignInButton{width:min(360px,100%);min-height:32px;margin:16px auto 0;display:block}
 .formal-gate .auth-status{margin:13px auto 0;width:min(360px,100%);padding:10px 12px;border-left:3px solid #147a65;border-radius:4px;background:#eef7f4;color:#526861;font-size:13.5px;line-height:1.5}
-.formal-gate-request{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 0 20px}
+.formal-gate-request{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px 24px;padding:24px 0 20px}
 .formal-gate-request h2{font-size:17px;margin-bottom:4px}.formal-gate-request p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
+.formal-request-email{display:inline-block;margin-top:7px;color:#147a65;font-size:15px;font-weight:900;text-decoration:none}.formal-request-email:hover{text-decoration:underline}
+.formal-request-details{grid-column:1/-1;padding-top:12px;border-top:1px solid #e3e9e6}.formal-request-details>b{display:block;margin-bottom:7px;font-size:13px}.formal-request-details ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 22px;margin:0;padding-left:19px;color:#686f78;font-size:12.5px;line-height:1.5}
 .formal-request-link{flex:0 0 auto;padding:12px 18px;border:1px solid #147a65;border-radius:7px;background:#147a65;color:#fff;font-weight:900;text-decoration:none;white-space:nowrap}
 .formal-request-link:hover{background:#0e6654;border-color:#0e6654}
 .formal-gate-owner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:16px;border-top:1px solid #e3e9e6;color:#747985;font-size:12.5px}
@@ -257,7 +259,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
   .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
-  .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{align-items:stretch;flex-direction:column}.formal-request-link{text-align:center}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
+  .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{grid-template-columns:1fr;align-items:stretch}.formal-request-link{text-align:center}.formal-request-details{grid-column:1}.formal-request-details ul{grid-template-columns:1fr}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
 @media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.step-help,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
 </style>
@@ -287,9 +289,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="formal-gate-request">
       <div>
         <h2>尚未開通學校？</h2>
-        <p>欲使用本系統，請填寫申請資料並寄出。</p>
+        <p>請自行撰寫申請信，或使用右側按鈕帶入格式。</p>
+        <a class="formal-request-email" href="mailto:chihhung1988@gmail.com">chihhung1988@gmail.com</a>
       </div>
-      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=排課輔助系統使用申請&amp;body=您好，我想申請使用排課輔助系統。%0D%0A%0D%0A學校名稱：%0D%0A縣市：%0D%0A申請人姓名／職稱：%0D%0A學校 Google Workspace 網域：%0D%0A預計使用學期：%0D%0A聯絡方式：">填寫使用申請</a>
+      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=排課輔助系統使用申請&amp;body=您好，我想申請使用排課輔助系統。%0D%0A%0D%0A學校全名：%0D%0A縣市：%0D%0A教育部六碼學校代碼：%0D%0A申請人姓名／職稱：%0D%0A聯絡電話或 Email：%0D%0A學校 Google Workspace 網域：%0D%0A預計使用學期：">撰寫申請信</a>
+      <div class="formal-request-details">
+        <b>申請信請提供：</b>
+        <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>聯絡電話或 Email</li><li>學校 Google Workspace 網域</li><li>預計使用學期</li></ul>
+      </div>
     </div>
     <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.8</span></div>
   </div>
