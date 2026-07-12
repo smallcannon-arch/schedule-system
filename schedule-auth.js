@@ -114,7 +114,7 @@
         document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜學校系統管理員`;
         state.activeRevision = localStorage.getItem(userStorageKey("schedule_active_revision")) || "";
         state.updateSequence = Number(localStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
-        status("系統管理員已登入；雲端暫存已啟用，導師存檔請手動讀取。", "ok");
+        status("服務正常｜雲端暫存已啟用｜導師存檔：手動讀取", "ok");
         await refreshDraftStatus();
         startAdminAutomation();
       } else if (state.profile.school_id) {

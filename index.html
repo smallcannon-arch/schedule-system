@@ -48,10 +48,6 @@ nav button.on{background:#fff;color:var(--pink-d);font-weight:900;box-shadow:var
 nav .ic{width:22px;text-align:center;font-size:17px}
 .nav-group{padding:10px 13px 5px;color:#9a8ca0;font-size:12px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:5px}
 .nav-group:first-child{border-top:0;margin-top:0;padding-top:3px}
-.side-foot{flex:0 0 auto;margin-top:10px;padding:12px;border:1px solid rgba(194,85,127,.12);border-radius:8px;background:rgba(255,255,255,.68);color:var(--muted)}
-.side-status{display:flex;align-items:center;gap:9px}.side-status-dot{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:var(--mint-d);box-shadow:0 0 0 4px rgba(31,138,109,.12)}
-.side-status b{display:block;color:var(--ink);font-size:12.5px;line-height:1.35}.side-status small{display:block;margin-top:2px;font-size:11.5px;line-height:1.35}
-.side-foot-meta{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.55}
 main{margin-left:230px;width:calc(100% - 230px);min-width:0;min-height:100vh;display:flex;flex:1;flex-direction:column;padding:22px 26px 60px;max-width:none}
 h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .sub{font-size:15.5px;color:var(--muted);margin-bottom:16px}
@@ -168,14 +164,14 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .auth-status[data-kind="error"]{color:#a5384b;font-weight:800}
 .auth-admin-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .auth-admin-actions[hidden]{display:none}
-.admin-dock{display:none;position:sticky;top:12px;z-index:30;width:100%;margin:0 0 20px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(72,55,78,.10)}
+.admin-dock{display:none;position:sticky;top:8px;z-index:30;width:100%;margin:0 0 16px;background:#fff;border:1px solid #dce5e1;border-radius:8px;box-shadow:0 4px 14px rgba(48,64,59,.08)}
 body.school-admin-mode .admin-dock{display:block}
 body.platform-admin-mode .admin-dock{display:none!important}
-.admin-dock summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:12px 14px;cursor:pointer;list-style:none}
+.admin-dock summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px;cursor:pointer;list-style:none}
 .admin-dock summary::-webkit-details-marker{display:none}
-.admin-dock-copy{display:grid;grid-template-columns:auto minmax(260px,max-content) minmax(260px,1fr);align-items:center;gap:10px 14px;min-width:0}
+.admin-dock-copy{display:grid;grid-template-columns:auto minmax(260px,max-content) minmax(320px,1fr);align-items:center;gap:8px 14px;min-width:0}
 .admin-dock-copy strong{padding-right:14px;border-right:1px solid var(--line);color:var(--ink);font-size:15px}.admin-dock-copy b{overflow-wrap:anywhere;color:var(--ink);font-size:14.5px}
-.admin-dock-copy .auth-status{grid-column:auto;margin:0;padding:7px 10px;border-left:3px solid var(--mint-d);border-radius:4px;background:#f2fbf7;font-size:12.5px;line-height:1.4}
+.admin-dock-copy .auth-status{grid-column:auto;display:flex;align-items:center;gap:8px;margin:0;padding:0;background:none;font-size:12.5px;line-height:1.4}.admin-dock-copy .auth-status::before{content:"";width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:#99a1aa}.admin-dock-copy .auth-status[data-kind="ok"]::before{background:#147a65;box-shadow:0 0 0 3px rgba(20,122,101,.12)}.admin-dock-copy .auth-status[data-kind="error"]::before{background:#a5384b;box-shadow:0 0 0 3px rgba(165,56,75,.12)}
 .admin-dock-toggle{padding:7px 11px;border:1px solid var(--line);border-radius:6px;background:#f7f4f8;color:var(--lav-d);font-size:13px;font-weight:900}
 .admin-dock-toggle::before{content:"管理"}.admin-dock[open] .admin-dock-toggle::before{content:"收合"}
 .admin-dock-body{padding:14px;border-top:1px solid var(--line);background:#fbfafc}
@@ -231,7 +227,6 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 body.teacher-mode .teacher-admin-only{display:none!important}
 body.teacher-mode .teacher-only{display:flex}
 body.teacher-mode aside nav button:not([data-v="tutor"]):not([data-v="my"]){display:none}
-body.teacher-mode .side-foot{display:none}
 body.teacher-mode nav .nav-group,body.signed-teacher:not(.teacher-mode) nav .nav-group{display:none}
 body.signed-teacher .auth-teacher-nav{display:flex}
 body.signed-teacher:not(.teacher-mode) aside nav button:not([data-v="my"]){display:none}
@@ -240,7 +235,7 @@ body.server-teacher-mode .server-teacher-only{display:flex}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
 @media(max-width:800px){
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
-  .logo{margin-bottom:8px;padding:10px 12px}.side-foot,.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
+  .logo{margin-bottom:8px;padding:10px 12px}.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}
@@ -315,10 +310,6 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="auth-teacher-nav" data-v="my"><span class="ic">▦</span>我的課表</button>
     <button data-v="tutor"><span class="ic">✏️</span>導師自排</button>
   </nav>
-  <div class="side-foot" id="appSideFoot">
-    <div class="side-status"><span class="side-status-dot"></span><div><b>示範服務運作中</b><small>瀏覽器內真實求解</small></div></div>
-    <div class="side-foot-meta">16 班匿名資料<br>正式版使用 CP-SAT 引擎</div>
-  </div>
 </aside>
 
 <main>
@@ -838,7 +829,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <footer class="app-footer" aria-label="系統版權資訊">
   <div class="app-footer-brand">
     <span class="app-footer-mark" aria-hidden="true">▦</span>
-    <div><b>智慧排課系統</b><small>學校課務排程與協作平台</small></div>
+    <div><b>智慧排課系統</b><small>CP-SAT 排課引擎｜學校課務排程與協作平台</small></div>
   </div>
   <div class="app-footer-session" id="platformFooterSession" hidden>
     <div class="app-footer-session-copy">
@@ -2424,7 +2415,6 @@ function configureAppMode(){
   document.title='智慧排課系統｜正式版';
   document.getElementById('appBrandName').textContent='智慧排課系統';
   document.getElementById('appBrandMeta').textContent='';
-  document.getElementById('appSideFoot').innerHTML='<div class="side-status"><span class="side-status-dot"></span><div><b>正式服務運作中</b><small>CP-SAT 排課引擎</small></div></div><div class="side-foot-meta">雲端暫存已啟用<br>教師存檔由管理員讀取</div>';
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
   document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
@@ -2883,7 +2873,7 @@ window.setFormalStorageIdentity=setFormalStorageIdentity;
 window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260712-4"></script>
+<script src="schedule-auth.js?v=20260712-5"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
