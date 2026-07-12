@@ -134,7 +134,7 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .les.conflict small{display:block;line-height:1.25}
 .editor-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .editor-toolbar label{display:grid;gap:5px;font-size:12.5px;font-weight:900;color:var(--muted)}
-.editor-toolbar input{width:210px;font:inherit;padding:9px 11px;border:2px solid var(--line);border-radius:8px;background:#fff}
+.editor-toolbar input,.editor-toolbar select{width:210px;font:inherit;padding:9px 11px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
 .editor-shell{padding:0;overflow-x:auto}
 .editor-grid{display:grid;grid-template-columns:minmax(420px,1fr) 270px minmax(420px,1fr);min-width:1110px}
 .editor-pane{padding:16px;min-width:0}.editor-pane h2{font-size:16px;margin-bottom:10px}
@@ -247,7 +247,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
   .app-footer{align-items:flex-start;flex-direction:column;gap:10px}.app-footer-meta{text-align:left}.app-footer-session{margin-left:0;padding:10px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);width:100%}
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .editor-table{min-width:620px}.editor-toolbar input{width:min(100%,260px)}
+  .editor-table{min-width:620px}.editor-toolbar input,.editor-toolbar select{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
@@ -685,8 +685,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </ol><div class="step-help-note">本土語與資源班綁課、固定課及連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
   </details>
   <div class="editor-toolbar">
-    <label>搜尋班級<input id="editClassSearch" list="editClassList" placeholder="班級、導師" onchange="editorChooseClass(this.value)"><datalist id="editClassList"></datalist></label>
-    <label>搜尋教師<input id="editTeacherSearch" list="editTeacherList" placeholder="教師姓名" onchange="editorChooseTeacher(this.value)"><datalist id="editTeacherList"></datalist></label>
+    <label>選擇班級<select class="edit" id="editClassSearch" onchange="editorChooseClass(this.value)"></select></label>
+    <label>同步教師<select class="edit" id="editTeacherSearch" onchange="editorChooseTeacher(this.value)"></select></label>
     <button class="btn soft sm" id="editUndo" type="button" onclick="editorUndo()" disabled>復原</button>
     <button class="btn soft sm" id="editRedo" type="button" onclick="editorRedo()" disabled>重做</button>
     <button class="btn mint sm" type="button" onclick="editorClearSelection()">取消選取</button>
@@ -1595,12 +1595,10 @@ function editorEnsureSelection(){
   if(!teachers.includes(EDIT_TEACHER))EDIT_TEACHER=(CODE2C[EDIT_CLASS]&&CODE2C[EDIT_CLASS].tutor)||teachers[0]||'';
 }
 function editorFillSearch(){
-  const classList=document.getElementById('editClassList'),teacherList=document.getElementById('editTeacherList');
-  if(!classList||!teacherList)return;
-  classList.innerHTML=DATA.classes.map(c=>`<option value="${esc(editorClassLabel(c))}"></option>`).join('');
-  teacherList.innerHTML=editorTeachers().map(name=>`<option value="${esc(name)}"></option>`).join('');
-  const c=CODE2C[EDIT_CLASS];document.getElementById('editClassSearch').value=c?editorClassLabel(c):'';
-  document.getElementById('editTeacherSearch').value=EDIT_TEACHER;
+  const classSelect=document.getElementById('editClassSearch'),teacherSelect=document.getElementById('editTeacherSearch');
+  if(!classSelect||!teacherSelect)return;
+  classSelect.innerHTML=DATA.classes.map(c=>`<option value="${esc(c.code)}" ${c.code===EDIT_CLASS?'selected':''}>${esc(editorClassLabel(c))}</option>`).join('');
+  teacherSelect.innerHTML=editorTeachers().map(name=>`<option value="${esc(name)}" ${name===EDIT_TEACHER?'selected':''}>${esc(name)}</option>`).join('');
 }
 function editorChooseClass(value){
   const text=String(value||'').trim().toLowerCase();
