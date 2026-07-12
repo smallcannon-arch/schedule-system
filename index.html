@@ -2992,8 +2992,20 @@ function parseV5(wb,S,opt){
     nd.teacherSubjects[teacher]=nd.teacherSubjects[teacher]||[];
     if(!nd.teacherSubjects[teacher].includes(subj))nd.teacherSubjects[teacher].push(subj);
   }
-  nd.override={};nd.limits=[];nd.resGroups=[];
-  nd.classes.forEach(c=>{if(c.res){/* 保留旗標，抽離組於系統資源班頁設定 */}});
+  nd.override={};nd.limits=[];
+  const limitSheet=opt('不排課時間').length?opt('不排課時間'):opt('教師時段限制');
+  for(const r of limitSheet.slice(1))
+    if(r&&r[0]&&r[1]&&r[2])nd.limits.push([String(r[0]),String(r[1]),String(r[2]),String(r[3]||'不可排'),String(r[4]||'')]);
+  const rgMap={};
+  for(const r of opt('資源班overlay').slice(1)){
+    if(!r||!r[1]||!r[2]||!r[3])continue;
+    const key=[String(r[0]||'A組'),String(r[1]),String(r[2]),String(r[3])].join('|');
+    rgMap[key]=(rgMap[key]||0)+1;
+  }
+  nd.resGroups=Object.entries(rgMap).map(([key,n])=>{
+    const[grp,code,subj,t]=key.split('|');return{grp,code,subj,t,n};
+  });
+  for(const group of nd.resGroups){const classroom=nd.classes.find(c=>c.code===group.code);if(classroom)classroom.res=true}
   nd.rules=JSON.parse(JSON.stringify(DEMO0.rules));
   return nd;
 }
