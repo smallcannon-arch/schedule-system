@@ -292,10 +292,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <p>請自行撰寫申請信，或使用右側按鈕帶入格式。</p>
         <a class="formal-request-email" href="mailto:chihhung1988@gmail.com">chihhung1988@gmail.com</a>
       </div>
-      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=排課輔助系統使用申請&amp;body=您好，我想申請使用排課輔助系統。%0D%0A%0D%0A學校全名：%0D%0A縣市：%0D%0A教育部六碼學校代碼：%0D%0A申請人姓名／職稱：%0D%0A聯絡電話或 Email：%0D%0A學校 Google Workspace 網域：%0D%0A預計使用學期：">撰寫申請信</a>
+      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=排課輔助系統使用申請&amp;body=您好，我想申請使用排課輔助系統。%0D%0A%0D%0A學校全名：%0D%0A縣市：%0D%0A教育部六碼學校代碼：%0D%0A申請人姓名／職稱：%0D%0A學校 Google Workspace 網域：%0D%0A排課管理員 1 Google 帳號（須為同網域）：%0D%0A排課管理員 2 Google 帳號（選填，須為同網域）：%0D%0A預計使用學期：">撰寫申請信</a>
       <div class="formal-request-details">
         <b>申請信請提供：</b>
-        <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>聯絡電話或 Email</li><li>學校 Google Workspace 網域</li><li>預計使用學期</li></ul>
+        <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
     <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.8</span></div>
@@ -386,7 +386,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <input id="platformSchoolRecordId" type="hidden">
       <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
       <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
-      <label>系統管理員帳號<input id="platformSchoolAdmins" type="text" placeholder="admin@school.edu.tw"></label>
+      <label>排課管理員帳號（可多人）<input id="platformSchoolAdmins" type="text" placeholder="director@school.edu.tw, leader@school.edu.tw"></label>
       <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
       <div class="platform-school-buttons"><button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button><button class="btn soft sm" type="button" onclick="ScheduleAuth.newSchool()">新增學校</button></div>
     </div>
