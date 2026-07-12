@@ -94,6 +94,7 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .formal-grid .wide{grid-column:1/-1}.formal-grid input[type=text],.formal-grid input[type=password],.formal-grid input[type=file],.formal-grid textarea{width:100%;font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius:8px;background:#fffdfb}
 .formal-grid textarea{min-height:76px;resize:vertical}.checkline{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important}.checkline input{width:18px;height:18px}
 .formal-mode-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;border:0}.formal-mode-picker legend{grid-column:1/-1;margin-bottom:7px;color:var(--ink);font-size:15px;font-weight:900}.formal-mode-option{display:flex!important;align-items:flex-start;gap:10px;padding:13px;border:2px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}.formal-mode-option:has(input:checked){border-color:var(--mint-d);background:#f2fbf7}.formal-mode-option input{width:19px;height:19px;flex:0 0 auto;margin:2px 0 0}.formal-mode-option span{display:grid;gap:4px}.formal-mode-option b{font-size:15px}.formal-mode-option small{color:var(--muted);font-size:12px;line-height:1.6}.formal-mode-summary{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7}.formal-mode-summary b{white-space:nowrap}.formal-mode-summary span{color:var(--muted);font-size:13px}
+.solve-diagnosis{margin-top:16px;border:1px solid #e4c8c4;border-left:5px solid #b64c43;background:#fffafa;padding:18px 20px;text-align:left}.solve-diagnosis-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.solve-diagnosis-head h3{margin:0 0 4px;color:#87372f;font-size:18px}.solve-diagnosis-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}.solve-diagnosis-source{flex:0 0 auto;padding:4px 8px;border:1px solid #d9c6c2;background:#fff;color:#745b56;font-size:11px;font-weight:900}.solve-diagnosis-list{display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid #eadbd8}.solve-diagnosis-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid #eadbd8}.solve-diagnosis-index{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f3ded9;color:#87372f;font-size:13px;font-weight:900}.solve-diagnosis-copy{display:grid;gap:4px}.solve-diagnosis-title{display:flex;align-items:center;gap:8px;font-weight:900;color:var(--ink)}.solve-diagnosis-tag{padding:2px 6px;background:#f2e9d6;color:#795d20;font-size:10px;font-weight:900}.solve-diagnosis-tag.confirmed{background:#f3ded9;color:#87372f}.solve-diagnosis-copy p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}.solve-diagnosis-action{color:#74534d!important}.solve-diagnosis-foot{margin-top:12px;color:#685f5d;font-size:12.5px;line-height:1.55}
 .tutor-mode-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:12px 14px;border-left:4px solid var(--mint-d);background:#f2fbf7}.tutor-mode-notice.warn{border-color:var(--lemon-d);background:#fff9e8}.tutor-mode-notice span{color:var(--muted);font-size:13px;line-height:1.6}.tutor-mode-notice b{color:var(--ink)}
 .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:18px auto;max-width:680px}
 .rcell{border-radius:15px;padding:16px 8px}
@@ -241,7 +242,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .logo{margin-bottom:8px;padding:10px 12px}.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
-  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}
+  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head{display:grid}.solve-diagnosis-source{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
   .policy-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.policy-approvals{grid-template-columns:1fr 170px}
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
@@ -682,6 +683,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <div class="wide"><button class="btn pink" id="formalBtn" type="button" onclick="runFormal()">執行第一階段排課並下載</button></div>
     </div>
     <div id="formalStat" style="margin-top:14px"></div>
+    <section class="solve-diagnosis" id="formalDiagnosis" aria-live="polite" hidden></section>
   </div>
 </section>
 
@@ -1848,6 +1850,37 @@ function formalMessage(kind,title,detail=''){
   const box=document.getElementById('formalStat');
   box.innerHTML=`<span class="chip ${kind}">${esc(title)}</span>${detail?`<div class="sub" style="margin-top:8px;margin-bottom:0">${esc(detail)}</div>`:''}`;
 }
+const FORMAL_DIAG_VIEWS=new Set(['build','alloc','native','res','lim','rules']);
+function clearFormalDiagnosis(){
+  const box=document.getElementById('formalDiagnosis');
+  if(box){box.hidden=true;box.innerHTML=''}
+}
+function formalDiagnosticGo(view){
+  if(FORMAL_DIAG_VIEWS.has(view))go(view);
+}
+function renderFormalDiagnosis(items,status='INFEASIBLE'){
+  const box=document.getElementById('formalDiagnosis');
+  const rows=Array.isArray(items)?items.filter(item=>item&&item.title).slice(0,10):[];
+  if(!box||!rows.length)return clearFormalDiagnosis();
+  const timedOut=status==='UNKNOWN';
+  box.innerHTML=`
+    <div class="solve-diagnosis-head">
+      <div><h3>${timedOut?'尚未找到可行解':'無解診斷'}</h3><p>${timedOut?'求解時間已到，請先依下列順序縮小問題範圍。':'系統已依硬規則與可用節次整理出優先調整項目。'}</p></div>
+      <span class="solve-diagnosis-source">CP-SAT 規則診斷</span>
+    </div>
+    <ol class="solve-diagnosis-list">${rows.map((item,index)=>{
+      const confirmed=item.confirmed!==false,view=FORMAL_DIAG_VIEWS.has(item.view)?item.view:'';
+      return `<li class="solve-diagnosis-item">
+        <span class="solve-diagnosis-index">${index+1}</span>
+        <div class="solve-diagnosis-copy">
+          <div class="solve-diagnosis-title">${esc(item.title)}<span class="solve-diagnosis-tag ${confirmed?'confirmed':''}">${confirmed?'已確認':'優先檢查'}</span></div>
+          <p>${esc(item.detail||'')}</p><p class="solve-diagnosis-action"><b>建議：</b>${esc(item.action||'調整後重新執行排課。')}</p>
+        </div>
+        ${view?`<button class="btn soft sm" type="button" data-view="${view}" onclick="formalDiagnosticGo(this.dataset.view)">前往調整</button>`:''}
+      </li>`}).join('')}</ol>
+    <div class="solve-diagnosis-foot">診斷由案件資料與硬規則容量計算產生，不使用 AI，也不會呼叫模型 API。每次調整後請重新執行排課。</div>`;
+  box.hidden=false;
+}
 function formalRunIsComplete(){
   return document.querySelector('input[name="formalRunMode"]:checked')?.value==='complete';
 }
@@ -1860,6 +1893,7 @@ function formalRunModeChanged(){
 }
 async function runFormal(){
   const btn=document.getElementById('formalBtn');
+  clearFormalDiagnosis();
   const setup=ScheduleSetup.validate();
   if(setup.hard.length)return formalMessage('bad','排課資料尚未完整',setup.hard.slice(0,4).join('；'));
   let base;
@@ -1889,6 +1923,10 @@ async function runFormal(){
     if(!response.ok){
       let data={};try{data=await response.json()}catch(e){}
       const details=[data.error,...(data.issues||[])].filter(Boolean).join('；')||`HTTP ${response.status}`;
+      if(Array.isArray(data.diagnostics)&&data.diagnostics.length){
+        renderFormalDiagnosis(data.diagnostics,data.status);
+        return formalMessage('bad',data.status==='UNKNOWN'?'本次尚未找到可行解':'排課無解，請依診斷調整',data.error||'請查看下方診斷結果。');
+      }
       return formalMessage('bad','正式排課未完成',details);
     }
     const result=await response.json();
@@ -1911,6 +1949,7 @@ async function runFormal(){
     for(const row of result.schedule)SOL[`${row.code}|${row.day}|${row.period}`]={s:row.subject,t:row.teacher||'',room:row.room||'R00'};
     OVL=(result.overlay||[]).map(row=>({grp:row.group,code:row.code,subj:row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
     tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};renderAll();saveLS();
+    clearFormalDiagnosis();
     formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
       completeness==='complete'?'正式課表已下載':'部分課表已下載',
       `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；新竹市規則問題 ${compliance} 項`+
