@@ -24,7 +24,7 @@ body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(-
 .formal-gate h1{font-size:32px;margin-bottom:7px;color:#303a43}.formal-gate .formal-gate-lead{margin:0;color:#747985;font-size:16px;line-height:1.65}
 .formal-gate-signin{margin-top:28px;padding:22px 0 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .formal-gate-signin>b{display:block;color:var(--ink);font-size:17px}.formal-gate-signin>small{display:block;margin-top:3px;color:var(--muted);font-size:13.5px}
-#formalGoogleSignInButton{width:min(360px,100%);min-height:40px;margin:16px auto 0;display:flex;align-items:center;justify-content:center;overflow:visible;border-radius:20px;background:transparent}#formalGoogleSignInButton>div{width:100%!important;max-width:100%!important;overflow:visible!important;border-radius:20px}#formalGoogleSignInButton iframe{display:block;max-width:100%!important;min-width:0!important;min-height:36px!important;border-radius:20px}
+#formalGoogleSignInButton{width:min(360px,100%);min-height:32px;margin:16px auto 0;display:block}
 .formal-gate .auth-status{margin:13px auto 0;width:min(360px,100%);padding:10px 12px;border-left:3px solid #147a65;border-radius:4px;background:#eef7f4;color:#526861;font-size:13.5px;line-height:1.5}
 .formal-gate-request{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 0 20px}
 .formal-gate-request h2{font-size:17px;margin-bottom:4px}.formal-gate-request p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
@@ -288,7 +288,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       </div>
       <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=智慧排課系統使用申請&amp;body=您好，我想申請使用智慧排課系統。%0D%0A%0D%0A學校名稱：%0D%0A縣市：%0D%0A申請人姓名／職稱：%0D%0A學校 Google Workspace 網域：%0D%0A預計使用學期：%0D%0A聯絡方式：">填寫使用申請</a>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：江志宏</span><span>智慧排課系統 1.8</span></div>
+    <div class="formal-gate-owner"><span>新竹市 內湖國小 江志宏</span><span>智慧排課系統 1.8</span></div>
   </div>
 </section>
 
@@ -849,7 +849,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="btn soft sm" type="button" onclick="ScheduleAuth.logout()">登出</button>
   </div>
   <div class="app-footer-meta">
-    <b>系統規劃與維護：江志宏</b>
+    <b>新竹市 內湖國小 江志宏</b>
     <small>© 2026 江志宏｜智慧排課系統．版權所有　版本 1.8</small>
   </div>
 </footer>
@@ -2883,7 +2883,7 @@ window.setFormalStorageIdentity=setFormalStorageIdentity;
 window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260712-3"></script>
+<script src="schedule-auth.js?v=20260712-4"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
