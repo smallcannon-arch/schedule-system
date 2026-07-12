@@ -63,14 +63,28 @@
     return {d: text((band || group).d), p: Number((band || group).p)};
   }
 
+  function isMinnanLanguage(value) {
+    const language = text(value).replace(/[\s（）()]/g, "");
+    return !language || ["本土語", "本土語文", "閩南語", "臺語", "台語", "臺灣台語", "台灣台語", "本土語文閩南語"].includes(language);
+  }
+
+  function minnanGroupSources(data) {
+    return new Set((data.nativeGroups || []).filter((group) => isMinnanLanguage(group.lang))
+      .flatMap((group) => listValues(group.sources)));
+  }
+
   function buildEntries(data, schedule, overlays) {
     const output = [];
     const nativeEnabled = data.nativeLockEnabled === true;
+    const groupedMinnan = nativeEnabled ? minnanGroupSources(data) : new Set();
     for (const item of schedule || []) {
-      if (nativeEnabled && text(item.s) === "本土語文") continue;
+      const nativeBase = nativeEnabled && text(item.s) === "本土語文";
+      if (nativeBase && groupedMinnan.has(text(item.code))) continue;
       output.push({
         code: text(item.code), d: text(item.d), p: Number(item.p), s: text(item.s),
-        displaySubject: text(item.s), t: text(item.t), room: text(item.room), source: text(item.source) || "schedule",
+        displaySubject: nativeBase ? "閩南語（原班）" : text(item.s), t: text(item.t),
+        room: text(item.room), source: nativeBase ? "native-base" : text(item.source) || "schedule",
+        language: nativeBase ? "閩南語" : "",
       });
     }
     if (nativeEnabled) {
@@ -154,7 +168,8 @@
     return teachers.map((teacher) => {
       const teacherEntries = entries.filter((entry) => entry.t === teacher);
       const title = [text(data._school), `${teacher} 教師課表`].filter(Boolean).join("　");
-      const subtitle = `職別：${text((data.roster || {})[teacher]) || "教師"}　｜　每週授課：${teacherEntries.length} 節`;
+      const weeklyPeriods = new Set(teacherEntries.map((entry) => `${entry.d}|${entry.p}`)).size;
+      const subtitle = `職別：${text((data.roster || {})[teacher]) || "教師"}　｜　每週授課：${weeklyPeriods} 節`;
       const rows = timetableRows(title, subtitle, teacherEntries, (entry) => {
         const group = entry.group ? `｜${entry.group}` : "";
         const role = entry.assistant ? "（協同）" : "";
@@ -185,7 +200,7 @@
       return [
         `週${item.d}`, periodText(item.p), gradeText(classroom && classroom.g), classNumber(classroom),
         item.t, text((teacherIds || {})[item.t]), mapping.category, mapping.domain, mapping.subject,
-        item.source === "native" ? nativeLanguage(item.language, mapping.language) : mapping.language,
+        item.source === "native" || item.source === "native-base" ? nativeLanguage(item.language, mapping.language) : mapping.language,
         mapping.schoolName, mapping.frequency || "每週上課",
       ];
     }).sort((a, b) => DAYS.indexOf(a[0].replace("週", "")) - DAYS.indexOf(b[0].replace("週", ""))
@@ -211,7 +226,7 @@
       if (!text(mapping.category)) issues.push(`${item.s}缺少類別對應`);
       if (!text(mapping.domain)) issues.push(`${item.s}缺少領域對應`);
       if (!text(mapping.subject)) issues.push(`${item.s}缺少科目對應`);
-      if (item.source === "native" && !nativeLanguage(item.language, mapping.language)) issues.push(`${item.group || item.s}缺少語言別`);
+      if ((item.source === "native" || item.source === "native-base") && !nativeLanguage(item.language, mapping.language)) issues.push(`${item.group || item.s}缺少語言別`);
       if (mapping.category === "彈性學習" && !text(mapping.schoolName)) issues.push(`${item.s}缺少校訂課程名稱`);
     }
     return [...new Set(issues)];

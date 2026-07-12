@@ -45,6 +45,16 @@
     return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
   }
 
+  function isMinnanLanguage(value) {
+    const language = String(value || "").replace(/[\s（）()]/g, "");
+    return !language || ["本土語", "本土語文", "閩南語", "臺語", "台語", "臺灣台語", "台灣台語", "本土語文閩南語"].includes(language);
+  }
+
+  function minnanGroupSources(d) {
+    return new Set((d.nativeGroups || []).filter((group) => isMinnanLanguage(group.lang))
+      .flatMap((group) => nativeValues(group.sources)));
+  }
+
   function subjectLabel(subject) {
     return subject === "本土語文" ? "閩南語（原班）" : subject;
   }
@@ -61,10 +71,12 @@
 
   function teachingSummary(d, name) {
     const result = {retained: 0, released: 0, cross: 0, total: 0};
+    const groupedMinnan = minnanGroupSources(d);
     for (const item of d.classes) {
       for (const [subject, info] of Object.entries(d.subjects)) {
         const hours = Math.max(0, Number((info.hours || [])[item.g - 1]) || 0);
         if (!hours) continue;
+        if (subject === "本土語文" && d.nativeLockEnabled === true && groupedMinnan.has(item.code)) continue;
         const assigned = (d.assign[item.code] || {})[subject] || "";
         if (item.tutor === name) {
           if (assigned === name) result.retained += hours;
@@ -74,6 +86,9 @@
     }
     for (const group of (d.nativeGroups || [])) {
       if (group.t === name || group.assistant === name) result.cross += 1;
+    }
+    for (const group of (d.resGroups || [])) {
+      if (group.t === name) result.cross += Math.max(0, Number(group.n) || 0);
     }
     result.total = result.retained + result.cross;
     return result;
@@ -190,7 +205,6 @@
           hard.push(`${grade}年級本土語共同時段不在該年級可排時段內`);
         }
         const groups = nativeGroups.filter((item) => +item.g === grade);
-        if (!groups.length) hard.push(`${grade}年級尚未建立本土語課鎖定分組`);
         const groupSlots = new Set();
         for (const group of groups) {
           const groupDay = String(group.d || day);

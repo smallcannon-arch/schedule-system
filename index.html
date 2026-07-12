@@ -8,7 +8,7 @@
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>
 :root{
-  --ink:#4a4458; --muted:#8d829e; --line:#efe8ea; --bg:#fdf8f4;
+  --ink:#4a4458; --muted:#8d829e; --line:#efe8ea; --bg:#fdf8f4; --bad:#a5384b;
   --pink:#f7cdd9; --pink-d:#c2557f; --mint:#c3e7d9; --mint-d:#1f8a6d;
   --lav:#ddd3f2; --lav-d:#7c65c5; --peach:#ffd9c2; --peach-d:#d1663a;
   --lemon:#faeec5; --lemon-d:#b08d1e; --sky:#cfe6f5; --sky-d:#3878a8;
@@ -298,7 +298,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.8</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.9</span></div>
   </div>
 </section>
 
@@ -890,7 +890,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.8</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.9</small>
   </div>
 </footer>
 
@@ -900,8 +900,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
 <script src="schedule-policy.js?v=20260712-1"></script>
-<script src="setup-builder.js?v=20260712-3"></script>
-<script src="schedule-exports.js?v=20260712-2"></script>
+<script src="setup-builder.js?v=20260713-1"></script>
+<script src="schedule-exports.js?v=20260713-1"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -1020,6 +1020,14 @@ function toggleG(g,d,p){
 function nativeSourceCodes(value){
   const raw=Array.isArray(value)?value:String(value||'').split(/[、,，;；\s]+/);
   return [...new Set(raw.map(code=>String(code||'').trim()).filter(Boolean))];
+}
+function isMinnanLanguage(value){
+  const lang=String(value||'').replace(/[\s（）()]/g,'');
+  return !lang||['本土語','本土語文','閩南語','臺語','台語','臺灣台語','台灣台語','本土語文閩南語'].includes(lang);
+}
+function minnanGroupSources(){
+  return new Set((DATA.nativeGroups||[]).filter(group=>isMinnanLanguage(group.lang))
+    .flatMap(group=>nativeSourceCodes(group.sources)));
 }
 function nativeGradeFromSources(value,fallback){
   const grades=[...new Set(nativeSourceCodes(value).map(code=>CODE2C[code]).filter(Boolean).map(item=>+item.g).filter(Boolean))];
@@ -1188,12 +1196,7 @@ function setNativeLockEnabled(enabled){
       for(let grade=1;grade<=6;grade++)if(subject&&Number((subject.hours||[])[grade-1]||0)>0&&DATA.classes.some(c=>+c.g===grade))
         DATA.nativeBands.push({g:grade,d:'二',p:Math.min(grade,6)});
     }
-    if(!Array.isArray(DATA.nativeGroups)||!DATA.nativeGroups.length){
-      DATA.nativeGroups=nativeBandRows().map(band=>{
-        const lang='閩南語',qualified=nativeQualifiedTeachers(lang);
-        return{...band,grp:`${band.g}年級${lang}組`,lang,sources:DATA.classes.filter(c=>+c.g===band.g).map(c=>c.code),students:0,t:qualified.length===1?qualified[0]:'',room:'R00',assistant:'',mode:'實體'};
-      });
-    }
+    if(!Array.isArray(DATA.nativeGroups))DATA.nativeGroups=[];
   }
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();
   saveLS(enabled?'已啟用語言分組硬鎖':'已停用語言分組硬鎖');
@@ -1243,8 +1246,8 @@ function addNativeGroup(){
   if(!DATA.nativeLockEnabled)return;
   const groups=nativeRows(),previous=TeacherWorkflow.clone(groups);
   const band=nativeBandRows()[0];if(!band)return alert('請先新增年級共同時段。');
-  const lang='閩南語',qualified=nativeQualifiedTeachers(lang),number=groups.filter(item=>+item.g===+band.g).length+1;
-  groups.push({...band,grp:`${band.g}年級${lang}${number}組`,lang,sources:DATA.classes.filter(c=>+c.g===band.g).map(c=>c.code),students:0,t:qualified.length===1?qualified[0]:'',room:'R00',assistant:'',mode:'實體'});
+  const lang='客語',qualified=nativeQualifiedTeachers(lang),number=groups.filter(item=>+item.g===+band.g).length+1;
+  groups.push({...band,grp:`${band.g}年級${lang}${number}組`,lang,sources:[],students:0,t:qualified.length===1?qualified[0]:'',room:'R00',assistant:'',mode:'實體'});
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('已新增本土語分組');
 }
 function createMinnanGroups(){
@@ -1385,13 +1388,12 @@ let ENG_SUBJ=[],TEACHERS=[];
 function renderAlloc(){
   const t=document.getElementById('allocTable');
   const subjects=[...(DATA.subjects['本土語文']?['本土語文']:[]),...ENG_SUBJ];
-  let h='<tr><th>班級</th>'+subjects.map(s=>`<th>${esc(s)}</th>`).join('')+'</tr>';
+  let h='<tr><th>班級</th>'+subjects.map(s=>`<th>${esc(s==='本土語文'?'閩南語（原班）':s)}</th>`).join('')+'</tr>';
   for(const c of DATA.classes){
     h+=`<tr><td class="cls">${esc(clsName(c))}</td>`;
     for(const s of subjects){
       const hrs=hoursOf(s,c.g);
       if(hrs===0){h+='<td class="na">–</td>';continue}
-      if(s==='本土語文'&&DATA.nativeLockEnabled){h+='<td class="na">語言分組硬鎖</td>';continue}
       const cur=(DATA.assign[c.code]&&DATA.assign[c.code][s])||'';
       h+=`<td><select class="${cur?'':'empty'}" onchange="setA(${jsArg(c.code)},${jsArg(s)},this.value)">${TEACHERS.map(x=>`<option value="${esc(x)}" ${x===cur?'selected':''}>${esc(x)}</option>`).join('')}</select></td>`;
     }
@@ -1417,16 +1419,21 @@ function invalidateSchedule(){
 function renderTLoad(){
   const box=document.getElementById('tloadBox');if(!box)return;
   const load={};
+  const groupedMinnan=minnanGroupSources();
   for(const code in DATA.assign){
     const c=CODE2C[code];if(!c)continue;
     for(const s in DATA.assign[code]){
-      if(s==='本土語文'&&DATA.nativeLockEnabled)continue;
+      if(s==='本土語文'&&DATA.nativeLockEnabled&&groupedMinnan.has(code))continue;
       const t=DATA.assign[code][s];
       if(t&&t!=='待聘(鐘點)')load[t]=(load[t]||0)+(hoursOf(s,c.g)||0);
     }
   }
   if(DATA.nativeLockEnabled)for(const group of nativeRows()){
     for(const t of [group.t,group.assistant])if(t&&t!=='待聘(鐘點)')load[t]=(load[t]||0)+1;
+  }
+  for(const group of (DATA.resGroups||[])){
+    const t=group.t;
+    if(t&&t!=='待聘(鐘點)')load[t]=(load[t]||0)+Math.max(0,+group.n||0);
   }
   const tc=DATA.tcap||{};
   const loadRows=[...new Set([...Object.keys(DATA.roster||{}),...Object.keys(load)])]
@@ -1453,12 +1460,14 @@ let SOL=null, tutorPlaced={};  // tutorPlaced[code]['day|p']=subj
 const DAILY_HARD_CAP={'科任':6,'導師':6,'組長':6,'主任':6,'導師兼組長':6,'導師兼主任':6,'資源班教師':6,'資源班導師':6,'專任輔導教師':6,'教支人員':6,'鐘點教師':6,'其他':6,'':6};
 function buildTasks(){
   const tasks=[];
+  const groupedMinnan=minnanGroupSources();
   for(const c of DATA.classes){
     for(const s in DATA.subjects){
       const h=hoursOf(s,c.g);
       if(h===0||!isEngine(c.code,s))continue;
       const t=(DATA.assign[c.code]&&DATA.assign[c.code][s])||'';
-      if(!t&&!(s==='本土語文'&&DATA.nativeLockEnabled))continue; // 未配不硬排
+      const nativeGroupOwned=s==='本土語文'&&DATA.nativeLockEnabled&&groupedMinnan.has(c.code);
+      if(!t&&!nativeGroupOwned)continue; // 未配不硬排
       tasks.push({code:c.code,g:c.g,s,t,h,room:roomOf(c.code,s),
         banned:new Set(DATA.subjects[s].banned),block:DATA.subjects[s].block,
         pairMode:DATA.subjects[s].pairMode});
@@ -1468,6 +1477,7 @@ function buildTasks(){
 }
 function trySolve(tasks){
   const cls={},tch={},rm={},dayLoad={},lockErrors=[];
+  const groupedMinnan=minnanGroupSources();
   const occT=(t,d,p)=>t&&(tch[`${t}|${d}|${p}`]||TLIM.has(`${t}|${d}|${p}`));
   const roomFree=(r,d,p,need)=>{
     if(r==='R00')return true;
@@ -1489,7 +1499,8 @@ function trySolve(tasks){
   for(const lk of DATA.locks){
     const c=CODE2C[lk.c],info=DATA.subjects[lk.s];
     const native=lk.s==='本土語文'&&DATA.nativeLockEnabled;
-    const t=native?'':((DATA.assign[lk.c]&&DATA.assign[lk.c][lk.s])||'');
+    const nativeGroupOwned=native&&groupedMinnan.has(lk.c);
+    const t=nativeGroupOwned?'':((DATA.assign[lk.c]&&DATA.assign[lk.c][lk.s])||'');
     if(!c||!info){lockErrors.push(`H10 鎖定資料不存在：${lk.c} ${lk.s}`);continue}
     const tk={code:lk.c,g:c.g,s:lk.s,t,room:native?'R00':(roomOf(lk.c,lk.s)||'R00'),banned:new Set(info.banned||[])};
     if(!DAYS.includes(lk.d)||!PS.includes(+lk.p)||!ok(tk,lk.d,+lk.p)||!roomFree(tk.room,lk.d,+lk.p,1)){
@@ -1567,7 +1578,13 @@ function validateSchedule(){
   const entries=scheduleEntries(false),hard=[],pending=[];
   const add=(code,msg)=>{const text=`${code} ${msg}`;if(!hard.some(x=>x.text===text))hard.push({code,msg,text})};
   const cslot={},tslot={},rslot={},tday={},counts={};
-  const teacherEntries=[...entries,...OVL.map(o=>({code:o.code,d:o.d,p:+o.p,s:o.subj,t:o.t||'',source:'overlay'}))];
+  const nativeEntries=DATA.nativeLockEnabled?(DATA.nativeGroups||[]).flatMap(group=>{
+    const band=(DATA.nativeBands||[]).find(item=>+item.g===+group.g)||group;
+    return [group.t,group.assistant].filter(Boolean).map((teacher,index)=>({
+      code:nativeSourceCodes(group.sources)[0]||`${group.g}年級`,d:band.d,p:+band.p,
+      s:'本土語文',t:teacher,source:'native',assistant:index===1}));
+  }):[];
+  const teacherEntries=[...entries,...OVL.map(o=>({code:o.code,d:o.d,p:+o.p,s:o.subj,t:o.t||'',source:'overlay'})),...nativeEntries];
   for(const e of entries){
     const c=CODE2C[e.code],info=DATA.subjects[e.s];
     if(!c||!info){add('資料',`${e.code} ${e.s} 找不到班級或科目設定`);continue}
@@ -2575,6 +2592,26 @@ function initDerived(){
   DATA.teacherNativeLangs=DATA.teacherNativeLangs||{};
   DATA.teacherSubjects=DATA.teacherSubjects||{};
   DATA.assignmentModes=DATA.assignmentModes||{};
+  if(Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length){
+    const removed=[];
+    DATA.nativeGroups=DATA.nativeGroups.filter(group=>{
+      const sources=nativeSourceCodes(group.sources);
+      if(!isMinnanLanguage(group.lang)||sources.length!==1||!group.t)return true;
+      const code=sources[0];
+      DATA.assign[code]=DATA.assign[code]||{};
+      if(!DATA.assign[code]['本土語文'])DATA.assign[code]['本土語文']=String(group.t).trim();
+      removed.push(...[group.t,group.assistant].filter(Boolean).map(name=>`${name}|${group.d}|${+group.p}`));
+      return false;
+    });
+    if(removed.length){
+      const removedSet=new Set(removed),generated=new Set(DATA.nativeGenerated?.derived||removed);
+      DATA.derived=(DATA.derived||[]).filter(row=>{
+        const key=`${row[0]}|${row[1]}|${+row[2]}`;
+        return !(removedSet.has(key)&&generated.has(key));
+      });
+      if(DATA.nativeGenerated)DATA.nativeGenerated.derived=(DATA.nativeGenerated.derived||[]).filter(key=>!removedSet.has(key));
+    }
+  }
   const inferredTeacherSubjects={};
   for(const row of Object.values(DATA.assign))for(const [subject,teacher] of Object.entries(row||{}))if(teacher){
     inferredTeacherSubjects[teacher]=inferredTeacherSubjects[teacher]||[];
