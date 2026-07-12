@@ -93,6 +93,8 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .formal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;text-align:left}
 .formal-grid .wide{grid-column:1/-1}.formal-grid input[type=text],.formal-grid input[type=password],.formal-grid input[type=file],.formal-grid textarea{width:100%;font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius:8px;background:#fffdfb}
 .formal-grid textarea{min-height:76px;resize:vertical}.checkline{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important}.checkline input{width:18px;height:18px}
+.formal-mode-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;border:0}.formal-mode-picker legend{grid-column:1/-1;margin-bottom:7px;color:var(--ink);font-size:15px;font-weight:900}.formal-mode-option{display:flex!important;align-items:flex-start;gap:10px;padding:13px;border:2px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}.formal-mode-option:has(input:checked){border-color:var(--mint-d);background:#f2fbf7}.formal-mode-option input{width:19px;height:19px;flex:0 0 auto;margin:2px 0 0}.formal-mode-option span{display:grid;gap:4px}.formal-mode-option b{font-size:15px}.formal-mode-option small{color:var(--muted);font-size:12px;line-height:1.6}.formal-mode-summary{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7}.formal-mode-summary b{white-space:nowrap}.formal-mode-summary span{color:var(--muted);font-size:13px}
+.tutor-mode-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:12px 14px;border-left:4px solid var(--mint-d);background:#f2fbf7}.tutor-mode-notice.warn{border-color:var(--lemon-d);background:#fff9e8}.tutor-mode-notice span{color:var(--muted);font-size:13px;line-height:1.6}.tutor-mode-notice b{color:var(--ink)}
 .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:18px auto;max-width:680px}
 .rcell{border-radius:15px;padding:16px 8px}
 .rcell b{font-size:25px;display:block}
@@ -211,7 +213,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .policy-panel{margin-bottom:18px;border-left:4px solid var(--mint-d)}.policy-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.policy-heading h2{margin-bottom:4px}.policy-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:14px}.policy-grid label{display:grid;gap:4px;font-size:13px;font-weight:900;color:var(--ink)}.policy-grid small{font-size:11px;font-weight:500;color:var(--muted)}.policy-grid input,.policy-approvals input[type=date]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}.policy-actions{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}.policy-approvals{display:grid;grid-template-columns:minmax(300px,1fr) 170px minmax(280px,1fr) 170px;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.policy-approvals label{font-size:13px;font-weight:800}.policy-status{display:flex;gap:12px;margin-top:12px;padding:9px 11px;border-left:3px solid var(--mint-d);background:#f2fbf7}.policy-status.bad{border-color:var(--pink-d);background:#fff4f7}.policy-status span{color:var(--muted);font-size:13px}
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}.setup-subject-skills{min-width:190px;text-align:left}.teaching-load{display:grid;gap:3px;min-width:165px}.teaching-load b{white-space:nowrap}.teaching-load small{color:var(--muted);font-size:11px;white-space:nowrap}
-.native-band-table{min-width:620px}.native-table{min-width:1580px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:140px;text-align:left}.native-table input[data-native="sources"]{min-width:170px;text-align:left}.native-table input[data-native="group"]{min-width:150px;text-align:left}.native-table td:nth-child(6) select,.native-table td:nth-child(7) select{min-width:230px}
+.native-band-table{min-width:620px}.native-table{min-width:980px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:150px;text-align:left}.native-table input[data-native="sources"]{min-width:190px;text-align:left}.native-table td:nth-child(3)>select{min-width:250px}.native-group-main{display:grid;gap:4px;min-width:170px;text-align:left}.native-group-main>span{color:var(--mint-d);font-size:11px;font-weight:900}.native-group-main small{max-width:210px;overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.native-row-actions{display:flex;align-items:flex-start;gap:7px;min-width:260px}.native-row-more{flex:1;text-align:left}.native-row-more summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900;white-space:nowrap}.native-more-grid{display:grid;grid-template-columns:1fr 100px;gap:8px;margin-top:9px;padding:10px;border-left:3px solid var(--sky-d);background:#f7fafc}.native-more-grid label{display:grid;gap:3px;color:var(--muted);font-size:11px;font-weight:800}.native-more-grid label.wide{grid-column:1/-1}.native-more-grid input,.native-more-grid select{width:100%;min-width:0!important;max-width:none!important;box-sizing:border-box}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
 .export-panel{margin-top:16px}.export-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.export-group{padding:16px 18px;border-right:1px solid var(--line)}.export-group:last-child{border-right:0}.export-group h3{margin:0 0 5px;font-size:16px}.export-group p{min-height:42px;margin:0 0 12px;color:var(--muted);font-size:12.5px;line-height:1.65}.export-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.export-settings{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}.export-settings summary{cursor:pointer;color:var(--sky-d);font-weight:900}.export-settings-body{padding-top:14px}.export-identity{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.export-map-table{min-width:1120px}.export-map-table input{min-width:130px;text-align:left}.export-map-table input[data-export="schoolName"]{min-width:190px}.export-status{margin-top:12px;color:var(--muted);font-size:13px}.export-status.bad{color:var(--bad);font-weight:800}
 .setup-hours{display:block;color:var(--muted);font-size:10px;margin-top:2px}.assignment-cell{min-width:138px}.assignment-state{display:block;margin-top:4px;font-size:11px;font-weight:900;white-space:nowrap}.assignment-state.retained{color:var(--mint-d)}.assignment-state.released{color:var(--sky-d)}.assignment-state.missing{color:var(--bad)}.assignment-mode{display:flex;align-items:center;gap:5px;margin-top:5px;color:var(--muted);font-size:11px;white-space:nowrap}.assignment-mode input{width:15px;height:15px;margin:0}
@@ -239,7 +241,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .logo{margin-bottom:8px;padding:10px 12px}.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
-  .formal-grid{grid-template-columns:1fr}
+  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
   .policy-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.policy-approvals{grid-template-columns:1fr 170px}
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
@@ -529,7 +531,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <summary>操作說明</summary>
       <div class="step-help-body"><ol>
         <li><b>設定共同時段：</b>每個年級只設定一次星期與節次，系統會鎖定該年級所有班級課表。</li>
-        <li><b>建立抽離分組：</b>依語別填入來源班級、人數、授課教師、教室與上課方式。</li>
+        <li><b>建立抽離分組：</b>選擇語別、來源班級與授課教師；年級會由來源班級自動判斷。</li>
         <li><b>重新排課：</b>任何異動都會使舊課表失效，請重新執行 CP-SAT 並確認硬規則為零違反。</li>
       </ol><div class="step-help-note">儲存後會鎖定全年級班級課表、授課與協同教師，以及非原班教室；導師與課表編修均不能移動。</div></div>
     </details>
@@ -541,7 +543,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div class="panel tbl">
       <h2>語言抽離分組</h2>
-      <div class="sub">授課教師由「教師與配課」名冊帶入；身分與可授語別分開設定，導師、行政、科任與教支人員都能擔任授課教師。</div>
+      <div class="sub">主畫面只保留語別、來源班級、授課教師與教室；人數、協同教師、方式及自訂組名需要時再展開。</div>
+      <datalist id="nativeLanguageOptions"><option value="閩南語"></option><option value="客語"></option><option value="原住民族語"></option><option value="臺灣手語"></option></datalist>
       <table class="native-table" id="nativeTable"></table>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn mint sm" type="button" onclick="createMinnanGroups()">依班級建立閩南語組</button>
@@ -636,7 +639,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>排課前：</b>先確認配課完整，資源班、不排課時間與規則都已設定。</li>
-      <li><b>開始求解：</b>CP-SAT 可獨立完成正式排課；OpenAI 只在需要規劃軟規則時選用。</li>
+      <li><b>開始求解：</b>CP-SAT 先排科任、固定課與鎖定課；導師課預設保留給老師登入後自行安排。</li>
       <li><b>檢查結果：</b>確認排入節數、未排項目與硬規則違反，再進行課表編修。</li>
     </ol><div class="step-help-note">正式使用應以硬規則違反為 0 且所有必要節數完整排入為準。</div></div>
   </details>
@@ -658,16 +661,25 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
   </div>
   <div class="panel formal-only">
-    <h2>正式 CP-SAT + OpenAI</h2>
+    <h2>正式 CP-SAT 排課</h2>
+    <div class="sub">不需要 AI 或模型 API。請先選擇本次要交給導師接續安排，或由系統直接完成全部課程。</div>
     <div class="frm formal-grid">
       <label class="wide">正式 API 網址<input id="formalApiUrl" type="text" inputmode="url" value="http://127.0.0.1:8766"></label>
       <div class="wide current-data-source"><b>排課資料</b><span id="formalDataSource">目前系統案件</span><button class="btn soft sm" type="button" onclick="go('build')">檢查資料</button></div>
       <label class="api-key-fallback">系統 API key<input id="formalApiKey" type="password" autocomplete="off" placeholder="本機可留空"></label>
-      <label class="checkline"><input id="formalAutoTutor" type="checkbox" checked onchange="formalTutorModeChanged()">CP-SAT 自動排完導師課</label>
-      <label class="checkline"><input id="formalStrict" type="checkbox" checked>必須達到正式完整標準</label>
-      <label class="checkline wide"><input id="formalUseAI" type="checkbox">使用 OpenAI 規劃軟規則</label>
-      <label class="wide">OpenAI 排課目標<textarea id="formalGoal" maxlength="1200" placeholder="例如：國語與數學優先上午、行政教師空堂集中。請勿輸入姓名。"></textarea></label>
-      <div class="wide"><button class="btn pink" id="formalBtn" type="button" onclick="runFormal()">執行正式排課並下載</button></div>
+      <fieldset class="formal-mode-picker wide">
+        <legend>導師課怎麼處理？</legend>
+        <label class="formal-mode-option">
+          <input type="radio" name="formalRunMode" value="tutor" checked onchange="formalRunModeChanged()">
+          <span><b>導師登入後自行安排</b><small>建議模式。CP-SAT 只排科任、固定課、資源班與本土語鎖課，導師課先保留。</small></span>
+        </label>
+        <label class="formal-mode-option">
+          <input type="radio" name="formalRunMode" value="complete" onchange="formalRunModeChanged()">
+          <span><b>由 CP-SAT 一併排完導師課</b><small>直接產生完整課表；導師登入後只能查看，不能重新安排已由系統排入的導師課。</small></span>
+        </label>
+      </fieldset>
+      <div class="formal-mode-summary wide" id="formalModeSummary"><b>目前模式：導師自行安排</b><span>完成第一階段後，到「導師自排」發布給老師接續處理。</span></div>
+      <div class="wide"><button class="btn pink" id="formalBtn" type="button" onclick="runFormal()">執行第一階段排課並下載</button></div>
     </div>
     <div id="formalStat" style="margin-top:14px"></div>
   </div>
@@ -814,6 +826,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <li><b>承辦同步：</b>承辦人按讀取導師存檔，檢核後將更新合併回全校課表。</li>
     </ol><div class="step-help-note">導師只能調整自己班級；資源班綁課與固定課保持唯讀，不能移動或清除。</div></div>
   </details>
+  <div class="tutor-mode-notice" id="tutorModeNotice"></div>
   <div class="panel teacher-handoff">
     <h2 class="teacher-admin-only">離線備援</h2>
     <div class="teacher-actions teacher-admin-only">
@@ -998,6 +1011,10 @@ function nativeSourceCodes(value){
   const raw=Array.isArray(value)?value:String(value||'').split(/[、,，;；\s]+/);
   return [...new Set(raw.map(code=>String(code||'').trim()).filter(Boolean))];
 }
+function nativeGradeFromSources(value,fallback){
+  const grades=[...new Set(nativeSourceCodes(value).map(code=>CODE2C[code]).filter(Boolean).map(item=>+item.g).filter(Boolean))];
+  return grades.length===1?grades[0]:(+fallback||1);
+}
 function nativeBandRows(){
   const sourceGroups=Array.isArray(DATA.nativeGroups)?DATA.nativeGroups:[];
   const legacy=DATA.nativeSchemaVersion!==2;
@@ -1059,9 +1076,13 @@ function nativeRows(){
   const bands=nativeBandRows();
   DATA.nativeGroups.forEach((group,index)=>{
     group.g=+group.g||1;group.lang=String(group.lang||'本土語文').trim();
+    if(group.lang==='本土語文'||group.lang==='本土語'){
+      const skills=(DATA.teacherNativeLangs?.[group.t]||[]).filter(Boolean);
+      group.lang=skills.length===1?skills[0]:'閩南語';
+    }
     group.grp=String(group.grp||group.group||`${group.g}年級${group.lang}${index+1}組`).trim();
     if(!Object.prototype.hasOwnProperty.call(group,'sources'))group.sources=DATA.classes.filter(c=>+c.g===group.g).map(c=>c.code);
-    group.sources=nativeSourceCodes(group.sources);group.students=Math.max(0,+group.students||0);
+    group.sources=nativeSourceCodes(group.sources);group.g=nativeGradeFromSources(group.sources,group.g);group.students=Math.max(0,+group.students||0);
     group.t=String(group.t||'').trim();group.room=String(group.room||'R00').trim()||'R00';
     group.assistant=String(group.assistant||'').trim();group.mode=String(group.mode||(/直播/.test(group.lang)?'直播共學':'實體'));
     const band=bands.find(item=>+item.g===group.g);if(band){group.d=band.d;group.p=+band.p}
@@ -1128,23 +1149,23 @@ function renderNative(){
   if(toggle)toggle.checked=!!DATA.nativeLockEnabled;
   if(settings)settings.hidden=!DATA.nativeLockEnabled;
   renderNativeBands();
-  const groups=nativeRows(),rooms=Object.keys(DATA.rooms||{}),bands=nativeBandRows();
-  let html='<tr><th>年級</th><th>語別</th><th>分組名稱</th><th>來源班級</th><th>人數</th><th>授課教師</th><th>協同教師</th><th>教室</th><th>方式</th><th></th></tr>';
+  const groups=nativeRows(),rooms=Object.keys(DATA.rooms||{});
+  let html='<tr><th>語別／組別</th><th>來源班級</th><th>授課教師</th><th>教室</th><th>更多</th></tr>';
   groups.forEach((group,index)=>{
     html+=`<tr>
-      <td><select class="edit" onchange="nativeSet(${index},'g',this.value)">${bands.map(band=>`<option value="${band.g}" ${+group.g===+band.g?'selected':''}>${band.g}年級</option>`).join('')}</select></td>
-      <td><input data-native="lang" value="${esc(group.lang||'')}" placeholder="例：原民語(直播)" onchange="nativeSet(${index},'lang',this.value)"></td>
-      <td><input data-native="group" value="${esc(group.grp||'')}" placeholder="例：三年級客語組" onchange="nativeSet(${index},'grp',this.value)"></td>
+      <td><div class="native-group-main"><span>${group.g}年級</span><input list="nativeLanguageOptions" data-native="lang" value="${esc(group.lang||'')}" placeholder="選擇或輸入語別" onchange="nativeSet(${index},'lang',this.value)"><small>${esc(group.grp||'系統自動命名')}</small></div></td>
       <td><input data-native="sources" value="${esc(nativeSourceCodes(group.sources).join('、'))}" placeholder="例：3甲、3乙" onchange="nativeSet(${index},'sources',this.value)"></td>
-      <td><input class="numin" type="number" min="0" max="999" value="${+group.students||0}" onchange="nativeSet(${index},'students',this.value)"></td>
       <td><select class="edit setup-wide-select" onchange="nativeSet(${index},'t',this.value)">${nativeTeacherOptions(group.t,group.lang,true)}</select></td>
-      <td><select class="edit setup-wide-select" onchange="nativeSet(${index},'assistant',this.value)">${nativeTeacherOptions(group.assistant,'',false)}</select></td>
       <td><select class="edit setup-wide-select" onchange="nativeSet(${index},'room',this.value)">${rooms.map(room=>`<option value="${esc(room)}" ${group.room===room?'selected':''}>${esc(room==='R00'?'原班教室':room)}</option>`).join('')}</select></td>
-      <td><select class="edit" onchange="nativeSet(${index},'mode',this.value)"><option ${group.mode==='實體'?'selected':''}>實體</option><option ${group.mode==='直播共學'?'selected':''}>直播共學</option></select></td>
-      <td><button class="icon-btn" type="button" title="刪除此分組" aria-label="刪除此分組" onclick="removeNativeGroup(${index})">×</button></td>
+      <td><div class="native-row-actions"><details class="native-row-more"><summary>更多設定</summary><div class="native-more-grid">
+        <label>分組名稱<input data-native="group" value="${esc(group.grp||'')}" placeholder="系統自動命名" onchange="nativeSet(${index},'grp',this.value)"></label>
+        <label>學生人數（選填）<input class="numin" type="number" min="0" max="999" value="${+group.students||0}" onchange="nativeSet(${index},'students',this.value)"></label>
+        <label class="wide">協同教師<select class="edit setup-wide-select" onchange="nativeSet(${index},'assistant',this.value)">${nativeTeacherOptions(group.assistant,'',false)}</select></label>
+        <label>上課方式<select class="edit" onchange="nativeSet(${index},'mode',this.value)"><option ${group.mode==='實體'?'selected':''}>實體</option><option ${group.mode==='直播共學'?'selected':''}>直播共學</option></select></label>
+      </div></details><button class="icon-btn" type="button" title="刪除此分組" aria-label="刪除此分組" onclick="removeNativeGroup(${index})">×</button></div></td>
     </tr>`;
   });
-  if(!groups.length)html+='<tr><td colspan="10" style="padding:18px;color:var(--muted)">尚未建立語言抽離分組</td></tr>';
+  if(!groups.length)html+='<tr><td colspan="5" style="padding:18px;color:var(--muted)">尚未建立語言抽離分組</td></tr>';
   table.innerHTML=html;
 }
 function setNativeLockEnabled(enabled){
@@ -1172,7 +1193,14 @@ function nativeSet(index,key,value){
   if(key==='g'){
     row.g=+value;
     row.sources=DATA.classes.filter(c=>+c.g===row.g).map(c=>c.code);
-  }else if(key==='sources')row.sources=nativeSourceCodes(value);
+  }else if(key==='sources'){
+    const sources=nativeSourceCodes(value),unknown=sources.filter(code=>!CODE2C[code]);
+    if(unknown.length){alert(`找不到來源班級：${unknown.join('、')}`);return renderNative()}
+    const grades=[...new Set(sources.map(code=>+CODE2C[code].g))];
+    if(grades.length>1){alert('同一語言分組的來源班級必須屬於同一年級。');return renderNative()}
+    if(grades.length&&!nativeBandRows().some(band=>+band.g===grades[0])){alert(`請先設定${grades[0]}年級的共同時段。`);return renderNative()}
+    row.sources=sources;row.g=nativeGradeFromSources(sources,row.g);
+  }
   else if(key==='students')row.students=Math.max(0,+value||0);
   else if(key==='lang'){
     row.lang=String(value||'').trim();
@@ -1820,11 +1848,15 @@ function formalMessage(kind,title,detail=''){
   const box=document.getElementById('formalStat');
   box.innerHTML=`<span class="chip ${kind}">${esc(title)}</span>${detail?`<div class="sub" style="margin-top:8px;margin-bottom:0">${esc(detail)}</div>`:''}`;
 }
-function formalTutorModeChanged(){
-  const auto=document.getElementById('formalAutoTutor').checked;
-  if(!auto)document.getElementById('formalStrict').checked=false;
-  formalMessage('warn',auto?'完整自動排課':'保留導師調整',
-    auto?'導師課將由 CP-SAT 一併排完。':'CP-SAT 只排固定課；完成後可在導師自排頁匯出單班教師調整檔。');
+function formalRunIsComplete(){
+  return document.querySelector('input[name="formalRunMode"]:checked')?.value==='complete';
+}
+function formalRunModeChanged(){
+  const complete=formalRunIsComplete(),summary=document.getElementById('formalModeSummary'),button=document.getElementById('formalBtn');
+  if(summary)summary.innerHTML=complete?
+    '<b>目前模式：系統完成全部課程</b><span>CP-SAT 會連同導師課一起排完，完成後可直接進入課表編修與匯出。</span>':
+    '<b>目前模式：導師自行安排</b><span>CP-SAT 先排科任與鎖定課，完成後到「導師自排」交給老師接續處理。</span>';
+  if(button)button.textContent=complete?'執行完整排課並下載':'執行第一階段排課並下載';
 }
 async function runFormal(){
   const btn=document.getElementById('formalBtn');
@@ -1837,15 +1869,16 @@ async function runFormal(){
   }catch(e){return formalMessage('bad','正式 API 網址格式不正確')}
   localStorage.setItem('schedule_formal_api_url',base.href.replace(/\/$/,''));
   const localData=TeacherWorkflow.clone(DATA);
+  const completeMode=formalRunIsComplete();
   const payload={
     data:localData,
     limits:TeacherWorkflow.clone(LIMITS),
     rules:TeacherWorkflow.clone(RULES),
     time_limit:120,
-    auto_schedule_tutor:document.getElementById('formalAutoTutor').checked,
-    strict_complete:document.getElementById('formalStrict').checked,
-    use_openai:document.getElementById('formalUseAI').checked,
-    ai_goal:document.getElementById('formalGoal').value.trim(),
+    auto_schedule_tutor:completeMode,
+    strict_complete:completeMode,
+    use_openai:false,
+    ai_goal:'',
   };
   const headers=ScheduleAuth.authorizationHeaders(),apiKey=document.getElementById('formalApiKey').value;
   headers['Content-Type']='application/json';
@@ -1872,17 +1905,16 @@ async function runFormal(){
     const pool=response.headers.get('X-Tutor-Pool')||'0';
     const weekly=response.headers.get('X-Weekly-Cap-Issues')||'0';
     const compliance=response.headers.get('X-Compliance-Issues')||'0';
-    const ai=response.headers.get('X-OpenAI-Status')||'disabled';
     applyData(localData,(localData._school?localData._school+'（':'')+'正式 CP-SAT 結果'+(localData._school?'）':''));
-    FORMAL_AUTO_TUTOR=document.getElementById('formalAutoTutor').checked;
+    FORMAL_AUTO_TUTOR=completeMode;
     SOL={};
     for(const row of result.schedule)SOL[`${row.code}|${row.day}|${row.period}`]={s:row.subject,t:row.teacher||'',room:row.room||'R00'};
     OVL=(result.overlay||[]).map(row=>({grp:row.group,code:row.code,subj:row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
     tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};renderAll();saveLS();
     formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
       completeness==='complete'?'正式課表已下載':'部分課表已下載',
-      `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；新竹市規則問題 ${compliance} 項；OpenAI ${ai}`+
-      (FORMAL_AUTO_TUTOR?'':'；固定課已載入，可前往導師自排發出教師調整檔'));
+      `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；新竹市規則問題 ${compliance} 項`+
+      (FORMAL_AUTO_TUTOR?'':'；科任與鎖定課已載入，可前往導師自排交給老師接續安排'));
   }catch(error){
     formalMessage('bad','無法連線正式 API','請確認 API 網址、CORS 與服務是否已啟動。');
   }finally{btn.disabled=false}
@@ -2334,6 +2366,13 @@ function renderTutor(){
   const c=CODE2C[code];
   if(!c)return;
   const pool=remainPool(code);
+  const notice=document.getElementById('tutorModeNotice');
+  if(notice){
+    notice.className='tutor-mode-notice'+(FORMAL_AUTO_TUTOR?' warn':'');
+    notice.innerHTML=FORMAL_AUTO_TUTOR?
+      '<span><b>本次導師課已由 CP-SAT 排完。</b> 此頁沒有可手排科目；若要交給導師安排，請回到「執行排課」選擇第一個模式後重新排課。</span><button class="btn soft sm teacher-admin-only" type="button" onclick="go(\'run\')">回到執行排課</button>':
+      `<span><b>本次保留導師手排。</b> ${pool.reduce((sum,item)=>sum+Math.max(0,item[1]),0)} 節待安排；導師登入後只能處理自己的班級。</span>`;
+  }
   document.getElementById('poolBar').innerHTML=pool.map(([s,left])=>
     `<button type="button" class="pchip ${pickSubj===s?'on':''} ${left===0?'zero':''}" ${left===0?'disabled':''} onclick="pickP(${jsArg(s)},${left})">${esc(s)} <span style="opacity:.7">×${left}</span></button>`).join('');
   const total=pool.reduce((a,[,l])=>a+l,0);
@@ -2457,7 +2496,7 @@ function configureAppMode(){
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
   document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
-  document.getElementById('runIntro').textContent='正式排課由 CP-SAT 執行，完成後再發布給教師查看或調整。';
+  document.getElementById('runIntro').textContent='正式排課只使用 CP-SAT；預設先排科任與鎖定課，再由導師登入自行安排導師課。';
 }
 function enterFormalAdminMode(){
   document.body.classList.remove('formal-locked');
