@@ -45,6 +45,10 @@
     return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
   }
 
+  function subjectLabel(subject) {
+    return subject === "本土語文" ? "閩南語（原班）" : subject;
+  }
+
   function isTutorArrangeable(d, item, subject) {
     const assigned = (d.assign[item.code] || {})[subject] || "";
     if (!item.tutor || assigned !== item.tutor) return false;
@@ -60,13 +64,16 @@
     for (const item of d.classes) {
       for (const [subject, info] of Object.entries(d.subjects)) {
         const hours = Math.max(0, Number((info.hours || [])[item.g - 1]) || 0);
-        if (!hours || (subject === "本土語文" && d.nativeLockEnabled === true)) continue;
+        if (!hours) continue;
         const assigned = (d.assign[item.code] || {})[subject] || "";
         if (item.tutor === name) {
           if (assigned === name) result.retained += hours;
           else if (assigned) result.released += hours;
         } else if (assigned === name) result.cross += hours;
       }
+    }
+    for (const group of (d.nativeGroups || [])) {
+      if (group.t === name || group.assistant === name) result.cross += 1;
     }
     result.total = result.retained + result.cross;
     return result;
@@ -150,7 +157,6 @@
         const hours = Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0);
         if (!hours) continue;
         assignmentTotal += 1;
-        if (subject === "本土語文" && nativeLockEnabled) continue;
         const teacher = d.assign[item.code] && d.assign[item.code][subject];
         if (!teacher) {
           assignmentMissing += 1;
@@ -398,11 +404,10 @@
     if (!target) return;
     const subjects = Object.keys(d.subjects).filter((subject) =>
       (d.subjects[subject].hours || []).some((value) => Number(value) > 0));
-    target.innerHTML = `<thead><tr><th>班級</th>${subjects.map((subject) => `<th>${esc(subject)}</th>`).join("")}</tr></thead><tbody>${d.classes.map((item) =>
+    target.innerHTML = `<thead><tr><th>班級</th>${subjects.map((subject) => `<th>${esc(subjectLabel(subject))}</th>`).join("")}</tr></thead><tbody>${d.classes.map((item) =>
       `<tr><td class="cls">${esc(item.code)}</td>${subjects.map((subject) => {
         const hours = Number((d.subjects[subject].hours || [])[item.g - 1]) || 0;
-        if (!hours) return '<td class="na">–</td>';
-        if (subject === "本土語文" && d.nativeLockEnabled === true) return '<td class="na">由本土語課鎖定管理</td>';
+        if (!hours) return '<td class="na">—</td>';
         const selected = (d.assign[item.code] || {})[subject] || "";
         const retained = selected && selected === item.tutor;
         const arrangeable = retained && isTutorArrangeable(d, item, subject);

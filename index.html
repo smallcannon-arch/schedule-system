@@ -312,7 +312,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="on" data-v="build"><span class="ic">▤</span>資料建置</button>
     <button data-v="alloc"><span class="ic">👩‍🏫</span>配課檢核</button>
     <div class="nav-group">排課條件</div>
-    <button data-v="native"><span class="ic">🌐</span>本土語課鎖定</button>
+    <button data-v="native"><span class="ic">🌐</span>語言分組鎖定</button>
     <button data-v="res"><span class="ic">🧩</span>資源班</button>
     <button data-v="lim"><span class="ic">🚫</span>不排課時間</button>
     <button data-v="rules"><span class="ic">📐</span>排課規則</button>
@@ -529,12 +529,12 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </section>
 
-<!-- ═══ 本土語課鎖定 ═══ -->
+<!-- ═══ 語言分組鎖定 ═══ -->
 <section class="view" id="v-native">
-  <h1>🌐 本土語課鎖定</h1>
-  <div class="sub">選用功能。學校需要配合本土語分組或直播共學固定時段時再啟用。</div>
+  <h1>🌐 語言分組鎖定</h1>
+  <div class="sub">選用功能。用於客語、原住民族語、直播共學及其他抽離分組；原班閩南語請至「資料建置 ＞ 配課」設定。</div>
   <div class="panel">
-    <label class="native-option-toggle"><input id="nativeLockToggle" type="checkbox" onchange="setNativeLockEnabled(this.checked)"><span><b>啟用本土語課鎖定</b><small>啟用後，同一年級所有語別必須安排在相同星期與節次，並同步鎖定人員及場地；停用時保留設定但不套用。</small></span></label>
+    <label class="native-option-toggle"><input id="nativeLockToggle" type="checkbox" onchange="setNativeLockEnabled(this.checked)"><span><b>啟用語言分組硬鎖</b><small>啟用後，抽離與直播分組會和原班閩南語共用固定時段，並同步鎖定人員及場地；停用時保留設定但不套用。</small></span></label>
   </div>
   <div class="native-lock-settings" id="nativeLockSettings" hidden>
     <details class="step-help">
@@ -557,10 +557,9 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <datalist id="nativeLanguageOptions"><option value="閩南語"></option><option value="客語"></option><option value="原住民族語"></option><option value="臺灣手語"></option></datalist>
       <table class="native-table" id="nativeTable"></table>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn mint sm" type="button" onclick="createMinnanGroups()">依班級建立閩南語組</button>
         <button class="btn soft sm" type="button" onclick="addNativeGroup()">新增其他語言分組</button>
       </div>
-      <div class="sub" style="margin-top:8px">快速建立會依各年級共同時段，為每個班級建立一個閩南語組；客語、原民語及直播共學分組會保留。</div>
+      <div class="sub" style="margin-top:8px">此處只建立抽離或直播分組；閩南語原班教師與班級請在「資料建置 ＞ 配課」維護。</div>
     </div>
   </div>
 </section>
@@ -681,7 +680,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <legend>導師課怎麼處理？</legend>
         <label class="formal-mode-option">
           <input type="radio" name="formalRunMode" value="tutor" checked onchange="formalRunModeChanged()">
-          <span><b>導師登入後自行安排</b><small>建議模式。CP-SAT 只排科任、固定課、資源班與本土語鎖課，導師課先保留。</small></span>
+          <span><b>導師登入後自行安排</b><small>建議模式。CP-SAT 只排科任、固定課、資源班與語言分組鎖課，導師課先保留。</small></span>
         </label>
         <label class="formal-mode-option">
           <input type="radio" name="formalRunMode" value="complete" onchange="formalRunModeChanged()">
@@ -699,14 +698,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <!-- ═══ 三欄課表編修 ═══ -->
 <section class="view" id="v-edit">
   <h1>課表編修</h1>
-  <div class="sub">左側查看班級，右側同步查看教師；點選可移動課程後再點目標空格。本土語、資源班綁課、固定課與連堂群組保持鎖定。</div>
+  <div class="sub">左側查看班級，右側同步查看教師；點選可移動課程後再點目標空格。語言分組、資源班綁課、固定課與連堂群組保持鎖定。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>選擇對象：</b>搜尋班級或教師，左右課表會同步顯示目前安排。</li>
       <li><b>移動課程：</b>先點可移動課程，再點目標空格；系統會即時檢查衝突。</li>
       <li><b>確認變更：</b>查看完整度、操作結果與最近變更，完成後立即暫存。</li>
-    </ol><div class="step-help-note">本土語與資源班綁課、固定課及連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
+    </ol><div class="step-help-note">語言分組與資源班綁課、固定課及連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
   </details>
   <div class="editor-toolbar">
     <label>選擇班級<select class="edit" id="editClassSearch" onchange="editorChooseClass(this.value)"></select></label>
@@ -901,7 +900,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
 <script src="schedule-policy.js?v=20260712-1"></script>
-<script src="setup-builder.js?v=20260712-2"></script>
+<script src="setup-builder.js?v=20260712-3"></script>
 <script src="schedule-exports.js?v=20260712-2"></script>
 <script>
 /* ═══ 通用 ═══ */
@@ -1197,7 +1196,7 @@ function setNativeLockEnabled(enabled){
     }
   }
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();
-  saveLS(enabled?'已啟用本土語課鎖定':'已停用本土語課鎖定');
+  saveLS(enabled?'已啟用語言分組硬鎖':'已停用語言分組硬鎖');
 }
 function nativeSet(index,key,value){
   const groups=nativeRows(),previous=TeacherWorkflow.clone(groups),row=groups[index];if(!row)return;
@@ -1217,7 +1216,7 @@ function nativeSet(index,key,value){
     row.lang=String(value||'').trim();
     const qualified=nativeQualifiedTeachers(row.lang);if(!row.t&&qualified.length===1)row.t=qualified[0];
   }else row[key]=value;
-  syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('本土語課鎖定已更新');
+  syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('語言分組鎖定已更新');
 }
 function nativeBandSet(index,key,value){
   const bands=nativeBandRows(),previous=TeacherWorkflow.clone(nativeRows()),band=bands[index];if(!band)return;
@@ -1376,7 +1375,7 @@ function poolOf(code){
 }
 function renderStat(){
   document.getElementById('statLine').innerHTML=
-  `班級 <b>${DATA.classes.length}</b> 班｜教師 <b>${Object.keys(DATA.roster).length}</b> 人｜科目 <b>${Object.keys(DATA.subjects).length}</b> 科｜本土語鎖定 <b>${DATA.locks.length}</b> 筆｜不排課時間 <b>${LIMITS.length}</b> 筆｜場地封鎖 <b>${DATA.blocked.length}</b> 筆｜規則 <b>${RULES.length}</b> 條`;
+  `班級 <b>${DATA.classes.length}</b> 班｜教師 <b>${Object.keys(DATA.roster).length}</b> 人｜科目 <b>${Object.keys(DATA.subjects).length}</b> 科｜語言分組鎖定 <b>${DATA.locks.length}</b> 筆｜不排課時間 <b>${LIMITS.length}</b> 筆｜場地封鎖 <b>${DATA.blocked.length}</b> 筆｜規則 <b>${RULES.length}</b> 條`;
   const source=document.getElementById('formalDataSource');
   if(source)source.textContent=document.getElementById('dataSrc').textContent||'目前系統案件';
 }
@@ -1392,7 +1391,7 @@ function renderAlloc(){
     for(const s of subjects){
       const hrs=hoursOf(s,c.g);
       if(hrs===0){h+='<td class="na">–</td>';continue}
-      if(s==='本土語文'&&DATA.nativeLockEnabled){h+='<td class="na">本土語課鎖定</td>';continue}
+      if(s==='本土語文'&&DATA.nativeLockEnabled){h+='<td class="na">語言分組硬鎖</td>';continue}
       const cur=(DATA.assign[c.code]&&DATA.assign[c.code][s])||'';
       h+=`<td><select class="${cur?'':'empty'}" onchange="setA(${jsArg(c.code)},${jsArg(s)},this.value)">${TEACHERS.map(x=>`<option value="${esc(x)}" ${x===cur?'selected':''}>${esc(x)}</option>`).join('')}</select></td>`;
     }
@@ -2982,7 +2981,8 @@ function parseV5(wb,S,opt){
   const arows=mergedRows?mergedRows.slice(1).map(r=>[r?.[8],r?.[9],r?.[10]]):S('配課');
   for(const r of arows.slice(1)){
     if(!r||!r[0]||!r[1])continue;
-    const t=String(r[0]).trim(),subj=String(r[1]).trim();
+    const t=String(r[0]).trim(),rawSubj=String(r[1]).trim();
+    const subj=/^(閩南語|臺語|台語|本土語文[（(]閩南語[）)])$/.test(rawSubj)?'本土語文':rawSubj;
     if(!nd.subjects[subj]){nd._warn.push(`配課科目「${subj}」不在科目節數表，該列略過`);continue}
     for(const code of expand(r[2],subj))
       ((nd.assign[code]=nd.assign[code]||{})[subj]=t);
