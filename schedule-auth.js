@@ -5,7 +5,7 @@
     activeRevision: "", updateSequence: 0, draftRevision: "", draftConflict: false,
     draftReady: false, hasLocalBackup: false, lastDraftHash: "", automationStarted: false,
     autoSaveTimer: null, saveInFlight: null, savePending: false, pendingManual: false,
-    schools: []};
+    autoSaveInterval: null, sessionExpired: false, schools: [], usage: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -42,6 +42,7 @@
     if (!response.ok) {
       const error = new Error((payload && (payload.detail || payload.error)) || `伺服器回應 ${response.status}`);
       error.status = response.status;
+      if (response.status === 401 && state.profile) handleSessionExpired();
       throw error;
     }
     return payload;
@@ -105,11 +106,12 @@
   async function handleCredential(response) {
     try {
       status("正在確認學校帳號…", "working");
+      state.sessionExpired = false;
       state.credential = response.credential || "";
       state.profile = await request("/auth/me");
       document.getElementById("googleAdminActions").hidden = !state.profile.is_admin;
       document.getElementById("platformSchoolActions").hidden = !state.profile.is_super_admin;
-      if (state.profile.is_super_admin) await loadSchools();
+      if (state.profile.is_super_admin) await Promise.all([loadSchools(), loadUsage()]);
       if (state.profile.is_admin) {
         setDraftEditingLocked(true);
         if (root.setFormalStorageIdentity) {
@@ -135,6 +137,7 @@
         status("平台總管理員已登入。", "ok");
       }
       document.getElementById("googleLogoutButton").hidden = false;
+      document.getElementById("googleLogoutButton").textContent = "登出";
     } catch (error) {
       state.credential = "";
       status(error.message, "error");
@@ -370,6 +373,48 @@
     }
   }
 
+  function formatUsageDate(value) {
+    if (!value) return "尚無紀錄";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "尚無紀錄" : date.toLocaleString("zh-TW", {
+      month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  function renderUsage() {
+    const summary = document.getElementById("platformUsageSummary");
+    const body = document.getElementById("platformUsageList");
+    if (!summary || !body || !state.usage) return;
+    const totals = state.usage.totals || {};
+    const metrics = [
+      ["已開通學校", totals.configured_schools], ["近 7 日活躍", totals.active_7d],
+      ["近 30 日活躍", totals.active_period], ["登入", totals.login],
+      ["求解完成", totals.solve_success], ["正式發布", totals.publish],
+      ["教師送出", totals.teacher_save],
+    ];
+    summary.innerHTML = metrics.map(([label, value]) =>
+      `<div><span>${label}</span><b>${Number(value || 0).toLocaleString("zh-TW")}</b></div>`).join("");
+    body.innerHTML = (state.usage.schools || []).map((school) => {
+      const events = school.events || {};
+      return `<tr><td><b>${root.esc(school.name)}</b><small>${root.esc(school.moe_code || school.school_id)}</small></td>
+        <td>${formatUsageDate(school.last_active_at)}</td>
+        <td>${Number(events.login || 0)}</td><td>${Number(events.solve_success || 0)}</td>
+        <td>${Number(events.publish || 0)}</td><td>${Number(events.teacher_save || 0)}</td></tr>`;
+    }).join("") || '<tr><td colspan="6">尚無學校使用紀錄</td></tr>';
+  }
+
+  async function loadUsage() {
+    const element = document.getElementById("platformUsageStatus");
+    try {
+      if (element) element.textContent = "正在整理近 30 日使用概況…";
+      state.usage = await request("/platform/usage?days=30");
+      renderUsage();
+      if (element) element.textContent = "本使用概況只彙整學校、日期、角色與操作次數；不保存姓名、Email、IP 或課表內容。";
+    } catch (error) {
+      if (element) element.textContent = `使用概況載入失敗：${error.message}`;
+    }
+  }
+
   function setDraftEditingLocked(locked) {
     state.draftReady = !locked;
     if (root.setFormalEditingLocked) root.setFormalEditingLocked(locked);
@@ -381,6 +426,35 @@
       button.disabled = busy || !state.draftReady;
       button.textContent = busy ? "正在儲存…" : "儲存至學校雲端";
     });
+  }
+
+  function stopSessionTimers() {
+    clearTimeout(state.autoSaveTimer);
+    state.autoSaveTimer = null;
+    if (state.autoSaveInterval) clearInterval(state.autoSaveInterval);
+    state.autoSaveInterval = null;
+    state.automationStarted = false;
+    state.savePending = false;
+    state.pendingManual = false;
+  }
+
+  function handleSessionExpired() {
+    if (state.sessionExpired) return;
+    state.sessionExpired = true;
+    stopSessionTimers();
+    state.credential = "";
+    const message = "登入已逾時，請按「重新登入」後繼續；這台電腦的本機備份仍會保留。";
+    if (state.profile && state.profile.is_admin) {
+      state.draftConflict = true;
+      setDraftEditingLocked(true);
+      const adminDock = document.getElementById("adminDock");
+      if (adminDock) adminDock.open = true;
+      const draftStatus = document.getElementById("cloudDraftStatus");
+      if (draftStatus) draftStatus.textContent = message;
+    }
+    const logoutButton = document.getElementById("googleLogoutButton");
+    if (logoutButton) logoutButton.textContent = "重新登入";
+    status(message, "error");
   }
 
   async function performDraftSave(manual) {
@@ -411,7 +485,7 @@
       const result = await request("/admin/draft", {
         method: "PUT", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({...snapshot, active_revision: state.activeRevision,
-          expected_draft_revision: state.draftRevision}),
+          expected_draft_revision: state.draftRevision, save_mode: manual ? "manual" : "auto"}),
       });
       state.draftRevision = result.draft_revision || "";
       state.draftConflict = false;
@@ -424,6 +498,7 @@
       element.textContent = `${manual ? "已儲存至學校雲端" : "已自動存檔"}：${new Date(result.saved_at).toLocaleString("zh-TW")}｜${result.saved_by || state.profile.email}。`;
       return true;
     } catch (error) {
+      if (state.sessionExpired) return false;
       if (error.status === 409) {
         state.draftConflict = true;
         setDraftEditingLocked(true);
@@ -452,7 +527,7 @@
   }
 
   function saveDraft(manual) {
-    if (!state.profile || !state.profile.is_admin) return Promise.resolve();
+    if (!state.profile || !state.profile.is_admin || state.sessionExpired) return Promise.resolve();
     if (manual) {
       clearTimeout(state.autoSaveTimer);
       state.autoSaveTimer = null;
@@ -545,11 +620,11 @@
   function startAdminAutomation() {
     if (state.automationStarted) return;
     state.automationStarted = true;
-    setInterval(() => saveDraft(false), 60000);
+    state.autoSaveInterval = setInterval(() => saveDraft(false), 60000);
   }
 
   function queueDraftSave() {
-    if (!state.profile || !state.profile.is_admin || state.draftConflict || !state.draftReady) return;
+    if (!state.profile || !state.profile.is_admin || state.sessionExpired || state.draftConflict || !state.draftReady) return;
     if (state.saveInFlight) {
       state.savePending = true;
       return;
@@ -584,6 +659,7 @@
   }
 
   function logout() {
+    stopSessionTimers();
     if (root.clearFormalSessionData) root.clearFormalSessionData();
     state.credential = "";
     state.profile = null;
@@ -593,5 +669,5 @@
   }
 
   root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
-    syncTeacherUpdates, savePlacements, loadSchools, saveSchool, editSchool, newSchool, logout};
+    syncTeacherUpdates, savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

@@ -205,6 +205,11 @@ body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution){opaci
 .platform-school-actions[hidden]{display:none}
 body.platform-admin-mode #v-build>.setup-actions,body.platform-admin-mode #v-build>.setup-import-hint,body.platform-admin-mode #v-build>.step-help,body.platform-admin-mode #setupSummary,body.platform-admin-mode #v-build>.setup-tabs,body.platform-admin-mode #v-build>.setup-pane,body.platform-admin-mode .setup-ready-only{display:none}
 body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:not(.platform-admin-mode) .setup-ready-only,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-tabs,body.setup-pending:not(.platform-admin-mode) #v-build>.setup-pane{display:none!important}
+.platform-usage-head{display:flex;align-items:end;justify-content:space-between;gap:16px}.platform-usage-head h2{margin-bottom:4px}.platform-usage-head .sub{margin:0}
+.platform-usage-summary{display:grid;grid-template-columns:repeat(7,minmax(92px,1fr));gap:1px;margin:16px 0;background:var(--line);border:1px solid var(--line);overflow:hidden}
+.platform-usage-summary div{min-width:0;padding:11px 12px;background:#fff}.platform-usage-summary span{display:block;color:var(--muted);font-size:12px;font-weight:800;white-space:nowrap}.platform-usage-summary b{display:block;margin-top:2px;color:var(--ink);font-size:22px}
+.platform-usage-table-wrap{overflow-x:auto}.platform-usage-table{width:100%;min-width:680px;border-collapse:collapse;font-size:13px}.platform-usage-table th,.platform-usage-table td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.platform-usage-table th{color:var(--muted);font-size:12px}.platform-usage-table small,.platform-school-list small{display:block;margin-top:2px;color:var(--muted)}
+.platform-school-divider{margin:24px 0 18px;padding-top:18px;border-top:1px solid var(--line)}.platform-school-divider h2{margin-bottom:4px}
 .platform-school-form{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(170px,1.15fr) minmax(190px,1.3fr) auto auto;gap:8px;align-items:end}
 .platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
 .platform-school-form input[type="text"],.platform-school-form input[type="email"]{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;color:var(--ink);background:#fff}
@@ -271,7 +276,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
   .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
-  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-school-actions{overflow-x:auto}
+  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-school-actions{overflow-x:auto}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{grid-template-columns:1fr;align-items:stretch}.formal-request-link{text-align:center}.formal-request-details{grid-column:1}.formal-request-details ul{grid-template-columns:1fr}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
 @media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.step-help,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
@@ -311,7 +316,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.11</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.12</span></div>
   </div>
 </section>
 
@@ -394,8 +399,17 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="btn mint sm formal-only" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
   </div>
   <section class="panel platform-school-actions" id="platformSchoolActions" hidden>
-    <h2>學校管理</h2>
-    <div class="sub">建立可使用本系統的學校、Workspace 網域與學校系統管理員。</div>
+    <div class="platform-usage-head">
+      <div><h2>使用概況</h2><div class="sub">近 30 日各校登入、求解、發布與教師協作情形。</div></div>
+      <button class="btn soft sm" type="button" onclick="ScheduleAuth.loadUsage()">重新整理</button>
+    </div>
+    <div class="platform-usage-summary" id="platformUsageSummary" aria-label="平台使用概況"></div>
+    <div class="auth-status" id="platformUsageStatus">本使用概況只彙整操作次數，不保存個人資料或課表內容。</div>
+    <div class="platform-usage-table-wrap"><table class="platform-usage-table" aria-label="各校使用概況">
+      <thead><tr><th>學校</th><th>最後活動</th><th>登入</th><th>求解完成</th><th>正式發布</th><th>教師送出</th></tr></thead>
+      <tbody id="platformUsageList"><tr><td colspan="6">登入後載入使用概況</td></tr></tbody>
+    </table></div>
+    <div class="platform-school-divider"><h2>學校管理</h2><div class="sub">建立可使用本系統的學校、Workspace 網域與學校系統管理員。</div></div>
     <div class="platform-school-form">
       <label>教育部學校代碼（6碼）<input id="platformSchoolId" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="例如：183622"></label>
       <input id="platformSchoolRecordId" type="hidden">
@@ -924,7 +938,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.11</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.12</small>
   </div>
 </footer>
 
@@ -3134,7 +3148,7 @@ window.setFormalEditingLocked=setFormalEditingLocked;
 window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260713-3"></script>
+<script src="schedule-auth.js?v=20260713-4"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
