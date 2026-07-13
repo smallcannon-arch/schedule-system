@@ -5,7 +5,9 @@
     activeRevision: "", updateSequence: 0, draftRevision: "", draftConflict: false,
     draftReady: false, hasCloudDraft: false, hasLocalBackup: false, lastDraftHash: "", automationStarted: false,
     autoSaveTimer: null, saveInFlight: null, savePending: false, pendingManual: false,
-    autoSaveInterval: null, sessionExpired: false, deletingDraft: false, schools: [], usage: null};
+    autoSaveInterval: null, sessionExpired: false, deletingDraft: false, loadingDraft: false,
+    publishing: false, syncingUpdates: false, importingTeacherCsv: false,
+    savingSchool: false, loadingUsage: false, savingPlacements: false, schools: [], usage: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -138,6 +140,7 @@
       }
       document.getElementById("googleLogoutButton").hidden = false;
       document.getElementById("googleLogoutButton").textContent = "登出";
+      updateActionButtons();
     } catch (error) {
       state.credential = "";
       status(error.message, "error");
@@ -200,9 +203,12 @@
       alert("案件已開始編輯，無法再批次匯入教師帳號。請到「教師與配課」修改後，按「同步教師登入名冊」。");
       return;
     }
+    if (state.importingTeacherCsv) { input.value = ""; return; }
     const body = new FormData();
     body.append("file", file);
     body.append("replace", "true");
+    state.importingTeacherCsv = true;
+    updateTeacherCsvImportState();
     try {
       status("正在匯入教師帳號表…", "working");
       const result = await request("/admin/teachers/import-csv", {method: "POST", body});
@@ -210,6 +216,8 @@
     } catch (error) {
       status(error.message, "error");
     } finally {
+      state.importingTeacherCsv = false;
+      updateTeacherCsvImportState();
       input.value = "";
     }
   }
@@ -247,7 +255,7 @@
       <td>${(school.domains || []).map(root.esc).join("<br>")}</td>
       <td>${(school.admin_emails || []).map(root.esc).join("<br>") || "尚未指定"}</td>
       <td><span class="chip ${school.active ? "ok" : "bad"}">${school.active ? "啟用" : "停用"}</span>
-        <button class="btn soft sm" type="button" onclick="ScheduleAuth.editSchool('${school.school_id}')">編輯</button></td>
+        <button class="btn soft sm" type="button" onclick="ScheduleAuth.editSchool('${school.school_id}')" ${state.savingSchool ? "disabled" : ""}>編輯</button></td>
     </tr>`).join("") || '<tr><td colspan="4">尚未建立學校</td></tr>';
   }
 
@@ -264,6 +272,7 @@
   }
 
   function editSchool(schoolId) {
+    if (state.savingSchool) return;
     const school = state.schools.find((item) => item.school_id === schoolId);
     if (!school) return;
     document.getElementById("platformSchoolRecordId").value = school.school_id;
@@ -276,6 +285,7 @@
   }
 
   function newSchool() {
+    if (state.savingSchool) return;
     document.getElementById("platformSchoolRecordId").value = "";
     document.getElementById("platformSchoolId").value = "";
     document.getElementById("platformSchoolName").value = "";
@@ -287,6 +297,7 @@
   }
 
   async function saveSchool() {
+    if (state.savingSchool) return;
     const schoolCode = document.getElementById("platformSchoolId").value.trim();
     const schoolId = document.getElementById("platformSchoolRecordId").value.trim().toLowerCase() || schoolCode;
     const payload = {
@@ -299,6 +310,18 @@
     const element = document.getElementById("platformSchoolStatus");
     try {
       if (!/^\d{6}$/.test(schoolCode)) throw new Error("教育部學校代碼須為 6 位數字");
+      if (!payload.name) throw new Error("請填寫學校名稱");
+      if (!payload.domains.length) throw new Error("請填寫至少一個 Google Workspace 網域");
+      if (!payload.admin_emails.length) throw new Error("請填寫至少一位排課管理員帳號");
+      const domains = payload.domains.map((domain) => domain.toLowerCase().replace(/^@/, ""));
+      const invalidDomain = domains.find((domain) => !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain));
+      if (invalidDomain) throw new Error(`Workspace 網域格式不正確：${invalidDomain}`);
+      const invalidAdmin = payload.admin_emails.find((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+      if (invalidAdmin) throw new Error(`管理員帳號格式不正確：${invalidAdmin}`);
+      const outsideDomain = payload.admin_emails.find((email) => !domains.includes(email.toLowerCase().split("@")[1] || ""));
+      if (outsideDomain) throw new Error(`管理員帳號必須使用已填寫的 Workspace 網域：${outsideDomain}`);
+      state.savingSchool = true;
+      updateActionButtons();
       element.textContent = "正在儲存學校…";
       await request(`/platform/schools/${encodeURIComponent(schoolId)}`, {
         method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
@@ -308,17 +331,30 @@
       await loadSchools();
     } catch (error) {
       element.textContent = error.message;
+    } finally {
+      state.savingSchool = false;
+      renderSchools();
+      updateActionButtons();
     }
   }
 
   async function publishCurrent() {
+    if (state.publishing) return;
     try {
+      if (!state.draftReady || state.draftConflict) throw new Error("請先載入學校雲端案件，再發布正式課表");
       const snapshot = root.getScheduleAuthSnapshot();
       if (!snapshot || !snapshot.sol) throw new Error("請先完成排課，再發布正式課表");
+      if (root.schedulePublishability) {
+        const result = root.schedulePublishability();
+        if (!result.ready) throw new Error(`課表尚未完成：${result.hard} 項硬規則問題、${result.pending} 項待排課程`);
+      }
       if (root.SchedulePolicy) {
         const compliance = root.SchedulePolicy.validate(snapshot.data, {requireApproval: true});
         if (compliance.blocking.length) throw new Error(compliance.blocking.slice(0, 3).join("；"));
       }
+      if (state.activeRevision && !confirm("重新發布會建立新的正式課表版本；教師目前開啟的舊版本將不能再送出調整。確定發布？")) return;
+      state.publishing = true;
+      updateActionButtons();
       status("正在發布教師課表…", "working");
       const result = await request("/admin/publish", {
         method: "POST", headers: {"Content-Type": "application/json"},
@@ -332,6 +368,9 @@
       status(`正式課表已發布（${new Date(result.published_at).toLocaleString("zh-TW")}）。`, "ok");
     } catch (error) {
       status(error.message, "error");
+    } finally {
+      state.publishing = false;
+      updateActionButtons();
     }
   }
 
@@ -381,10 +420,49 @@
     }
   }
 
+  function updateActionButtons() {
+    const adminReady = !!(state.profile && state.profile.is_admin) && !state.sessionExpired;
+    const publishability = root.schedulePublishability ? root.schedulePublishability() : {ready: true, hard: 0, pending: 0};
+    const publish = document.getElementById("publishScheduleButton");
+    if (publish) {
+      publish.disabled = state.publishing || !!state.saveInFlight || !adminReady || !state.draftReady || !publishability.ready;
+      publish.textContent = state.publishing ? "正在發布…" : "發布正式教師課表";
+      publish.title = publishability.ready ? "" : (publishability.hard || publishability.pending ?
+        `尚有 ${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程` : "請先完成正式排課");
+    }
+    const sync = document.getElementById("syncTeacherUpdatesButton");
+    if (sync) {
+      sync.disabled = state.syncingUpdates || !adminReady || !state.draftReady || !state.activeRevision;
+      sync.textContent = state.syncingUpdates ? "正在讀取…" : "讀取導師存檔";
+      sync.title = state.activeRevision ? "" : "請先發布正式教師課表";
+    }
+    const loadDraftButton = document.getElementById("cloudContinueButton");
+    if (loadDraftButton) loadDraftButton.disabled = state.loadingDraft || !!state.saveInFlight || state.deletingDraft || state.sessionExpired;
+    const localBackupButton = document.getElementById("localBackupButton");
+    if (localBackupButton) localBackupButton.disabled = state.loadingDraft || !!state.saveInFlight || state.deletingDraft || state.sessionExpired;
+    const saveSchoolButton = document.getElementById("platformSchoolSaveButton");
+    if (saveSchoolButton) {
+      saveSchoolButton.disabled = state.savingSchool;
+      saveSchoolButton.textContent = state.savingSchool ? "正在儲存…" : "儲存學校";
+    }
+    const newSchoolButton = document.getElementById("platformSchoolNewButton");
+    if (newSchoolButton) newSchoolButton.disabled = state.savingSchool;
+    const usageButton = document.getElementById("platformUsageRefreshButton");
+    if (usageButton) {
+      usageButton.disabled = state.loadingUsage;
+      usageButton.textContent = state.loadingUsage ? "正在整理…" : "重新整理";
+    }
+    const placementButton = document.getElementById("teacherPlacementSaveButton");
+    if (placementButton) {
+      placementButton.disabled = state.savingPlacements || state.sessionExpired;
+      placementButton.textContent = state.savingPlacements ? "正在儲存…" : "儲存課表調整";
+    }
+  }
+
   function teacherCsvImportLocked() {
     const setupStarted = !document.body.classList.contains("setup-pending");
     return !state.draftReady || state.hasCloudDraft || state.draftConflict ||
-      state.sessionExpired || setupStarted;
+      state.sessionExpired || state.importingTeacherCsv || setupStarted;
   }
 
   function updateTeacherCsvImportState() {
@@ -395,11 +473,12 @@
     const locked = teacherCsvImportLocked();
     button.classList.toggle("csv-import-locked", locked);
     button.setAttribute("aria-disabled", locked ? "true" : "false");
-    button.title = locked ? "案件開始後請到教師與配課頁修改並同步登入名冊" : "匯入教師帳號 CSV";
+    button.title = state.importingTeacherCsv ? "正在匯入教師帳號" :
+      (locked ? "案件開始後請到教師與配課頁修改並同步登入名冊" : "匯入教師帳號 CSV");
     input.disabled = locked;
-    if (hint) hint.textContent = locked ?
+    if (hint) hint.textContent = state.importingTeacherCsv ? "正在匯入教師帳號，完成前請勿關閉頁面。" : (locked ?
       "案件已開始編輯，批次匯入已鎖定；請到「教師與配課」修改帳號，再按「同步教師登入名冊」。" :
-      "請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。";
+      "請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。");
   }
 
   function downloadTeacherCsvTemplate() {
@@ -450,7 +529,10 @@
   }
 
   async function loadUsage() {
+    if (state.loadingUsage) return;
     const element = document.getElementById("platformUsageStatus");
+    state.loadingUsage = true;
+    updateActionButtons();
     try {
       if (element) element.textContent = "正在整理近 30 日使用概況…";
       state.usage = await request("/platform/usage?days=30");
@@ -458,6 +540,9 @@
       if (element) element.textContent = "本使用概況只彙整學校、日期、角色與操作次數；不保存姓名、Email、IP 或課表內容。";
     } catch (error) {
       if (element) element.textContent = `使用概況載入失敗：${error.message}`;
+    } finally {
+      state.loadingUsage = false;
+      updateActionButtons();
     }
   }
 
@@ -466,6 +551,7 @@
     if (root.setFormalEditingLocked) root.setFormalEditingLocked(locked);
     setSaveButtonsBusy(!!state.saveInFlight);
     updateTeacherCsvImportState();
+    updateActionButtons();
   }
 
   function setSaveButtonsBusy(busy) {
@@ -478,6 +564,7 @@
       deleteButton.disabled = busy || state.deletingDraft || !state.hasCloudDraft || state.sessionExpired;
       deleteButton.textContent = state.deletingDraft ? "正在刪除…" : "刪除雲端案件";
     }
+    updateActionButtons();
   }
 
   function stopSessionTimers() {
@@ -506,6 +593,7 @@
     }
     const logoutButton = document.getElementById("googleLogoutButton");
     if (logoutButton) logoutButton.textContent = "重新登入";
+    updateActionButtons();
     status(message, "error");
   }
 
@@ -598,7 +686,9 @@
   }
 
   async function loadDraft() {
-    if (!state.profile || !state.profile.is_admin) return;
+    if (!state.profile || !state.profile.is_admin || state.loadingDraft) return;
+    state.loadingDraft = true;
+    updateActionButtons();
     try {
       const draft = await request("/admin/draft");
       if (!confirm(`載入 ${new Date(draft.saved_at).toLocaleString("zh-TW")} 的雲端暫存？目前畫面內容會被取代。`)) return;
@@ -627,6 +717,9 @@
         document.getElementById("cloudContinueButton").hidden = true;
         document.getElementById("cloudDraftStatus").textContent = "目前尚無學校雲端案件，可以開始建立新案件。";
       } else alert(`無法載入雲端暫存：${error.message}`);
+    } finally {
+      state.loadingDraft = false;
+      updateActionButtons();
     }
   }
 
@@ -724,12 +817,14 @@
   }
 
   async function syncTeacherUpdates() {
-    if (!state.profile || !state.profile.is_admin) return;
+    if (!state.profile || !state.profile.is_admin || state.syncingUpdates) return;
     const element = document.getElementById("teacherSyncStatus");
     if (!state.activeRevision) {
       element.textContent = "發布正式課表後，可按「讀取導師存檔」取得更新。";
       return;
     }
+    state.syncingUpdates = true;
+    updateActionButtons();
     try {
       const query = `?revision=${encodeURIComponent(state.activeRevision)}&after=${state.updateSequence}`;
       const result = await request(`/admin/teacher-updates${query}`);
@@ -749,6 +844,9 @@
       localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
     } catch (error) {
       element.textContent = error.status === 409 ? "正式課表版本已變更，請重新發布或載入對應暫存。" : `導師課表同步失敗：${error.message}`;
+    } finally {
+      state.syncingUpdates = false;
+      updateActionButtons();
     }
   }
 
@@ -771,6 +869,7 @@
   }
 
   async function savePlacements() {
+    if (state.savingPlacements) return;
     const submission = root.getServerTeacherSubmission();
     if (!submission) return;
     const {code, revision, placements, remaining} = submission;
@@ -778,6 +877,8 @@
       alert(`尚有科目未排完：${remaining.map((item) => `${item[0]} ${item[1]}節`).join("、")}`);
       return;
     }
+    state.savingPlacements = true;
+    updateActionButtons();
     try {
       status("正在儲存課表調整…", "working");
       await request(`/teacher/classes/${encodeURIComponent(code)}/placements`, {
@@ -790,6 +891,9 @@
     } catch (error) {
       status(error.message, "error");
       alert(`無法儲存：${error.message}`);
+    } finally {
+      state.savingPlacements = false;
+      updateActionButtons();
     }
   }
 
@@ -803,7 +907,7 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState,
+  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons,
     publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     syncTeacherUpdates, savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};

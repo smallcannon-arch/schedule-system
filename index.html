@@ -317,7 +317,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.15</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.16</span></div>
   </div>
 </section>
 
@@ -366,11 +366,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="auth-admin-actions" id="googleAdminActions" hidden>
       <button class="btn soft sm always-available" type="button" onclick="ScheduleAuth.downloadTeacherCsvTemplate()">下載教師帳號 CSV 範本</button>
       <label class="btn soft sm" id="teacherCsvImportButton" style="cursor:pointer">匯入教師帳號 CSV<input id="teacherCsvImportInput" type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
-      <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
+      <button class="btn mint sm" id="publishScheduleButton" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
       <button class="btn mint sm" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
       <button class="btn soft sm cloud-draft-resolution" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
       <button class="btn soft sm cloud-draft-resolution" id="localBackupButton" type="button" onclick="ScheduleAuth.useLocalBackup()" hidden>改用這台電腦的備份</button>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
+      <button class="btn soft sm" id="syncTeacherUpdatesButton" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
       <button class="btn danger sm" id="deleteCloudDraftButton" type="button" onclick="ScheduleAuth.openDeleteDraftDialog()" disabled>刪除雲端案件</button>
     </div>
     <div class="admin-dock-notes">
@@ -404,7 +404,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <section class="panel platform-school-actions" id="platformSchoolActions" hidden>
     <div class="platform-usage-head">
       <div><h2>使用概況</h2><div class="sub">近 30 日各校登入、求解、發布與教師協作情形。</div></div>
-      <button class="btn soft sm" type="button" onclick="ScheduleAuth.loadUsage()">重新整理</button>
+      <button class="btn soft sm" id="platformUsageRefreshButton" type="button" onclick="ScheduleAuth.loadUsage()">重新整理</button>
     </div>
     <div class="platform-usage-summary" id="platformUsageSummary" aria-label="平台使用概況"></div>
     <div class="auth-status" id="platformUsageStatus">本使用概況只彙整操作次數，不保存個人資料或課表內容。</div>
@@ -420,7 +420,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
       <label>排課管理員帳號（可多人）<input id="platformSchoolAdmins" type="text" placeholder="director@school.edu.tw, leader@school.edu.tw"></label>
       <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
-      <div class="platform-school-buttons"><button class="btn mint sm" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button><button class="btn soft sm" type="button" onclick="ScheduleAuth.newSchool()">新增學校</button></div>
+      <div class="platform-school-buttons"><button class="btn mint sm" id="platformSchoolSaveButton" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button><button class="btn soft sm" id="platformSchoolNewButton" type="button" onclick="ScheduleAuth.newSchool()">新增學校</button></div>
     </div>
     <div class="auth-status" id="platformSchoolStatus"></div>
     <table class="platform-school-list" aria-label="已建立學校">
@@ -494,7 +494,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <table class="setup-table" id="setupTeachersTable"></table>
       <div class="setup-actions">
         <button class="btn soft sm" type="button" onclick="ScheduleSetup.addTeacher()">新增教師</button>
-        <button class="btn mint sm formal-only" type="button" onclick="ScheduleSetup.syncTeachers()">同步教師登入名冊</button>
+        <button class="btn mint sm formal-only" id="setupTeacherSyncButton" type="button" onclick="ScheduleSetup.syncTeachers()">同步教師登入名冊</button>
       </div>
       <div class="sub" id="setupTeacherSyncStatus" style="margin-bottom:0"></div>
     </div>
@@ -819,24 +819,24 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <h3>正式課表 PDF</h3>
         <p>A4 橫式排版，每班或每位教師一頁；在列印視窗選擇「另存為 PDF」。</p>
         <div class="export-actions">
-          <button class="btn mint sm" type="button" onclick="printTimetables('class')">班級課表 PDF</button>
-          <button class="btn mint sm" type="button" onclick="printTimetables('teacher')">教師課表 PDF</button>
+          <button class="btn mint sm" type="button" data-schedule-export onclick="printTimetables('class')">班級課表 PDF</button>
+          <button class="btn mint sm" type="button" data-schedule-export onclick="printTimetables('teacher')">教師課表 PDF</button>
         </div>
       </section>
       <section class="export-group">
         <h3>可編輯 Excel</h3>
         <p>保留正式版面、科目色彩與列印設定，供承辦人後續編修或核對。</p>
         <div class="export-actions">
-          <button class="btn soft sm" type="button" onclick="exportClassTimetables()">班級課表 Excel</button>
-          <button class="btn soft sm" type="button" onclick="exportTeacherTimetables()">教師課表 Excel</button>
+          <button class="btn soft sm" type="button" data-schedule-export onclick="exportClassTimetables()">班級課表 Excel</button>
+          <button class="btn soft sm" type="button" data-schedule-export onclick="exportTeacherTimetables()">教師課表 Excel</button>
         </div>
       </section>
       <section class="export-group">
         <h3>系統上傳 Excel</h3>
         <p>輸出前檢查科目對應與教師識別資料，不加入可能影響上傳的版面內容。</p>
         <div class="export-actions">
-          <button class="btn soft sm" type="button" onclick="exportUploadWorkbook('human')">人力資源網</button>
-          <button class="btn pink sm" type="button" onclick="exportUploadWorkbook('school')">校務系統</button>
+          <button class="btn soft sm" type="button" data-schedule-export onclick="exportUploadWorkbook('human')">人力資源網</button>
+          <button class="btn pink sm" type="button" data-schedule-export onclick="exportUploadWorkbook('school')">校務系統</button>
         </div>
       </section>
     </div>
@@ -886,7 +886,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div class="teacher-actions server-teacher-only">
       <span class="chip ok" id="serverTeacherModeBadge">Google 教師調整模式</span>
-      <button class="btn pink sm" type="button" onclick="ScheduleAuth.savePlacements()">儲存課表調整</button>
+      <button class="btn pink sm" id="teacherPlacementSaveButton" type="button" onclick="ScheduleAuth.savePlacements()">儲存課表調整</button>
       <button class="btn soft sm" type="button" onclick="go('my')">我的課表</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.logout()">登出</button>
     </div>
@@ -897,7 +897,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <select id="tutorSel" onchange="renderTutor()"></select>
       <span id="tutorDone"></span>
       <span style="flex:1"></span>
-      <button class="btn soft sm" onclick="clearTutor()">清空重排</button>
+      <button class="btn soft sm" id="clearTutorButton" onclick="clearTutor()">清空重排</button>
       <button class="btn soft sm" onclick="window.print()">🖨️ 列印工作單</button>
     </div>
     <div class="poolbar" id="poolBar"></div>
@@ -961,7 +961,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.15</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.16</small>
   </div>
 </footer>
 
@@ -971,7 +971,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
 <script src="schedule-policy.js?v=20260713-2"></script>
-<script src="setup-builder.js?v=20260713-2"></script>
+<script src="setup-builder.js?v=20260713-3"></script>
 <script src="schedule-exports.js?v=20260713-1"></script>
 <script>
 /* ═══ 通用 ═══ */
@@ -1047,12 +1047,12 @@ function renderLim(){
   const t=document.getElementById('limTbl');
   let h='<tr><th>對象(教師/年級/班級)</th><th>星期</th><th>節次</th><th>類型</th><th style="min-width:180px">原因</th><th></th></tr>';
   LIMITS.forEach((r,i)=>{
-    h+=`<tr><td><input list="tlist" value="${esc(r[0])}" onchange="LIMITS[${i}][0]=this.value;rebuildLim()"></td>
-      <td><select class="edit" onchange="LIMITS[${i}][1]=this.value;rebuildLim()">${['一','二','三','四','五','每日'].map(x=>`<option ${x===r[1]?'selected':''}>${x}</option>`).join('')}</select></td>
-      <td><select class="edit" onchange="LIMITS[${i}][2]=this.value;rebuildLim()">${['1','2','3','4','5','6','7','全部'].map(x=>`<option ${x===r[2]?'selected':''}>${x}</option>`).join('')}</select></td>
-      <td><select class="edit" onchange="LIMITS[${i}][3]=this.value;rebuildLim()"><option ${r[3]==='不可排'?'selected':''}>不可排</option><option ${r[3]==='避免'?'selected':''}>避免</option></select></td>
-      <td><input list="rlist" value="${esc(r[4])}" style="text-align:left" onchange="LIMITS[${i}][4]=this.value"></td>
-      <td><button class="btn soft sm" onclick="LIMITS.splice(${i},1);renderLim();rebuildLim()">✕</button></td></tr>`;
+    h+=`<tr><td><input list="tlist" value="${esc(r[0])}" onchange="setLimitValue(${i},0,this.value)"></td>
+      <td><select class="edit" onchange="setLimitValue(${i},1,this.value)">${['一','二','三','四','五','每日'].map(x=>`<option ${x===r[1]?'selected':''}>${x}</option>`).join('')}</select></td>
+      <td><select class="edit" onchange="setLimitValue(${i},2,this.value)">${['1','2','3','4','5','6','7','全部'].map(x=>`<option ${x===r[2]?'selected':''}>${x}</option>`).join('')}</select></td>
+      <td><select class="edit" onchange="setLimitValue(${i},3,this.value)"><option ${r[3]==='不可排'?'selected':''}>不可排</option><option ${r[3]==='避免'?'selected':''}>避免</option></select></td>
+      <td><input list="rlist" value="${esc(r[4])}" style="text-align:left" onchange="setLimitValue(${i},4,this.value)"></td>
+      <td><button class="btn soft sm" type="button" title="刪除此限制" onclick="removeLimit(${i})">✕</button></td></tr>`;
   });
   t.innerHTML=h;
   const db=document.getElementById('derivedBox');
@@ -1063,7 +1063,17 @@ function renderLim(){
     db.style.display='none';  // 修正：匯入新資料後殘留舊推導清單
   }
 }
-function addLim(){LIMITS.push(['','一','1','不可排','']);renderLim()}
+function saveLimitChange(label){
+  invalidateSchedule();rebuildLim();renderLim();renderGGrid();saveLS(label||'不排課時間已更新');
+}
+function setLimitValue(index,key,value){if(!LIMITS[index])return;LIMITS[index][key]=value;saveLimitChange()}
+function addLim(){LIMITS.push(['','一','1','不可排','']);renderLim();saveLS('已新增不排課時間')}
+function removeLimit(index){
+  const row=LIMITS[index];if(!row)return;
+  const label=[row[0],row[1]&&`週${row[1]}`,row[2]&&`第${row[2]}節`].filter(Boolean).join(' ');
+  if(!confirm(`確定刪除${label?`「${label}」`: '這筆'}不排課限制？刪除後必須重新執行排課。`))return;
+  LIMITS.splice(index,1);saveLimitChange('已刪除不排課時間');
+}
 /* 年級快速設定格 */
 function gLimIdx(g,d,p){return LIMITS.findIndex(r=>r[0]===`${g}年級`&&r[1]===d&&r[2]===String(p)&&r[3]==='不可排')}
 function renderGGrid(){
@@ -1085,7 +1095,7 @@ function toggleG(g,d,p){
   const i=gLimIdx(g,d,p);
   if(i>=0)LIMITS.splice(i,1);
   else LIMITS.push([`${g}年級`,d,String(p),'不可排','學年共同時間(快速設定)']);
-  rebuildLim();renderLim();renderGGrid();
+  saveLimitChange('年級共同時間已更新');
 }
 
 /* ═══ 本土語／直播共學硬鎖 ═══ */
@@ -1344,7 +1354,9 @@ function createMinnanGroups(){
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS(`已建立 ${generated.length} 個閩南語組`);
 }
 function removeNativeGroup(index){
-  const groups=nativeRows(),previous=TeacherWorkflow.clone(groups);groups.splice(index,1);
+  const groups=nativeRows(),group=groups[index];if(!group)return;
+  if(!confirm(`確定刪除「${group.grp||group.lang||'此語言分組'}」？刪除後相關硬鎖會移除，且必須重新排課。`))return;
+  const previous=TeacherWorkflow.clone(groups);groups.splice(index,1);
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();saveLS('已刪除本土語分組');
 }
 
@@ -1365,17 +1377,24 @@ function renderRules(){
       <td style="font-weight:900">${esc(r[0])}</td>
       <td><span class="chip ${r[1]==='硬'?'bad':'warn'}" style="padding:2px 10px">${esc(r[1])}</span></td>
       <td style="font-size:13px">${esc(r[2])}</td>
-      <td>${custom?`<input value="${esc(r[3])}" style="text-align:left" onchange="RULES[${i}][3]=this.value">`:`<span style="font-size:13.5px">${esc(r[3])}</span>`}</td>
+      <td>${custom?`<input value="${esc(r[3])}" style="text-align:left" onchange="setRuleValue(${i},3,this.value)">`:`<span style="font-size:13.5px">${esc(r[3])}</span>`}</td>
       <td>${r[1]==='軟'?`<input class="numin" type="number" min="0" value="${w?w[1]:0}" disabled title="瀏覽器 DEMO 不套用軟規則權重；請使用正式版 CP-SAT">`:'—'}</td>
-      <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} onchange="RULES[${i}][5]=this.checked?'是':'否';renderRules();rebuildLim()"></td>
-      <td>${custom?`<button class="btn soft sm" onclick="RULES.splice(${i},1);renderRules()">✕</button>`:''}</td></tr>`;
+      <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} onchange="setRuleValue(${i},5,this.checked?'是':'否')"></td>
+      <td>${custom?`<button class="btn soft sm" type="button" title="刪除此規則" onclick="removeRule(${i})">✕</button>`:''}</td></tr>`;
   });
   t.innerHTML=h;
 }
+function saveRuleChange(label){invalidateSchedule();renderRules();rebuildLim();saveLS(label||'排課規則已更新')}
+function setRuleValue(index,key,value){if(!RULES[index])return;RULES[index][key]=value;saveRuleChange()}
 function addRule(){
   const n=RULES.filter(r=>r[0].startsWith('C')).length+1;
   RULES.push(['C'+String(n).padStart(2,'0'),'軟','自訂','（請輸入規則內容，正式版由引擎擴充實作）','penalty=1','是']);
-  renderRules();
+  renderRules();saveLS('已新增自訂規則');
+}
+function removeRule(index){
+  const rule=RULES[index];if(!rule||!rule[0].startsWith('C'))return;
+  if(!confirm(`確定刪除自訂規則 ${rule[0]}？`))return;
+  RULES.splice(index,1);saveRuleChange('已刪除自訂規則');
 }
 
 /* ═══ 資源班（勾選班級＋抽離設定＋overlay 排入）═══ */
@@ -1392,7 +1411,7 @@ function renderRes(){
       <td><select class="edit" onchange="rgSet(${i},'subj',this.value)"><option ${g.subj==='國語文'?'selected':''}>國語文</option><option ${g.subj==='數學'?'selected':''}>數學</option></select></td>
       <td><input list="tlist" value="${esc(g.t)}" style="max-width:110px" onchange="rgSet(${i},'t',this.value)"></td>
       <td><input class="numin" type="number" min="1" max="6" value="${g.n}" onchange="rgSet(${i},'n',+this.value)"></td>
-      <td><button class="btn soft sm" onclick="DATA.resGroups.splice(${i},1);renderRes();saveLS()">✕</button></td></tr>`;
+      <td><button class="btn soft sm" type="button" title="刪除此抽離組" onclick="removeResGroup(${i})">✕</button></td></tr>`;
   });
   t.innerHTML=h;
 }
@@ -1404,9 +1423,15 @@ function rgSet(i,k,v){DATA.resGroups[i][k]=v;invalidateSchedule();renderRes();sa
 function addResG(){
   DATA.resGroups=DATA.resGroups||[];
   const first=DATA.classes.find(c=>c.res)||DATA.classes[0];
+  if(!first)return alert('請先在「資料建置」建立班級，再新增資源班抽離組。');
   DATA.resGroups.push({grp:'A組',code:first.code,subj:'國語文',t:'',n:2});
   if(!first.res){first.res=true}
   invalidateSchedule();renderRes();saveLS();
+}
+function removeResGroup(index){
+  const group=(DATA.resGroups||[])[index];if(!group)return;
+  if(!confirm(`確定刪除「${group.grp||'此抽離組'}」的${group.subj||''}設定？刪除後必須重新排課。`))return;
+  DATA.resGroups.splice(index,1);invalidateSchedule();renderRes();fillTutor();saveLS('已刪除資源班抽離組');
 }
 function placeOverlay(cls){
   const out=[],warn=[],busy={};
@@ -1480,12 +1505,12 @@ function setA(code,s,v){
   invalidateSchedule();renderAlloc();saveLS();
 }
 function invalidateSchedule(){
-  if(!SOL)return;
+  if(!SOL){renderExportPanel();return}
   SOL=null;tutorPlaced={};OVL=[];pickSubj=null;TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
   editorResetHistory();
   const result=document.getElementById('runResult');if(result)result.style.display='none';
   const btn=document.getElementById('runBtn');if(btn)btn.textContent='⚡ 開始排課';
-  fillTT();fillTutor();
+  fillTT();fillTutor();renderExportPanel();
 }
 /* 教師節數檢核（角色基準＋超鐘點−減課）*/
 function renderTLoad(){
@@ -1719,6 +1744,11 @@ function refreshValidation(poolN){
     badge.textContent=check.hard.length?`有 ${check.hard.length} 項硬規則問題`:(poolN||check.pending.length?'第一階段完成，仍有課程待排':'✓ 完整課表通過檢核');
   }
   return check;
+}
+function schedulePublishability(){
+  if(!SOL)return {ready:false,hard:0,pending:0};
+  const check=validateSchedule();
+  return {ready:!check.hard.length&&!check.pending.length,hard:check.hard.length,pending:check.pending.length};
 }
 /* ═══ 三欄同步編修 ═══ */
 function editorSnapshot(){return {sol:ScheduleEditor.clone(SOL||{}),tp:ScheduleEditor.clone(tutorPlaced||{}),ovl:ScheduleEditor.clone(OVL||[])}}
@@ -2219,6 +2249,11 @@ function exportMappingSet(index,key,value){
 }
 function renderExportPanel(){
   const table=document.getElementById('exportMappingTable');if(!table||typeof ScheduleExports==='undefined')return;
+  const publishability=schedulePublishability(),hasSchedule=publishability.ready;
+  document.querySelectorAll('[data-schedule-export]').forEach(button=>{
+    button.disabled=!hasSchedule;
+    button.title=hasSchedule?'':(SOL?`尚有 ${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程`:'請先完成正式排課');
+  });
   const mappings=ScheduleExports.ensureMappings(DATA),names=Object.keys(DATA.subjects||{});
   let html='<tr><th>排課科目</th><th>類別</th><th>領域</th><th>人力網科目</th><th>語言別</th><th>校訂課程名稱</th><th>上課頻率</th></tr>';
   names.forEach((name,index)=>{
@@ -2234,6 +2269,12 @@ function renderExportPanel(){
   table.innerHTML=html;
   const status=document.getElementById('exportTeacherIdStatus'),matched=Object.keys(EXPORT_TEACHER_IDS).filter(name=>Object.prototype.hasOwnProperty.call(DATA.roster||{},name)).length;
   if(status){status.className=`chip ${matched?'ok':'warn'}`;status.textContent=matched?`已在記憶體載入 ${matched} 位教師資料`:'尚未載入教師身分證對照表'}
+  const exportStatus=document.getElementById('exportStatus');
+  if(exportStatus&&!hasSchedule){
+    exportStatus.className='export-status';
+    exportStatus.textContent=SOL?`課表尚未完成：${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程。`:'完成正式排課後即可匯出。';
+  }
+  if(window.ScheduleAuth&&ScheduleAuth.updateActionButtons)ScheduleAuth.updateActionButtons();
 }
 
 /* ═══ 教師單班調整檔交接 ═══ */
@@ -2500,8 +2541,11 @@ function remainPool(code){
 function renderTutor(){
   const code=document.getElementById('tutorSel').value;
   const c=CODE2C[code];
-  if(!c)return;
+  const clearButton=document.getElementById('clearTutorButton');
+  if(!c){if(clearButton)clearButton.disabled=true;return}
   const pool=remainPool(code);
+  const removable=Object.entries(tutorPlaced[code]||{}).filter(([,subject])=>!isResourceBound(code,subject)).length;
+  if(clearButton){clearButton.disabled=!removable;clearButton.title=removable?`清除 ${removable} 節導師自行排入的課程`:'目前沒有可清除的導師自排課程'}
   const notice=document.getElementById('tutorModeNotice');
   if(notice){
     notice.className='tutor-mode-notice'+(FORMAL_AUTO_TUTOR?' warn':'');
@@ -2587,6 +2631,10 @@ function rmP(code,d,p){
 function clearTutor(){
   const code=document.getElementById('tutorSel').value;
   if(TEACHER_MODE&&code!==TEACHER_MODE.code)return alert('教師調整檔只允許修改指定班級。');
+  const removable=Object.entries(tutorPlaced[code]||{}).filter(([,subject])=>!isResourceBound(code,subject));
+  if(!removable.length)return;
+  const classroom=CODE2C[code];
+  if(!confirm(`確定清除${classroom?clsName(classroom):code}由導師自行排入的 ${removable.length} 節課？資源班綁課與固定課會保留。`))return;
   const kept={};
   for(const [slot,subject] of Object.entries(tutorPlaced[code]||{}))if(isResourceBound(code,subject))kept[slot]=subject;
   tutorPlaced[code]=kept;syncTutorUI();
@@ -2847,6 +2895,8 @@ function exportJSON(){
 function importJSON(inp){
   const f=inp.files[0];if(!f)return;
   if(f.size>10*1024*1024){inp.value='';return alert('工作進度檔不可超過 10 MB。')}
+  const hasData=DATA.classes.length||Object.keys(DATA.roster).length||Object.keys(DATA.subjects).length;
+  if(hasData&&!confirm('載入工作進度會取代目前畫面中的案件與尚未另存變更。確定繼續？')){inp.value='';return}
   const rd=new FileReader();
   rd.onload=()=>{
     try{
@@ -2870,6 +2920,8 @@ function importJSON(inp){
 /* ═══ 匯入母版 Excel（SheetJS，於瀏覽器本機解析）═══ */
 function importXlsx(inp){
   const f=inp.files[0];if(!f)return;
+  const hasData=DATA.classes.length||Object.keys(DATA.roster).length||Object.keys(DATA.subjects).length;
+  if(hasData&&!confirm('匯入 Excel 會取代目前案件的班級、教師、科目、配課、限制與課表結果。請先確認雲端暫存已更新。確定繼續？')){inp.value='';return}
   const rd=new FileReader();
   rd.onload=()=>{
     try{
@@ -3183,7 +3235,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260713-6"></script>
+<script src="schedule-auth.js?v=20260713-7"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

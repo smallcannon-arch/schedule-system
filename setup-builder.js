@@ -11,6 +11,7 @@
   let activeTab = "classes";
   let lastMessage = "";
   let syncMessage = "";
+  let syncingTeachers = false;
 
   function data() {
     const value = adapter.getData();
@@ -397,6 +398,11 @@
     }).join("")}</tbody>`;
     const status = document.getElementById("setupTeacherSyncStatus");
     if (status) status.textContent = syncMessage || "學校 Google 帳號填妥後，可一次同步到教師登入名冊；教支人員若不需登入可留空。";
+    const syncButton = document.getElementById("setupTeacherSyncButton");
+    if (syncButton) {
+      syncButton.disabled = syncingTeachers;
+      syncButton.textContent = syncingTeachers ? "正在同步…" : "同步教師登入名冊";
+    }
   }
 
   function renderSubjects() {
@@ -651,6 +657,7 @@
   }
 
   async function syncTeachers() {
+    if (syncingTeachers) return;
     const d = data();
     const allRecords = Object.keys(d.roster).map((name) => {
       const classCodes = d.classes.filter((item) => item.tutor === name).map((item) => item.code);
@@ -671,14 +678,17 @@
       renderTeachers();
       return;
     }
+    syncingTeachers = true;
     try {
       syncMessage = "正在同步教師登入名冊…"; renderTeachers();
       const result = await adapter.syncTeachers(records);
       syncMessage = `已同步 ${result.imported} 位教師，可使用學校 Google 帳號登入。${skipped ? `另有 ${skipped} 位未填帳號的教支人員未建立登入權限。` : ""}`;
     } catch (error) {
       syncMessage = `同步失敗：${error.message}`;
+    } finally {
+      syncingTeachers = false;
+      renderTeachers();
     }
-    renderTeachers();
   }
 
   function addSubject() {
