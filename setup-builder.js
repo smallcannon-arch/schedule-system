@@ -343,25 +343,32 @@
     const d = data();
     const target = document.getElementById("setupPolicyPanel");
     if (!target || !root.SchedulePolicy) return;
-    const profile = root.SchedulePolicy.profile;
     const config = root.SchedulePolicy.normalize(d);
-    const count = root.SchedulePolicy.officialClassCount(d);
     const resolved = Object.fromEntries(["導師", "科任", "組長", "主任"].map((role) =>
       [role, root.SchedulePolicy.weeklyTarget(d, role)]));
     const result = root.SchedulePolicy.validate(d);
-    target.innerHTML = `<div class="policy-heading"><div><h2>適用規則</h2><div class="sub">${esc(profile.label)}｜每節 ${profile.periodMinutes} 分鐘｜每日最多 ${profile.dailyHardCap} 節（系統硬規則）</div></div><span class="chip ok">${esc(profile.id)}</span></div>
+    const scope = config.region && config.academicYear ? `${config.region}｜${config.academicYear} 學年度` : "請填寫縣市／適用單位與學年度";
+    const statusTitle = result.blocking.length ? `${result.blocking.length} 項規則必須修正` :
+      (result.warnings.length ? `${result.warnings.length} 項資料待確認` : "學校自訂規則檢核通過");
+    target.innerHTML = `<div class="policy-heading"><div><h2>學校自訂規則</h2><div class="sub">${esc(scope)}｜每節 ${config.periodMinutes} 分鐘｜教師每日最多 ${config.dailyHardCap} 節（系統硬規則）</div></div><span class="chip ok">各縣市適用</span></div>
+      <div class="policy-grid policy-context-grid">
+        <label>縣市／適用單位<small>自由填寫，例：新竹市、全國</small><input maxlength="30" value="${esc(config.region)}" placeholder="請填寫" onchange="ScheduleSetup.setPolicy('region',this.value)"></label>
+        <label>適用學年度<small>請填民國學年度</small><input type="number" min="1" max="999" value="${config.academicYear || ""}" placeholder="例：115" onchange="ScheduleSetup.setPolicy('academicYear',this.value)"></label>
+        <label>每節分鐘<small>依學校作息自行填寫</small><input type="number" min="1" max="120" value="${config.periodMinutes}" onchange="ScheduleSetup.setPolicy('periodMinutes',this.value)"></label>
+        <label>教師每日硬上限<small>最高 6 節，不允許排滿 7 節</small><input type="number" min="1" max="6" value="${config.dailyHardCap}" onchange="ScheduleSetup.setPolicy('dailyHardCap',this.value)"></label>
+      </div>
       <div class="policy-grid">
         <label>校務核定班級數<small>留 0 依目前班級自動計算</small><input type="number" min="0" max="99" value="${Number(config.officialClassCount) || 0}" onchange="ScheduleSetup.setPolicy('officialClassCount',this.value)"></label>
-        ${["導師", "科任", "組長", "主任"].map((role) => `<label>${role}每週基準節數<small>${role === "組長" || role === "主任" ? `目前 ${count} 班的建議值` : "新竹市固定基準"}</small><input type="number" min="0" max="30" value="${resolved[role]}" onchange="ScheduleSetup.setWeeklyTarget('${role}',this.value)"></label>`).join("")}
+        ${["導師", "科任", "組長", "主任"].map((role) => `<label>${role}每週基準節數<small>依縣市規定或校內核定填寫</small><input type="number" min="0" max="30" value="${resolved[role]}" onchange="ScheduleSetup.setWeeklyTarget('${role}',this.value)"></label>`).join("")}
       </div>
-      <div class="policy-actions"><button class="btn soft sm" type="button" onclick="ScheduleSetup.applySuggestedPolicy()">套用新竹市建議值</button><span>教師個別差異請在教師頁填寫「超鐘點」或「減課」。</span></div>
+      <div class="policy-actions"><span>以上節數由學校依所在地規定自行填寫；教師個別差異請在教師頁填寫「超鐘點」或「減課」。</span></div>
       <div class="policy-approvals">
         <label><input type="checkbox" ${config.staffingPrinciplesApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('staffingPrinciplesApproved',this.checked)"> 授課節數編配原則已經校務會議審議通過</label>
         <input type="date" value="${esc(config.staffingMeetingDate)}" aria-label="授課節數編配原則會議日期" onchange="ScheduleSetup.setPolicy('staffingMeetingDate',this.value)">
         <label><input type="checkbox" ${config.schedulePlanApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('schedulePlanApproved',this.checked)"> 學生作息與課表已納入課程計畫</label>
         <input type="date" value="${esc(config.schedulePlanMeetingDate)}" aria-label="課程計畫通過日期" onchange="ScheduleSetup.setPolicy('schedulePlanMeetingDate',this.value)">
       </div>
-      <div class="policy-status ${result.blocking.length ? "bad" : "ok"}"><b>${result.blocking.length ? `${result.blocking.length} 項規則必須修正` : "新竹市節數規則檢核通過"}</b><span>${esc(result.blocking[0] || result.warnings[0] || "發布時會再次由後端驗證。")}</span></div>`;
+      <div class="policy-status ${result.blocking.length ? "bad" : "ok"}"><b>${statusTitle}</b><span>${esc(result.blocking[0] || result.warnings[0] || "發布時會再次由後端驗證。")}</span></div>`;
   }
 
   function renderTeachers() {
@@ -447,9 +454,12 @@
     const d = data();
     const config = root.SchedulePolicy.normalize(d);
     if (key === "officialClassCount") config[key] = Math.max(0, Number(value) || 0);
+    else if (key === "academicYear") config[key] = Math.min(999, Math.max(0, Math.round(Number(value) || 0)));
+    else if (key === "periodMinutes") config[key] = Math.min(120, Math.max(1, Math.round(Number(value) || 40)));
+    else if (key === "dailyHardCap") config[key] = Math.min(6, Math.max(1, Math.round(Number(value) || 6)));
     else if (key === "staffingPrinciplesApproved" || key === "schedulePlanApproved") config[key] = !!value;
     else config[key] = String(value || "");
-    commit("新竹市案件規則已更新。");
+    commit("學校自訂規則已更新。");
   }
 
   function setWeeklyTarget(role, value) {
@@ -457,12 +467,6 @@
     const config = root.SchedulePolicy.normalize(d);
     config.weeklyTargets[role] = Math.max(0, Number(value) || 0);
     commit(`${role}每週基準節數已更新。`);
-  }
-
-  function applySuggestedPolicy() {
-    const d = data();
-    root.SchedulePolicy.setSuggestedWeeklyTargets(d);
-    commit("已依目前校務核定班級數套用新竹市建議節數。");
   }
 
   function show(name) {
@@ -798,7 +802,7 @@
 
   root.ScheduleSetup = {
     init, render, validate, show, showIssues, startBlank,
-    setPolicy, setWeeklyTarget, applySuggestedPolicy,
+    setPolicy, setWeeklyTarget,
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
     addTeacher, setTeacher, renameTeacher, removeTeacher, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,

@@ -233,7 +233,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-grade-counts{display:grid;grid-template-columns:repeat(6,minmax(82px,1fr));gap:8px;max-width:760px}
 .setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:13px;font-weight:900}
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
-.policy-panel{margin-bottom:18px;border-left:4px solid var(--mint-d)}.policy-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.policy-heading h2{margin-bottom:4px}.policy-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:14px}.policy-grid label{display:grid;gap:4px;font-size:13px;font-weight:900;color:var(--ink)}.policy-grid small{font-size:11px;font-weight:500;color:var(--muted)}.policy-grid input,.policy-approvals input[type=date]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}.policy-actions{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}.policy-approvals{display:grid;grid-template-columns:minmax(300px,1fr) 170px minmax(280px,1fr) 170px;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.policy-approvals label{font-size:13px;font-weight:800}.policy-status{display:flex;gap:12px;margin-top:12px;padding:9px 11px;border-left:3px solid var(--mint-d);background:#f2fbf7}.policy-status.bad{border-color:var(--pink-d);background:#fff4f7}.policy-status span{color:var(--muted);font-size:13px}
+.policy-panel{margin-bottom:18px;border-left:4px solid var(--mint-d)}.policy-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.policy-heading h2{margin-bottom:4px}.policy-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:14px}.policy-context-grid{grid-template-columns:minmax(190px,1.3fr) repeat(3,minmax(140px,1fr))}.policy-grid label{display:grid;gap:4px;font-size:13px;font-weight:900;color:var(--ink)}.policy-grid small{font-size:11px;font-weight:500;color:var(--muted)}.policy-grid input,.policy-approvals input[type=date]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}.policy-actions{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}.policy-approvals{display:grid;grid-template-columns:minmax(300px,1fr) 170px minmax(280px,1fr) 170px;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.policy-approvals label{font-size:13px;font-weight:800}.policy-status{display:flex;gap:12px;margin-top:12px;padding:9px 11px;border-left:3px solid var(--mint-d);background:#f2fbf7}.policy-status.bad{border-color:var(--pink-d);background:#fff4f7}.policy-status span{color:var(--muted);font-size:13px}
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}.setup-subject-skills{min-width:190px;text-align:left}.teaching-load{display:grid;gap:3px;min-width:165px}.teaching-load b{white-space:nowrap}.teaching-load small{color:var(--muted);font-size:11px;white-space:nowrap}
 .native-band-table{min-width:620px}.native-table{min-width:980px}.native-table input{min-width:120px}.native-table input[data-native="lang"]{min-width:150px;text-align:left}.native-table input[data-native="sources"]{min-width:190px;text-align:left}.native-table td:nth-child(3)>select{min-width:250px}.native-group-main{display:grid;gap:4px;min-width:170px;text-align:left}.native-group-main>span{color:var(--mint-d);font-size:11px;font-weight:900}.native-group-main small{max-width:210px;overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.native-row-actions{display:flex;align-items:flex-start;gap:7px;min-width:260px}.native-row-more{flex:1;text-align:left}.native-row-more summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900;white-space:nowrap}.native-more-grid{display:grid;grid-template-columns:1fr 100px;gap:8px;margin-top:9px;padding:10px;border-left:3px solid var(--sky-d);background:#f7fafc}.native-more-grid label{display:grid;gap:3px;color:var(--muted);font-size:11px;font-weight:800}.native-more-grid label.wide{grid-column:1/-1}.native-more-grid input,.native-more-grid select{width:100%;min-width:0!important;max-width:none!important;box-sizing:border-box}
 .native-option-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}.native-option-toggle input{width:22px;height:22px;flex:0 0 auto}.native-option-toggle span{display:grid;gap:3px}.native-option-toggle b{font-size:17px}.native-option-toggle small{color:var(--muted);font-size:13px}.native-lock-settings[hidden]{display:none}
@@ -265,7 +265,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head{display:grid}.solve-diagnosis-source{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
-  .policy-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.policy-approvals{grid-template-columns:1fr 170px}
+  .policy-grid,.policy-context-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.policy-approvals{grid-template-columns:1fr 170px}
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
   .step-help ol{grid-template-columns:1fr;gap:8px}.step-help li{padding-right:0}
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
@@ -316,7 +316,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.13</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.14</span></div>
   </div>
 </section>
 
@@ -959,7 +959,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.13</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.14</small>
   </div>
 </footer>
 
@@ -968,8 +968,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="data.js"></script>
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
-<script src="schedule-policy.js?v=20260712-1"></script>
-<script src="setup-builder.js?v=20260713-1"></script>
+<script src="schedule-policy.js?v=20260713-2"></script>
+<script src="setup-builder.js?v=20260713-2"></script>
 <script src="schedule-exports.js?v=20260713-1"></script>
 <script>
 /* ═══ 通用 ═══ */
@@ -2046,7 +2046,7 @@ async function runFormal(){
     clearFormalDiagnosis();
     formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
       completeness==='complete'?'正式課表已下載':'部分課表已下載',
-      `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；新竹市規則問題 ${compliance} 項`+
+      `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；自訂規則問題 ${compliance} 項`+
       (FORMAL_AUTO_TUTOR?'':'；科任與鎖定課已載入，可前往導師自排交給老師接續安排'));
   }catch(error){
     formalMessage('bad','無法連線正式 API','請確認 API 網址、CORS 與服務是否已啟動。');
@@ -2619,7 +2619,7 @@ function emptyFormalData(){
   const gslot=TeacherWorkflow.clone(DEMO0.gslot||{});
   return {classes:[],subjects:{},assign:{},override:{},locks:[],limits:[],derived:[],
     rules:TeacherWorkflow.clone(DEMO0.rules||[]),blocked:[],gslot,rooms:{R00:99},roster:{},
-    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},assignmentModes:{},exportMappings:{},policy:{profileId:'hsinchu-elementary-115'}};
+    resGroups:[],nativeSchemaVersion:2,nativeBands:[],nativeGroups:[],nativeLockEnabled:false,tcap:{},teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},assignmentModes:{},exportMappings:{},policy:{profileId:'tw-elementary-custom-v1'}};
 }
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
@@ -2698,6 +2698,7 @@ function initDerived(){
   for(const teacher of Object.keys(DATA.roster))if(!Object.prototype.hasOwnProperty.call(DATA.teacherSubjects,teacher))
     DATA.teacherSubjects[teacher]=inferredTeacherSubjects[teacher]||[];
   if(window.SchedulePolicy)SchedulePolicy.normalize(DATA);
+  const policyDailyCap=window.SchedulePolicy?SchedulePolicy.hardDailyCap(DATA):6;
   if(typeof DATA.nativeLockEnabled!=='boolean')DATA.nativeLockEnabled=
     (Array.isArray(DATA.nativeGroups)&&DATA.nativeGroups.length>0)||(DATA.locks||[]).some(lock=>lock.s==='本土語文');
   if(!Array.isArray(DATA.nativeGroups))DATA.nativeGroups=null;
@@ -2710,8 +2711,8 @@ function initDerived(){
   LIMITS=DATA.limits.map(r=>[...r]);
   RULES=DATA.rules.map(r=>[...r]);
   for(const row of RULES){
-    if(row[0]==='S08')row[3]='教師每日以 5 節為負荷偏好，任何教師均不得排滿 7 節';
-    if(row[0]==='S09')row[3]='導師每日以 4 節為負荷偏好，硬上限為 6 節';
+    if(row[0]==='S08')row[3]=`教師每日以 ${Math.min(5,policyDailyCap)} 節為負荷偏好，硬上限為 ${policyDailyCap} 節`;
+    if(row[0]==='S09')row[3]=`導師每日以 ${Math.min(4,policyDailyCap)} 節為負荷偏好，硬上限為 ${policyDailyCap} 節`;
   }
   DATA.rules=RULES.map(r=>[...r]);
   ENG_SUBJ=Object.keys(DATA.subjects).filter(s=>!DATA.subjects[s].self&&s!=='本土語文');
