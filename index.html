@@ -316,7 +316,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.12</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.13</span></div>
   </div>
 </section>
 
@@ -369,6 +369,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <button class="btn soft sm cloud-draft-resolution" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
       <button class="btn soft sm cloud-draft-resolution" id="localBackupButton" type="button" onclick="ScheduleAuth.useLocalBackup()" hidden>改用這台電腦的備份</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
+      <button class="btn danger sm" id="deleteCloudDraftButton" type="button" onclick="ScheduleAuth.openDeleteDraftDialog()" disabled>刪除雲端案件</button>
     </div>
     <div class="admin-dock-notes">
       <div class="cloud-draft-guide"><b>學校共用暫存</b><span>同校主任與組長讀取同一案件，換電腦登入後也能繼續。</span><small>停止操作 10 秒後自動存檔；若其他管理員已有較新版本，系統會阻擋覆蓋並要求先載入。</small></div>
@@ -923,6 +924,26 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </dialog>
 
+<dialog class="clear-project-dialog" id="deleteCloudDraftDialog" aria-labelledby="deleteCloudDraftTitle">
+  <div class="clear-project-head">
+    <h2 id="deleteCloudDraftTitle">刪除學校雲端案件</h2>
+    <p>這會刪除同校主任與組長共用的目前暫存，刪除後無法復原。</p>
+  </div>
+  <div class="clear-project-body">
+    <ul>
+      <li>永久刪除學校共用的雲端暫存及舊版暫存。</li>
+      <li>清空這台電腦目前的編輯畫面與本機備份，回到建立案件入口。</li>
+      <li>不會刪除已發布給教師查看的正式課表。</li>
+      <li>送出前還會再出現一次「最後確認」。</li>
+    </ul>
+    <label class="clear-project-confirm"><input id="deleteCloudDraftAcknowledge" type="checkbox" onchange="ScheduleAuth.toggleDeleteDraftConfirm()"><span>我了解雲端案件與本機編輯內容都會被刪除，而且無法復原。</span></label>
+  </div>
+  <div class="clear-project-actions">
+    <button class="btn soft sm" type="button" onclick="ScheduleAuth.closeDeleteDraftDialog()">取消</button>
+    <button class="btn danger sm" id="deleteCloudDraftConfirmButton" type="button" onclick="ScheduleAuth.deleteDraft()" disabled>前往最後確認</button>
+  </div>
+</dialog>
+
 <footer class="app-footer" aria-label="系統版權資訊">
   <div class="app-footer-brand">
     <span class="app-footer-mark" aria-hidden="true">▦</span>
@@ -938,7 +959,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.12</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.13</small>
   </div>
 </footer>
 
@@ -2805,6 +2826,15 @@ function clearFormalSessionData(){
   applyData(emptyFormalData(),'尚未載入學校資料');
   setSetupStarted(false);
 }
+function resetFormalProjectAfterCloudDelete(){
+  if(APP_MODE!=='formal')return;
+  const storageKey=currentLocalStorageKey();
+  if(storageKey)localStorage.removeItem(storageKey);
+  TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;
+  applyData(emptyFormalData(),'尚未載入學校資料');
+  setSetupStarted(false);
+  document.getElementById('lsMsg').textContent='學校雲端案件與這台電腦的本機備份已刪除，可以重新建立案件。';
+}
 function exportJSON(){
   const snapshot=currentSnapshot();
   downloadJSONFile('排課DEMO工作進度_'+new Date().toISOString().slice(0,10)+'.json',
@@ -3146,9 +3176,10 @@ setFmt('num');
 window.setFormalStorageIdentity=setFormalStorageIdentity;
 window.setFormalEditingLocked=setFormalEditingLocked;
 window.clearFormalSessionData=clearFormalSessionData;
+window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260713-4"></script>
+<script src="schedule-auth.js?v=20260713-5"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

@@ -3,9 +3,9 @@
 
   const state = {credential: "", profile: null, workspace: null, apiBaseUrl: "",
     activeRevision: "", updateSequence: 0, draftRevision: "", draftConflict: false,
-    draftReady: false, hasLocalBackup: false, lastDraftHash: "", automationStarted: false,
+    draftReady: false, hasCloudDraft: false, hasLocalBackup: false, lastDraftHash: "", automationStarted: false,
     autoSaveTimer: null, saveInFlight: null, savePending: false, pendingManual: false,
-    autoSaveInterval: null, sessionExpired: false, schools: [], usage: null};
+    autoSaveInterval: null, sessionExpired: false, deletingDraft: false, schools: [], usage: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -338,6 +338,7 @@
     try {
       const draft = await request("/admin/draft");
       state.draftRevision = draft.draft_revision || "";
+      state.hasCloudDraft = true;
       state.draftConflict = true;
       setDraftEditingLocked(true);
       if (adminDock) adminDock.open = true;
@@ -353,12 +354,14 @@
     } catch (error) {
       if (error.status === 404) {
         state.draftRevision = "";
+        state.hasCloudDraft = false;
         state.draftConflict = false;
         setDraftEditingLocked(false);
         if (continueButton) continueButton.hidden = true;
         if (localButton) localButton.hidden = true;
         element.textContent = "目前尚無學校雲端案件；開始建置後，停止操作 10 秒會自動存檔。";
       } else {
+        state.hasCloudDraft = false;
         state.draftConflict = true;
         setDraftEditingLocked(true);
         if (adminDock) adminDock.open = true;
@@ -426,6 +429,11 @@
       button.disabled = busy || !state.draftReady;
       button.textContent = busy ? "正在儲存…" : "儲存至學校雲端";
     });
+    const deleteButton = document.getElementById("deleteCloudDraftButton");
+    if (deleteButton) {
+      deleteButton.disabled = busy || state.deletingDraft || !state.hasCloudDraft || state.sessionExpired;
+      deleteButton.textContent = state.deletingDraft ? "正在刪除…" : "刪除雲端案件";
+    }
   }
 
   function stopSessionTimers() {
@@ -488,6 +496,7 @@
           expected_draft_revision: state.draftRevision, save_mode: manual ? "manual" : "auto"}),
       });
       state.draftRevision = result.draft_revision || "";
+      state.hasCloudDraft = true;
       state.draftConflict = false;
       state.lastDraftHash = hash;
       const continueButton = document.getElementById("cloudContinueButton");
@@ -551,6 +560,7 @@
       if (!confirm(`載入 ${new Date(draft.saved_at).toLocaleString("zh-TW")} 的雲端暫存？目前畫面內容會被取代。`)) return;
       root.applyAdminDraft(draft.snapshot);
       state.draftRevision = draft.draft_revision || "";
+      state.hasCloudDraft = true;
       state.draftConflict = false;
       state.activeRevision = draft.active_revision || "";
       state.updateSequence = 0;
@@ -567,11 +577,92 @@
     } catch (error) {
       if (error.status === 404) {
         state.draftRevision = "";
+        state.hasCloudDraft = false;
         state.draftConflict = false;
         setDraftEditingLocked(false);
         document.getElementById("cloudContinueButton").hidden = true;
         document.getElementById("cloudDraftStatus").textContent = "目前尚無學校雲端案件，可以開始建立新案件。";
       } else alert(`無法載入雲端暫存：${error.message}`);
+    }
+  }
+
+  function openDeleteDraftDialog() {
+    if (!state.profile || !state.profile.is_admin || !state.hasCloudDraft || state.sessionExpired) return;
+    const dialog = document.getElementById("deleteCloudDraftDialog");
+    const acknowledge = document.getElementById("deleteCloudDraftAcknowledge");
+    if (!dialog) return;
+    if (acknowledge) acknowledge.checked = false;
+    toggleDeleteDraftConfirm();
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else if (confirm("第一層警示：永久刪除學校雲端案件與這台電腦的本機編輯內容？已發布的教師課表會保留。")) {
+      deleteDraft(true);
+    }
+  }
+
+  function closeDeleteDraftDialog() {
+    const dialog = document.getElementById("deleteCloudDraftDialog");
+    if (dialog && dialog.open) dialog.close();
+  }
+
+  function toggleDeleteDraftConfirm() {
+    const acknowledge = document.getElementById("deleteCloudDraftAcknowledge");
+    const button = document.getElementById("deleteCloudDraftConfirmButton");
+    if (button) button.disabled = !(acknowledge && acknowledge.checked);
+  }
+
+  async function deleteDraft(skipAcknowledgement) {
+    const acknowledge = document.getElementById("deleteCloudDraftAcknowledge");
+    if (!skipAcknowledgement && (!acknowledge || !acknowledge.checked)) return;
+    if (!state.profile || !state.profile.is_admin || !state.hasCloudDraft ||
+        state.sessionExpired || state.saveInFlight || state.deletingDraft) return;
+    const schoolName = state.profile.school_name || "本校";
+    const finalWarning = `最後確認：確定永久刪除「${schoolName}」目前的學校雲端案件？\n\n刪除後無法復原；已發布的教師課表會保留。`;
+    if (!confirm(finalWarning)) return;
+
+    closeDeleteDraftDialog();
+    state.deletingDraft = true;
+    stopSessionTimers();
+    setSaveButtonsBusy(false);
+    const cloudStatus = document.getElementById("cloudDraftStatus");
+    if (cloudStatus) cloudStatus.textContent = "正在刪除學校雲端案件…";
+    try {
+      await request(`/admin/draft?expected_draft_revision=${encodeURIComponent(state.draftRevision)}`, {
+        method: "DELETE",
+      });
+      state.hasCloudDraft = false;
+      state.hasLocalBackup = false;
+      state.draftRevision = "";
+      state.draftConflict = false;
+      state.lastDraftHash = "";
+      state.activeRevision = "";
+      state.updateSequence = 0;
+      localStorage.removeItem(userStorageKey("schedule_active_revision"));
+      localStorage.removeItem(userStorageKey("schedule_teacher_update_sequence"));
+      if (root.resetFormalProjectAfterCloudDelete) root.resetFormalProjectAfterCloudDelete();
+      setDraftEditingLocked(false);
+      const continueButton = document.getElementById("cloudContinueButton");
+      const localButton = document.getElementById("localBackupButton");
+      if (continueButton) continueButton.hidden = true;
+      if (localButton) localButton.hidden = true;
+      if (cloudStatus) cloudStatus.textContent = "學校雲端案件已刪除；已發布的教師課表仍保留。可以建立空白案件或重新匯入 Excel。";
+      const teacherStatus = document.getElementById("teacherSyncStatus");
+      if (teacherStatus) teacherStatus.textContent = "目前尚未連結新案件；完成排課後可重新發布。";
+      status("雲端案件已刪除，可以重新開始建置。", "ok");
+    } catch (error) {
+      if (error.status === 409) {
+        state.hasCloudDraft = true;
+        state.draftConflict = true;
+        setDraftEditingLocked(true);
+        await refreshDraftStatus();
+        alert("另一位管理員已儲存較新的案件。為避免誤刪，請先重新載入最新雲端案件，再重新執行刪除。");
+      } else {
+        if (cloudStatus) cloudStatus.textContent = `刪除雲端案件失敗：${error.message}`;
+        alert(`刪除雲端案件失敗：${error.message}`);
+      }
+    } finally {
+      state.deletingDraft = false;
+      setSaveButtonsBusy(false);
+      if (!state.sessionExpired) startAdminAutomation();
     }
   }
 
@@ -669,5 +760,6 @@
   }
 
   root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
+    openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     syncTeacherUpdates, savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));
