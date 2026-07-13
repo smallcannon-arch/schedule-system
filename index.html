@@ -174,6 +174,8 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .admin-dock{display:none;position:sticky;top:8px;z-index:30;width:100%;margin:0 0 16px;background:#fff;border:1px solid #dce5e1;border-radius:8px;box-shadow:0 4px 14px rgba(48,64,59,.08)}
 body.school-admin-mode .admin-dock{display:block}
 body.platform-admin-mode .admin-dock{display:none!important}
+body.cloud-draft-pending aside nav,body.cloud-draft-pending main>section{opacity:.48;pointer-events:none;user-select:none}
+body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution){opacity:.45;pointer-events:none}
 .admin-dock summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px;cursor:pointer;list-style:none}
 .admin-dock summary::-webkit-details-marker{display:none}
 .admin-dock-copy{display:grid;grid-template-columns:auto minmax(260px,max-content) minmax(320px,1fr);align-items:center;gap:8px 14px;min-width:0}
@@ -309,7 +311,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.10</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.11</span></div>
   </div>
 </section>
 
@@ -359,7 +361,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <label class="btn soft sm" style="cursor:pointer">匯入教師帳號 CSV<input type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
       <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
       <button class="btn mint sm" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
-      <button class="btn soft sm" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
+      <button class="btn soft sm cloud-draft-resolution" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
+      <button class="btn soft sm cloud-draft-resolution" id="localBackupButton" type="button" onclick="ScheduleAuth.useLocalBackup()" hidden>改用這台電腦的備份</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
     </div>
     <div class="admin-dock-notes">
@@ -921,7 +924,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.10</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.11</small>
   </div>
 </footer>
 
@@ -2599,6 +2602,15 @@ function enterFormalAdminMode(){
   document.body.classList.add('formal-admin-mode','school-admin-mode');
   go('build');ScheduleSetup.show('classes');
 }
+function setFormalEditingLocked(locked){
+  if(APP_MODE!=='formal')return;
+  document.body.classList.toggle('cloud-draft-pending',!!locked);
+  document.body.setAttribute('aria-busy',locked?'true':'false');
+  document.querySelectorAll('aside nav,main>section').forEach(element=>{
+    if(locked)element.setAttribute('inert','');
+    else element.removeAttribute('inert');
+  });
+}
 function enterPlatformAdminMode(){
   document.body.classList.remove('formal-locked','school-admin-mode');
   document.body.classList.add('formal-admin-mode','platform-admin-mode');
@@ -3118,10 +3130,11 @@ else{
 document.getElementById('formalApiUrl').value=localStorage.getItem('schedule_formal_api_url')||'http://127.0.0.1:8766';
 setFmt('num');
 window.setFormalStorageIdentity=setFormalStorageIdentity;
+window.setFormalEditingLocked=setFormalEditingLocked;
 window.clearFormalSessionData=clearFormalSessionData;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260713-2"></script>
+<script src="schedule-auth.js?v=20260713-3"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
