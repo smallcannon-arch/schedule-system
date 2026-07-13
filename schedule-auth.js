@@ -30,10 +30,6 @@
     return `${name}:${school}:${(state.profile && state.profile.email) || "anonymous"}`;
   }
 
-  function authorizationHeaders() {
-    return state.credential ? {Authorization: `Bearer ${state.credential}`} : {};
-  }
-
   async function request(path, options) {
     if (!state.apiBaseUrl) throw new Error("正式教師入口尚未設定 API 網址");
     const headers = new Headers((options && options.headers) || {});
@@ -48,6 +44,16 @@
       throw error;
     }
     return payload;
+  }
+
+  async function solveData(payload) {
+    if (!state.apiBaseUrl) throw new Error("正式排課引擎尚未設定");
+    if (!state.credential) throw new Error("請先使用學校 Google 帳號登入");
+    return fetch(`${state.apiBaseUrl}/solve-data`, {
+      method: "POST",
+      headers: {Authorization: `Bearer ${state.credential}`, "Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
   }
 
   function roleLabel(role) {
@@ -121,8 +127,8 @@
         }
         if (root.enterFormalAdminMode) root.enterFormalAdminMode();
         document.getElementById("teacherProfile").textContent = `${schoolLabel(state.profile)}${state.profile.name}｜學校系統管理員`;
-        state.activeRevision = localStorage.getItem(userStorageKey("schedule_active_revision")) || "";
-        state.updateSequence = Number(localStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
+        state.activeRevision = sessionStorage.getItem(userStorageKey("schedule_active_revision")) || "";
+        state.updateSequence = Number(sessionStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
         status("服務正常｜雲端暫存已啟用｜導師存檔：手動讀取", "ok");
         await refreshDraftStatus();
         startAdminAutomation();
@@ -150,8 +156,6 @@
   async function initialize() {
     if ((root.SCHEDULE_APP_CONFIG || {}).mode !== "formal") return;
     state.apiBaseUrl = apiBaseUrl();
-    const apiInput = document.getElementById("formalApiUrl");
-    if (apiInput && state.apiBaseUrl) apiInput.value = state.apiBaseUrl;
     if (!state.apiBaseUrl) {
       status("正式教師入口尚未啟用；公開 DEMO 仍可正常試用。", "disabled");
       return;
@@ -362,8 +366,8 @@
       });
       state.activeRevision = result.revision;
       state.updateSequence = Number(result.update_sequence || 0);
-      localStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
-      localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
+      sessionStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
+      sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
       document.getElementById("teacherSyncStatus").textContent = "導師儲存後，請按「讀取導師存檔」取得更新。";
       status(`正式課表已發布（${new Date(result.published_at).toLocaleString("zh-TW")}）。`, "ok");
     } catch (error) {
@@ -582,7 +586,7 @@
     state.sessionExpired = true;
     stopSessionTimers();
     state.credential = "";
-    const message = "登入已逾時，請按「重新登入」後繼續；這台電腦的本機備份仍會保留。";
+    const message = "登入已逾時，請按「重新登入」後繼續；長期進度以學校雲端暫存為準。";
     if (state.profile && state.profile.is_admin) {
       state.draftConflict = true;
       setDraftEditingLocked(true);
@@ -698,9 +702,9 @@
       state.draftConflict = false;
       state.activeRevision = draft.active_revision || "";
       state.updateSequence = 0;
-      if (state.activeRevision) localStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
-      else localStorage.removeItem(userStorageKey("schedule_active_revision"));
-      localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), "0");
+      if (state.activeRevision) sessionStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
+      else sessionStorage.removeItem(userStorageKey("schedule_active_revision"));
+      sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), "0");
       state.lastDraftHash = JSON.stringify(root.getScheduleAuthSnapshot());
       setDraftEditingLocked(false);
       const continueButton = document.getElementById("cloudContinueButton");
@@ -773,8 +777,8 @@
       state.lastDraftHash = "";
       state.activeRevision = "";
       state.updateSequence = 0;
-      localStorage.removeItem(userStorageKey("schedule_active_revision"));
-      localStorage.removeItem(userStorageKey("schedule_teacher_update_sequence"));
+      sessionStorage.removeItem(userStorageKey("schedule_active_revision"));
+      sessionStorage.removeItem(userStorageKey("schedule_teacher_update_sequence"));
       if (root.resetFormalProjectAfterCloudDelete) root.resetFormalProjectAfterCloudDelete();
       setDraftEditingLocked(false);
       const continueButton = document.getElementById("cloudContinueButton");
@@ -841,7 +845,7 @@
         element.textContent = "目前沒有新的導師存檔。";
       }
       state.updateSequence = Number(result.update_sequence || state.updateSequence);
-      localStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
+      sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
     } catch (error) {
       element.textContent = error.status === 409 ? "正式課表版本已變更，請重新發布或載入對應暫存。" : `導師課表同步失敗：${error.message}`;
     } finally {
@@ -907,7 +911,7 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons,
+  root.ScheduleAuth = {initialize, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons,
     publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     syncTeacherUpdates, savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
