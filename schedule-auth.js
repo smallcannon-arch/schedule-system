@@ -195,6 +195,11 @@
   async function importTeacherCsv(input) {
     const file = input.files && input.files[0];
     if (!file) return;
+    if (teacherCsvImportLocked()) {
+      input.value = "";
+      alert("案件已開始編輯，無法再批次匯入教師帳號。請到「教師與配課」修改後，按「同步教師登入名冊」。");
+      return;
+    }
     const body = new FormData();
     body.append("file", file);
     body.append("replace", "true");
@@ -376,6 +381,44 @@
     }
   }
 
+  function teacherCsvImportLocked() {
+    const setupStarted = !document.body.classList.contains("setup-pending");
+    return !state.draftReady || state.hasCloudDraft || state.draftConflict ||
+      state.sessionExpired || setupStarted;
+  }
+
+  function updateTeacherCsvImportState() {
+    const button = document.getElementById("teacherCsvImportButton");
+    const input = document.getElementById("teacherCsvImportInput");
+    const hint = document.getElementById("teacherCsvImportHint");
+    if (!button || !input) return;
+    const locked = teacherCsvImportLocked();
+    button.classList.toggle("csv-import-locked", locked);
+    button.setAttribute("aria-disabled", locked ? "true" : "false");
+    button.title = locked ? "案件開始後請到教師與配課頁修改並同步登入名冊" : "匯入教師帳號 CSV";
+    input.disabled = locked;
+    if (hint) hint.textContent = locked ?
+      "案件已開始編輯，批次匯入已鎖定；請到「教師與配課」修改帳號，再按「同步教師登入名冊」。" :
+      "請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。";
+  }
+
+  function downloadTeacherCsvTemplate() {
+    const rows = [
+      ["教師姓名", "學校Google帳號", "角色", "負責班級"],
+      ["王小明", "teacher1@school.edu.tw", "導師", "1甲"],
+      ["李小華", "teacher2@school.edu.tw", "科任", ""],
+    ];
+    const csv = "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "教師帳號匯入範本.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function formatUsageDate(value) {
     if (!value) return "尚無紀錄";
     const date = new Date(value);
@@ -422,6 +465,7 @@
     state.draftReady = !locked;
     if (root.setFormalEditingLocked) root.setFormalEditingLocked(locked);
     setSaveButtonsBusy(!!state.saveInFlight);
+    updateTeacherCsvImportState();
   }
 
   function setSaveButtonsBusy(busy) {
@@ -759,7 +803,8 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
+  root.ScheduleAuth = {initialize, authorizationHeaders, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState,
+    publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     syncTeacherUpdates, savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

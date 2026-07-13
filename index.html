@@ -171,11 +171,12 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .auth-status[data-kind="error"]{color:#a5384b;font-weight:800}
 .auth-admin-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .auth-admin-actions[hidden]{display:none}
+.auth-admin-actions .csv-import-locked{opacity:.5;cursor:not-allowed!important;pointer-events:none}
 .admin-dock{display:none;position:sticky;top:8px;z-index:30;width:100%;margin:0 0 16px;background:#fff;border:1px solid #dce5e1;border-radius:8px;box-shadow:0 4px 14px rgba(48,64,59,.08)}
 body.school-admin-mode .admin-dock{display:block}
 body.platform-admin-mode .admin-dock{display:none!important}
 body.cloud-draft-pending aside nav,body.cloud-draft-pending main>section{opacity:.48;pointer-events:none;user-select:none}
-body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution){opacity:.45;pointer-events:none}
+body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution):not(.always-available){opacity:.45;pointer-events:none}
 .admin-dock summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px;cursor:pointer;list-style:none}
 .admin-dock summary::-webkit-details-marker{display:none}
 .admin-dock-copy{display:grid;grid-template-columns:auto minmax(260px,max-content) minmax(320px,1fr);align-items:center;gap:8px 14px;min-width:0}
@@ -316,7 +317,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.14</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.15</span></div>
   </div>
 </section>
 
@@ -363,7 +364,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div id="googleSignInButton" hidden></div>
     <div class="auth-admin-actions" id="googleAdminActions" hidden>
-      <label class="btn soft sm" style="cursor:pointer">匯入教師帳號 CSV<input type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
+      <button class="btn soft sm always-available" type="button" onclick="ScheduleAuth.downloadTeacherCsvTemplate()">下載教師帳號 CSV 範本</button>
+      <label class="btn soft sm" id="teacherCsvImportButton" style="cursor:pointer">匯入教師帳號 CSV<input id="teacherCsvImportInput" type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
       <button class="btn mint sm" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
       <button class="btn mint sm" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
       <button class="btn soft sm cloud-draft-resolution" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
@@ -373,7 +375,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div class="admin-dock-notes">
       <div class="cloud-draft-guide"><b>學校共用暫存</b><span>同校主任與組長讀取同一案件，換電腦登入後也能繼續。</span><small>停止操作 10 秒後自動存檔；若其他管理員已有較新版本，系統會阻擋覆蓋並要求先載入。</small></div>
-      <span>CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
+      <span id="teacherCsvImportHint">請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
       <span id="cloudDraftStatus">雲端暫存尚未啟動。</span>
       <span id="teacherSyncStatus">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
     </div>
@@ -959,7 +961,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.14</small>
+    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.15</small>
   </div>
 </footer>
 
@@ -978,6 +980,7 @@ let SETUP_STARTED=APP_MODE!=='formal';
 function setSetupStarted(started){
   SETUP_STARTED=APP_MODE!=='formal'||!!started;
   document.body.classList.toggle('setup-pending',APP_MODE==='formal'&&!SETUP_STARTED);
+  if(window.ScheduleAuth&&ScheduleAuth.updateTeacherCsvImportState)ScheduleAuth.updateTeacherCsvImportState();
 }
 const DAYS=['一','二','三','四','五'], PS=[1,2,3,4,5,6,7];
 const PAIRS=[[1,2],[2,3],[3,4],[5,6],[6,7]];
@@ -3180,7 +3183,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260713-5"></script>
+<script src="schedule-auth.js?v=20260713-6"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
