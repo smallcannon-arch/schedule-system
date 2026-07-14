@@ -916,6 +916,79 @@ def test_firestore_directory_does_not_query_an_empty_hosted_domain():
     assert directory.get_school_by_domain("") is None
 
 
+def test_firestore_directory_reads_domain_indexes_before_writing_transaction():
+    documents = {
+        "domains/shared.test": {"school_ids": ["existing-school"]},
+    }
+
+    class Snapshot:
+        def __init__(self, value):
+            self.value = deepcopy(value)
+            self.exists = value is not None
+
+        def to_dict(self):
+            return deepcopy(self.value)
+
+    class Transaction:
+        def __init__(self):
+            self.has_writes = False
+
+        def read(self, path):
+            if self.has_writes:
+                raise AssertionError("Firestore transactions cannot read after a write")
+            return Snapshot(documents.get(path))
+
+        def set(self, reference, value, merge=False):
+            self.has_writes = True
+            if merge and reference.path in documents:
+                documents[reference.path].update(deepcopy(value))
+            else:
+                documents[reference.path] = deepcopy(value)
+
+        def delete(self, reference):
+            self.has_writes = True
+            documents.pop(reference.path, None)
+
+    class Reference:
+        def __init__(self, path):
+            self.path = path
+
+        def get(self, transaction=None):
+            return transaction.read(self.path)
+
+    class Collection:
+        def __init__(self, prefix):
+            self.prefix = prefix
+
+        def document(self, key):
+            return Reference(f"{self.prefix}/{key}")
+
+    class Client:
+        @staticmethod
+        def transaction():
+            return Transaction()
+
+    class Firestore:
+        @staticmethod
+        def transactional(callback):
+            return callback
+
+    directory = object.__new__(FirestoreTenantDirectory)
+    directory._client = Client()
+    directory._firestore = Firestore()
+    directory._schools = Collection("schools")
+    directory._domains = Collection("domains")
+
+    school = directory.upsert_school({
+        "school_id": "134647", "name": "新增學校", "domains": ["shared.test"],
+        "admin_emails": ["admin@shared.test"], "active": True,
+    })
+
+    assert school["school_id"] == "134647"
+    assert documents["schools/134647"]["name"] == "新增學校"
+    assert documents["domains/shared.test"]["school_ids"] == ["134647", "existing-school"]
+
+
 def test_school_admin_cannot_import_another_domains_teacher(monkeypatch):
     store = MemoryScheduleStore()
     monkeypatch.setattr(app, "STORE", store)

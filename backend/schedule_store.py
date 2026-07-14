@@ -649,23 +649,12 @@ class FirestoreTenantDirectory:
             current = school_ref.get(transaction=tx)
             existing = current.to_dict() if current.exists else None
             value = normalize_school_record(record, existing)
-            for domain in (existing or {}).get("domains", []):
-                if domain not in value["domains"]:
-                    mapping_ref = self._domains.document(domain)
-                    mapping = mapping_ref.get(transaction=tx)
-                    mapping_value = mapping.to_dict() or {} if mapping.exists else {}
-                    school_ids = set(mapping_value.get("school_ids") or ())
-                    legacy_owner = str(mapping_value.get("school_id") or "")
-                    if legacy_owner:
-                        school_ids.add(legacy_owner)
-                    school_ids.discard(school_id)
-                    if school_ids:
-                        tx.set(mapping_ref, {
-                            "school_ids": sorted(school_ids), "updated_at": value["updated_at"]})
-                    else:
-                        tx.delete(mapping_ref)
-            tx.set(school_ref, value, merge=True)
-            for domain in value["domains"]:
+            previous_domains = set((existing or {}).get("domains") or ())
+            current_domains = set(value["domains"])
+            domain_mappings = {}
+
+            # Firestore transactions require every read to happen before the first write.
+            for domain in sorted(previous_domains | current_domains):
                 mapping_ref = self._domains.document(domain)
                 mapping = mapping_ref.get(transaction=tx)
                 mapping_value = mapping.to_dict() or {} if mapping.exists else {}
@@ -673,6 +662,19 @@ class FirestoreTenantDirectory:
                 legacy_owner = str(mapping_value.get("school_id") or "")
                 if legacy_owner:
                     school_ids.add(legacy_owner)
+                domain_mappings[domain] = (mapping_ref, school_ids)
+
+            for domain in sorted(previous_domains - current_domains):
+                mapping_ref, school_ids = domain_mappings[domain]
+                school_ids.discard(school_id)
+                if school_ids:
+                    tx.set(mapping_ref, {
+                        "school_ids": sorted(school_ids), "updated_at": value["updated_at"]})
+                else:
+                    tx.delete(mapping_ref)
+            tx.set(school_ref, value, merge=True)
+            for domain in sorted(current_domains):
+                mapping_ref, school_ids = domain_mappings[domain]
                 school_ids.add(school_id)
                 tx.set(mapping_ref, {
                     "school_ids": sorted(school_ids), "updated_at": value["updated_at"],
