@@ -8,7 +8,9 @@
     autoSaveInterval: null, sessionExpired: false, deletingDraft: false, loadingDraft: false,
     publishing: false, syncingUpdates: false, importingTeacherCsv: false,
     savingSchool: false, loadingUsage: false, savingPlacements: false,
-    loadingVersions: false, restoringVersion: false, versions: [], schools: [], usage: null};
+    loadingVersions: false, restoringVersion: false, versions: [],
+    loadingBackups: false, creatingBackup: false, restoringBackup: false, backups: [],
+    schools: [], usage: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -29,6 +31,21 @@
   function userStorageKey(name) {
     const school = (state.profile && state.profile.school_id) || "platform";
     return `${name}:${school}:${(state.profile && state.profile.email) || "anonymous"}`;
+  }
+
+  function refreshReadiness() {
+    if (root.ScheduleReadiness && root.ScheduleReadiness.render) root.ScheduleReadiness.render();
+  }
+
+  function getReadinessState() {
+    return {
+      isAdmin: !!(state.profile && state.profile.is_admin),
+      hasCloudDraft: state.hasCloudDraft,
+      draftRevision: state.draftRevision,
+      draftConflict: state.draftConflict,
+      activeRevision: state.activeRevision,
+      backupCount: state.backups.length,
+    };
   }
 
   async function request(path, options) {
@@ -400,6 +417,7 @@
       document.getElementById("teacherSyncStatus").textContent = "導師儲存後，請按「讀取導師存檔」取得更新。";
       document.getElementById("versionHistoryStatus").textContent = "已保留本次正式版本，可由「正式版本」查看或還原。";
       status(`正式課表已發布（${new Date(result.published_at).toLocaleString("zh-TW")}）。`, "ok");
+      refreshReadiness();
     } catch (error) {
       status(error.message, "error");
     } finally {
@@ -475,6 +493,20 @@
       versions.disabled = state.loadingVersions || state.restoringVersion || !adminReady;
       versions.textContent = state.loadingVersions ? "正在載入…" : (state.restoringVersion ? "正在還原…" : "正式版本");
       versions.title = "查看與還原正式課表版本";
+    }
+    const createBackupButton = document.getElementById("createBackupButton");
+    const createBackupDialogButton = document.getElementById("backupCreateDialogButton");
+    for (const button of [createBackupButton, createBackupDialogButton].filter(Boolean)) {
+      button.disabled = state.creatingBackup || state.restoringBackup || !!state.saveInFlight ||
+        !adminReady || !state.draftReady || !state.hasCloudDraft || state.draftConflict;
+      button.textContent = state.creatingBackup ? "正在建立…" :
+        (button.id === "backupCreateDialogButton" ? "建立目前案件還原點" : "建立還原點");
+    }
+    const backupHistoryButton = document.getElementById("backupHistoryButton");
+    if (backupHistoryButton) {
+      backupHistoryButton.disabled = state.loadingBackups || state.restoringBackup || !adminReady;
+      backupHistoryButton.textContent = state.loadingBackups ? "正在載入…" :
+        (state.restoringBackup ? "正在還原…" : "案件還原點");
     }
     const loadDraftButton = document.getElementById("cloudContinueButton");
     if (loadDraftButton) loadDraftButton.disabled = state.loadingDraft || !!state.saveInFlight || state.deletingDraft || state.sessionExpired;
@@ -677,6 +709,7 @@
         continueButton.textContent = "重新載入雲端案件";
       }
       element.textContent = `${manual ? "已儲存至學校雲端" : "已自動存檔"}：${new Date(result.saved_at).toLocaleString("zh-TW")}｜${result.saved_by || state.profile.email}。`;
+      refreshReadiness();
       return true;
     } catch (error) {
       if (state.sessionExpired) return false;
@@ -748,6 +781,7 @@
       if (continueButton) continueButton.textContent = "重新載入雲端案件";
       if (localButton) localButton.hidden = true;
       document.getElementById("cloudDraftStatus").textContent = `已載入學校雲端案件：${new Date(draft.saved_at).toLocaleString("zh-TW")}｜${draft.saved_by || "管理員"}。`;
+      refreshReadiness();
     } catch (error) {
       if (error.status === 404) {
         state.draftRevision = "";
@@ -756,6 +790,7 @@
         setDraftEditingLocked(false);
         document.getElementById("cloudContinueButton").hidden = true;
         document.getElementById("cloudDraftStatus").textContent = "目前尚無學校雲端案件，可以開始建立新案件。";
+        refreshReadiness();
       } else alert(`無法載入雲端暫存：${error.message}`);
     } finally {
       state.loadingDraft = false;
@@ -825,6 +860,7 @@
       const teacherStatus = document.getElementById("teacherSyncStatus");
       if (teacherStatus) teacherStatus.textContent = "目前尚未連結新案件；完成排課後可重新發布。";
       status("雲端案件已刪除，可以重新開始建置。", "ok");
+      refreshReadiness();
     } catch (error) {
       if (error.status === 409) {
         state.hasCloudDraft = true;
@@ -854,6 +890,118 @@
     if (continueButton) continueButton.textContent = "載入雲端案件";
     if (localButton) localButton.hidden = true;
     document.getElementById("cloudDraftStatus").textContent = "目前使用這台電腦的備份；確認內容後，請按「儲存至學校雲端」建立新的共用版本。";
+  }
+
+  function closeBackups() {
+    const dialog = document.getElementById("backupHistoryDialog");
+    if (dialog && dialog.open) dialog.close();
+  }
+
+  function renderBackups() {
+    const list = document.getElementById("backupHistoryList");
+    if (!list) return;
+    if (!state.backups.length) {
+      list.innerHTML = '<div class="backup-empty">目前尚未建立案件還原點。</div>';
+      return;
+    }
+    list.innerHTML = state.backups.map((backup) => {
+      const summary = backup.summary || {};
+      const meta = `${Number(summary.classes || 0)} 班｜${Number(summary.teachers || 0)} 位教師｜${Number(summary.subjects || 0)} 科` +
+        (summary.schedule_ready ? `｜課表 ${Number(summary.scheduled_entries || 0)} 筆` : "｜尚未完成排課");
+      return `<div class="backup-row"><div><b>${root.esc(summary.label || "排課案件")}</b>` +
+        `<span>${root.esc(new Date(backup.created_at).toLocaleString("zh-TW"))}｜${root.esc(backup.created_by || "管理員")}</span>` +
+        `<span>${root.esc(meta)}</span></div>` +
+        `<button class="btn soft sm" type="button" data-restore-backup="${root.esc(backup.backup_id)}" ${state.restoringBackup ? "disabled" : ""}>還原為雲端暫存</button></div>`;
+    }).join("");
+    list.querySelectorAll("[data-restore-backup]").forEach((button) => {
+      button.addEventListener("click", () => restoreBackup(button.dataset.restoreBackup));
+    });
+  }
+
+  async function loadBackups() {
+    if (!state.profile || !state.profile.is_admin || state.loadingBackups) return;
+    state.loadingBackups = true;
+    updateActionButtons();
+    try {
+      const result = await request("/admin/backups?limit=10");
+      state.backups = result.backups || [];
+      renderBackups();
+      refreshReadiness();
+    } catch (error) {
+      const list = document.getElementById("backupHistoryList");
+      if (list) list.innerHTML = `<div class="backup-empty">${root.esc(error.message)}</div>`;
+    } finally {
+      state.loadingBackups = false;
+      updateActionButtons();
+    }
+  }
+
+  function openBackups() {
+    if (!state.profile || !state.profile.is_admin) return;
+    const dialog = document.getElementById("backupHistoryDialog");
+    if (!dialog) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    loadBackups();
+  }
+
+  async function createBackup() {
+    if (!state.profile || !state.profile.is_admin || state.creatingBackup || state.restoringBackup) return;
+    state.creatingBackup = true;
+    updateActionButtons();
+    try {
+      await saveDraft(true);
+      if (!state.hasCloudDraft || state.draftConflict) throw new Error("請先完成雲端儲存，再建立案件還原點");
+      const backup = await request("/admin/backups", {method: "POST"});
+      await loadBackups();
+      document.getElementById("cloudDraftStatus").textContent = `已建立案件還原點：${new Date(backup.created_at).toLocaleString("zh-TW")}。`;
+      status("案件還原點已建立。", "ok");
+    } catch (error) {
+      alert(`無法建立案件還原點：${error.message}`);
+    } finally {
+      state.creatingBackup = false;
+      updateActionButtons();
+    }
+  }
+
+  async function restoreBackup(backupId) {
+    if (!backupId || state.restoringBackup || state.creatingBackup) return;
+    const backup = state.backups.find((item) => item.backup_id === backupId);
+    if (!backup) return;
+    const summary = backup.summary || {};
+    const warning = `確定將「${summary.label || "排課案件"}」還原為新的學校雲端暫存？\n\n` +
+      `${Number(summary.classes || 0)} 班、${Number(summary.teachers || 0)} 位教師、${Number(summary.subjects || 0)} 科。\n` +
+      "目前雲端暫存會被取代；已發布的正式教師課表不會改動。";
+    if (!confirm(warning)) return;
+    state.restoringBackup = true;
+    updateActionButtons();
+    try {
+      const result = await request(`/admin/backups/${encodeURIComponent(backupId)}/restore`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({expected_draft_revision: state.draftRevision}),
+      });
+      root.applyAdminDraft(result.snapshot);
+      state.draftRevision = result.draft_revision || "";
+      state.activeRevision = result.active_revision || "";
+      state.hasCloudDraft = true;
+      state.draftConflict = false;
+      state.lastDraftHash = JSON.stringify(root.getScheduleAuthSnapshot());
+      setDraftEditingLocked(false);
+      if (state.activeRevision) sessionStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
+      else sessionStorage.removeItem(userStorageKey("schedule_active_revision"));
+      document.getElementById("cloudDraftStatus").textContent = `已從案件還原點建立新的雲端暫存：${new Date(result.restored_at).toLocaleString("zh-TW")}。`;
+      closeBackups();
+      status("案件已還原為新的雲端暫存；正式教師課表未變更。", "ok");
+      refreshReadiness();
+    } catch (error) {
+      if (error.status === 409) {
+        state.draftConflict = true;
+        setDraftEditingLocked(true);
+        alert("另一位管理員已更新雲端案件。請先載入最新案件，再重新執行還原。");
+      } else alert(`案件還原失敗：${error.message}`);
+    } finally {
+      state.restoringBackup = false;
+      updateActionButtons();
+    }
   }
 
   async function syncTeacherUpdates() {
@@ -1038,9 +1186,10 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons,
+  root.ScheduleAuth = {initialize, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons, getReadinessState,
     publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
+    openBackups, closeBackups, loadBackups, createBackup, restoreBackup,
     syncTeacherUpdates, openVersionHistory, closeVersionHistory, loadVersions, restoreVersion,
     savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

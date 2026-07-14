@@ -762,6 +762,53 @@ def test_admin_can_delete_cloud_draft_without_deleting_published_schedule(monkey
     assert store.get_active_state()["revision"] == published["revision"]
 
 
+def test_admin_can_create_and_restore_immutable_case_backup(monkeypatch):
+    store = MemoryScheduleStore()
+    monkeypatch.setattr(app, "STORE", store)
+    monkeypatch.setattr(app, "GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setattr(app, "ADMIN_EMAILS", ("admin@school.test",))
+    monkeypatch.setattr(app.auth_service, "verify_google_token", lambda *args: auth_service.GoogleIdentity(
+        "admin-sub", "admin@school.test", "排課管理員", "school.test"))
+    source = sample_snapshot()
+    payload = {"data": source["data"], "sol": {}, "tp": {}, "ovl": [], "label": "演練案件"}
+
+    saved = CLIENT.put("/admin/draft", headers={"Authorization": "Bearer token"}, json=payload)
+    backup = CLIENT.post("/admin/backups", headers={"Authorization": "Bearer token"})
+    published = store.publish_snapshot(source, "admin@school.test")
+    listed = CLIENT.get("/admin/backups", headers={"Authorization": "Bearer token"})
+    deleted = CLIENT.delete(
+        "/admin/draft", headers={"Authorization": "Bearer token"},
+        params={"expected_draft_revision": saved.json()["draft_revision"]})
+    restored = CLIENT.post(
+        f"/admin/backups/{backup.json()['backup_id']}/restore",
+        headers={"Authorization": "Bearer token"}, json={"expected_draft_revision": ""})
+    draft = CLIENT.get("/admin/draft", headers={"Authorization": "Bearer token"})
+
+    assert backup.status_code == 200
+    assert backup.json()["summary"]["label"] == "演練案件"
+    assert backup.json()["summary"]["classes"] == len(source["data"]["classes"])
+    assert listed.json()["backups"][0]["backup_id"] == backup.json()["backup_id"]
+    assert deleted.json()["deleted"] is True
+    assert restored.status_code == 200
+    assert restored.json()["active_revision"] == published["revision"]
+    assert store.get_active_state()["revision"] == published["revision"]
+    assert draft.json()["snapshot"]["label"] == "演練案件"
+
+
+def test_case_backups_keep_only_latest_ten():
+    store = MemoryScheduleStore()
+    for index in range(12):
+        snapshot = deepcopy(sample_snapshot())
+        snapshot["label"] = f"案件 {index}"
+        store.create_backup(snapshot, "admin@school.test")
+
+    backups = store.list_backups()
+
+    assert len(backups) == 10
+    assert backups[0]["summary"]["label"] == "案件 11"
+    assert backups[-1]["summary"]["label"] == "案件 2"
+
+
 def test_unknown_workspace_domain_is_denied_before_teacher_lookup(monkeypatch):
     monkeypatch.setattr(app, "GOOGLE_CLIENT_ID", "client-id")
     monkeypatch.setattr(app.auth_service, "verify_google_token", lambda *args: auth_service.GoogleIdentity(

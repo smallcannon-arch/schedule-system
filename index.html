@@ -248,6 +248,9 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done b{color:var(--mint-d)}
 .setup-health{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7;border-radius:4px;margin-bottom:14px}
 .setup-health.bad{border-color:var(--pink-d);background:#fff4f7}.setup-health span{font-size:14px;color:var(--muted);flex:1}
+.onboarding-checklist{margin:0 0 18px;border:1px solid var(--line);border-left:4px solid var(--sky-d);background:#fff}.onboarding-checklist summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;cursor:pointer;color:var(--ink);font-weight:900}.onboarding-checklist.complete{border-left-color:var(--mint-d)}.onboarding-checklist-body{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}.onboarding-step{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:9px;min-height:58px;padding:10px 12px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;color:var(--muted);font:inherit;text-align:left;cursor:pointer}.onboarding-step:nth-child(4n){border-right:0}.onboarding-step span{display:grid;place-items:center;width:34px;height:28px;border-radius:5px;background:#f3ecf4;color:var(--lav-d);font-size:11px;font-weight:900}.onboarding-step b{font-size:13px}.onboarding-step.done span{background:#dff3eb;color:var(--mint-d)}.onboarding-step.done b{color:var(--ink)}
+.readiness-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr)) minmax(220px,1.35fr);margin:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.readiness-summary>div{padding:14px 16px;border-right:1px solid var(--line)}.readiness-summary>div:last-child{border-right:0}.readiness-summary span{display:block;color:var(--muted);font-size:12px;font-weight:800}.readiness-summary b{display:block;margin-top:3px;color:var(--ink);font-size:24px}.readiness-summary .readiness-overall b{font-size:16px}.readiness-summary .readiness-overall.ok b{color:var(--mint-d)}.readiness-summary .readiness-overall.bad b{color:var(--bad)}.readiness-filters{display:flex;gap:5px;margin:0 0 8px;padding:4px;background:#f3ecf4;border-radius:8px;width:max-content;max-width:100%}.readiness-filters button{border:0;border-radius:5px;background:transparent;color:var(--muted);padding:8px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}.readiness-filters button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}.readiness-group{padding:18px 0;border-bottom:1px solid var(--line)}.readiness-group>header{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:8px}.readiness-group h2{margin:0 0 3px;font-size:18px}.readiness-group p{margin:0;color:var(--muted);font-size:13px}.readiness-group>header>span{color:var(--muted);font-size:12px;font-weight:900}.readiness-list{display:grid}.readiness-item{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:48px;padding:9px 0;border-top:1px solid #eee7e8}.readiness-item:first-child{border-top:0}.readiness-item p{color:var(--ink);font-size:14px}.readiness-state{font-size:12px;font-weight:900}.readiness-item.blocker .readiness-state{color:var(--bad)}.readiness-item.warning .readiness-state{color:#9a6a12}.readiness-item.pass .readiness-state{color:var(--mint-d)}.readiness-more{display:block;margin:10px auto 0;padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--lav-d);font:inherit;font-size:13px;font-weight:900;cursor:pointer}.readiness-more:hover{border-color:var(--lav-d);background:#fbf8fc}.readiness-empty{padding:30px 0;color:var(--muted);text-align:center}
+.backup-list{display:grid;border:1px solid var(--line)}.backup-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}.backup-row:last-child{border-bottom:0}.backup-row b,.backup-row span{display:block}.backup-row span{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.5}.backup-empty{padding:24px;color:var(--muted);text-align:center}
 .setup-issue-details,.policy-issue-details{margin:8px 0 16px;padding:0 13px;border-left:4px solid var(--lemon-d);background:#fffaf0}
 .setup-issue-details summary,.policy-issue-details summary{padding:10px 0;color:var(--ink);font-size:14px;font-weight:900;cursor:pointer}
 .setup-issue-list{margin:0;padding:0 0 12px 20px;color:var(--muted);font-size:14px;line-height:1.7}.setup-issue-list li.bad{color:var(--bad)}
@@ -292,7 +295,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
   .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head{display:grid}.solve-diagnosis-source{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}
-  .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}
+  .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}.onboarding-checklist-body{grid-template-columns:repeat(2,minmax(0,1fr))}.onboarding-step:nth-child(4n){border-right:1px solid var(--line)}.onboarding-step:nth-child(2n){border-right:0}.readiness-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.readiness-summary>div:nth-child(2){border-right:0}.readiness-summary>div:nth-child(-n+2){border-bottom:1px solid var(--line)}.readiness-item{grid-template-columns:62px minmax(0,1fr)}.readiness-item .btn{grid-column:2;justify-self:start}.readiness-filters{overflow-x:auto;width:100%}
   .policy-grid,.policy-context-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.policy-approvals{grid-template-columns:1fr 170px}
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
   .step-help ol{grid-template-columns:1fr;gap:8px}.step-help li{padding-right:0}
@@ -348,7 +351,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.22</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.23</b></span></div>
   </div>
 </section>
 
@@ -397,6 +400,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="nav-group">資料準備</div>
     <button class="on" data-v="build"><span class="ic">▤</span>資料建置</button>
     <button data-v="alloc"><span class="ic">👩‍🏫</span>配課檢核</button>
+    <button data-v="readiness"><span class="ic">✓</span>資料總檢查</button>
     <div class="nav-group">排課條件</div>
     <button data-v="native"><span class="ic">🌐</span>語言分組鎖定</button>
     <button data-v="res"><span class="ic">🧩</span>資源班</button>
@@ -448,6 +452,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <button class="btn soft sm cloud-draft-resolution" id="localBackupButton" type="button" onclick="ScheduleAuth.useLocalBackup()" hidden>改用這台電腦的備份</button>
       <button class="btn soft sm" id="syncTeacherUpdatesButton" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
       <button class="btn soft sm" id="versionHistoryButton" type="button" onclick="ScheduleAuth.openVersionHistory()">正式版本</button>
+      <button class="btn soft sm" id="createBackupButton" type="button" onclick="ScheduleAuth.createBackup()">建立還原點</button>
+      <button class="btn soft sm" id="backupHistoryButton" type="button" onclick="ScheduleAuth.openBackups()">案件還原點</button>
       <button class="btn danger sm" id="deleteCloudDraftButton" type="button" onclick="ScheduleAuth.openDeleteDraftDialog()" disabled>刪除雲端案件</button>
     </div>
     <div class="admin-dock-notes">
@@ -479,6 +485,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <label class="btn soft sm" style="cursor:pointer">上傳填妥的 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
     <button class="btn mint sm formal-only" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
   </div>
+  <details class="onboarding-checklist setup-ready-only" id="onboardingChecklist" open>
+    <summary><span>新手操作檢查表</span><span class="chip warn" id="onboardingChecklistProgress">0/8</span></summary>
+    <div class="onboarding-checklist-body" id="onboardingChecklistBody"></div>
+  </details>
   <section class="panel platform-school-actions" id="platformSchoolActions" hidden>
     <div class="platform-usage-head">
       <div><h2>使用概況</h2><div class="sub">近 30 日各校登入、求解、發布與教師協作情形。</div></div>
@@ -614,6 +624,20 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <table class="tt" id="myScheduleTable"></table>
   </div>
+</section>
+
+<!-- ═══ 資料總檢查 ═══ -->
+<section class="view" id="v-readiness">
+  <h1>資料總檢查</h1>
+  <div class="sub">集中檢查基礎資料、排課條件、課表完整度、雲端協作與匯出準備；需要修正時可直接前往對應頁面。</div>
+  <div class="readiness-summary" id="readinessSummary" aria-live="polite"></div>
+  <div class="readiness-filters" role="group" aria-label="檢查結果篩選">
+    <button class="on" type="button" data-readiness-filter="all" onclick="ScheduleReadiness.setFilter('all')">全部</button>
+    <button type="button" data-readiness-filter="blocker" onclick="ScheduleReadiness.setFilter('blocker')">需修正</button>
+    <button type="button" data-readiness-filter="warning" onclick="ScheduleReadiness.setFilter('warning')">待確認</button>
+    <button type="button" data-readiness-filter="pass" onclick="ScheduleReadiness.setFilter('pass')">已通過</button>
+  </div>
+  <div id="readinessGroups"></div>
 </section>
 
 <!-- ═══ 配課檢核 ═══ -->
@@ -1006,6 +1030,20 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </dialog>
 
+<dialog class="clear-project-dialog version-history-dialog" id="backupHistoryDialog" aria-labelledby="backupHistoryTitle">
+  <div class="clear-project-head">
+    <h2 id="backupHistoryTitle">案件還原點</h2>
+    <p>每校最多保留最近 10 份。還原會建立新的學校雲端暫存，不會改動已發布的正式教師課表。</p>
+  </div>
+  <div class="clear-project-body">
+    <div class="backup-list" id="backupHistoryList"><div class="backup-empty">正在載入案件還原點…</div></div>
+  </div>
+  <div class="clear-project-actions">
+    <button class="btn mint sm" id="backupCreateDialogButton" type="button" onclick="ScheduleAuth.createBackup()">建立目前案件還原點</button>
+    <button class="btn soft sm" type="button" onclick="ScheduleAuth.closeBackups()">關閉</button>
+  </div>
+</dialog>
+
 <dialog class="clear-project-dialog version-history-dialog" id="versionHistoryDialog" aria-labelledby="versionHistoryTitle">
   <div class="clear-project-head">
     <h2 id="versionHistoryTitle">正式課表版本</h2>
@@ -1054,7 +1092,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.22</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.23</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1065,9 +1103,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js"></script>
 <script src="schedule-editor.js"></script>
 <script src="schedule-policy.js?v=20260713-2"></script>
-<script src="setup-builder.js?v=20260713-3"></script>
+<script src="setup-builder.js?v=20260714-1"></script>
 <script src="schedule-exports.js?v=20260713-1"></script>
 <script src="feedback.js?v=20260714-1"></script>
+<script src="readiness-center.js?v=20260714-2"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -1091,6 +1130,7 @@ function go(v){
   if(v==='tutor')fillTutor();
   if(v==='edit')renderEditor();
   if(v==='build')ScheduleSetup.render();
+  if(v==='readiness'&&window.ScheduleReadiness)ScheduleReadiness.render();
   window.scrollTo(0,0);
 }
 function openSetupIssues(){
@@ -2803,7 +2843,7 @@ const rl=document.createElement('datalist');rl.id='rlist';
 rl.innerHTML=['學年共同時間','行政會議','導護勤務','本土語直播協同','週三下午進修','他校兼課','社團指導','兼任行政職務'].map(x=>`<option>${x}</option>`).join('');
 document.body.appendChild(rl);
 
-function renderAll(){renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderNative();renderRes();renderEditor();ScheduleSetup.render()}
+function renderAll(){renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderNative();renderRes();renderEditor();ScheduleSetup.render();if(window.ScheduleReadiness)ScheduleReadiness.render()}
 
 /* ═══ 資料來源切換（示範 / 匯入真實資料 / 瀏覽器存檔）═══ */
 const DEMO_LSKEY='schedule_demo_progress_v2';
@@ -2838,7 +2878,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.22');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.23');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3409,7 +3449,19 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260714-3"></script>
-<script>ScheduleAuth.initialize();</script>
+<script src="schedule-auth.js?v=20260714-4"></script>
+<script>
+ScheduleAuth.initialize();
+ScheduleReadiness.initialize({
+  mode:APP_MODE,
+  getData:()=>DATA,
+  getSetupValidation:()=>ScheduleSetup.validate(),
+  isScheduleReady:()=>SCHEDULE_READY,
+  getScheduleValidation:()=>SCHEDULE_READY?validateSchedule():{hard:[],pending:[]},
+  getExportIssues:()=>SCHEDULE_READY?ScheduleExports.validateUpload(DATA,exportEntries(),EXPORT_TEACHER_IDS):[],
+  getCloudState:()=>ScheduleAuth.getReadinessState(),
+  navigate:(view,tab)=>{go(view);if(view==='build'&&tab)ScheduleSetup.show(tab)},
+});
+</script>
 </body>
 </html>

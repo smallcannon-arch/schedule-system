@@ -186,6 +186,31 @@
       }
     }
 
+    for (const group of (d.resGroups || [])) {
+      const name = String(group.grp || "資源班抽離組").trim();
+      const classroom = d.classes.find((item) => item.code === group.code);
+      if (!classroom) hard.push(`${name}引用不存在的來源班級：${group.code || "未填"}`);
+      else if (!classroom.res) warnings.push(`${group.code}已有資源班抽離設定，但班級尚未勾選資源班學生`);
+      if (!d.subjects[group.subj]) hard.push(`${name}引用不存在的科目：${group.subj || "未填"}`);
+      if (!group.t) hard.push(`${name}尚未指定資源班教師`);
+      else if (!teacherNames.has(group.t)) hard.push(`${name}的資源班教師不在名冊：${group.t}`);
+      if (!Number.isInteger(+group.n) || +group.n < 1) hard.push(`${name}每週節數必須大於 0`);
+    }
+
+    for (const row of (adapter.getLimits() || [])) {
+      const target = String(row[0] || "").trim();
+      const day = String(row[1] || "").trim();
+      const period = String(row[2] || "").trim();
+      const knownGrade = /^[1-6]年級$/.test(target);
+      if (target && !teacherNames.has(target) && !classCodes.has(target) && !knownGrade) {
+        warnings.push(`不排課時間引用不存在的教師、班級或年級：${target}`);
+      }
+      if (day && ![...DAYS, "每日"].includes(day)) hard.push(`${target || "不排課時間"}的星期設定不正確：${day}`);
+      if (period && !["1", "2", "3", "4", "5", "6", "7", "全部"].includes(period)) {
+        hard.push(`${target || "不排課時間"}的節次設定不正確：${period}`);
+      }
+    }
+
     if (nativeSubject && nativeLockEnabled) {
       const nativeStaffSlots = new Set();
       const nativeRoomLoad = new Map();

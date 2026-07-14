@@ -105,12 +105,34 @@ def _encode_snapshot_document(document):
     return value
 
 
+def _snapshot_summary(snapshot):
+    value = snapshot or {}
+    data = value.get("data") or {}
+    schedule = value.get("schedule") or {}
+    overlays = value.get("overlay") or []
+    return {
+        "label": str(value.get("label") or "排課案件")[:120],
+        "classes": len(data.get("classes") or []),
+        "teachers": len(data.get("roster") or {}),
+        "subjects": len(data.get("subjects") or {}),
+        "scheduled_entries": len(schedule) + len(overlays),
+        "schedule_ready": bool(value.get("schedule_ready")),
+    }
+
+
+def _backup_metadata(backup):
+    return {key: deepcopy(backup.get(key)) for key in (
+        "backup_id", "created_at", "created_by", "active_revision",
+        "source_draft_revision", "summary")}
+
+
 class MemoryScheduleStore:
     def __init__(self):
         self._teachers = {}
         self._state = None
         self._drafts = {}
         self._history = {}
+        self._backups = {}
         self._lock = threading.RLock()
 
     def get_teacher(self, email):
@@ -278,6 +300,38 @@ class MemoryScheduleStore:
             self._drafts.clear()
             return True
 
+    def create_backup(self, snapshot, created_by, active_revision="",
+                      source_draft_revision=""):
+        backup = {
+            "backup_id": str(uuid.uuid4()),
+            "created_at": utc_now(),
+            "created_by": created_by,
+            "active_revision": str(active_revision or ""),
+            "source_draft_revision": str(source_draft_revision or ""),
+            "summary": _snapshot_summary(snapshot),
+            "snapshot": deepcopy(snapshot),
+        }
+        with self._lock:
+            self._backups[backup["backup_id"]] = backup
+            ordered = sorted(
+                self._backups.values(),
+                key=lambda item: str(item.get("created_at") or ""), reverse=True)
+            for item in ordered[10:]:
+                self._backups.pop(item["backup_id"], None)
+        return deepcopy(backup)
+
+    def list_backups(self, limit=10):
+        with self._lock:
+            ordered = sorted(
+                self._backups.values(),
+                key=lambda item: str(item.get("created_at") or ""), reverse=True)
+            return [_backup_metadata(item) for item in ordered[:max(1, min(int(limit), 10))]]
+
+    def get_backup(self, backup_id):
+        with self._lock:
+            value = self._backups.get(str(backup_id or ""))
+            return deepcopy(value) if value else None
+
 
 class FirestoreScheduleStore:
     def __init__(self, project_id, school_id, client=None):
@@ -290,6 +344,7 @@ class FirestoreScheduleStore:
         self._state = self._school.collection("state").document("active")
         self._drafts = self._school.collection("drafts")
         self._history = self._school.collection("published_versions")
+        self._backups = self._school.collection("backups")
 
     def _teacher_ref(self, email):
         return self._teachers.document(normalize_email(email))
@@ -551,6 +606,37 @@ class FirestoreScheduleStore:
             return True
 
         return remove(transaction)
+
+    def create_backup(self, snapshot, created_by, active_revision="",
+                      source_draft_revision=""):
+        backup = {
+            "backup_id": str(uuid.uuid4()),
+            "created_at": utc_now(),
+            "created_by": created_by,
+            "active_revision": str(active_revision or ""),
+            "source_draft_revision": str(source_draft_revision or ""),
+            "summary": _snapshot_summary(snapshot),
+            "snapshot": deepcopy(snapshot),
+        }
+        self._backups.document(backup["backup_id"]).set(
+            _encode_snapshot_document(backup))
+        ordered = sorted(
+            (document for document in self._backups.stream()),
+            key=lambda document: str((_decode_snapshot(document.to_dict()) or {}).get("created_at") or ""),
+            reverse=True)
+        for document in ordered[10:]:
+            document.reference.delete()
+        return backup
+
+    def list_backups(self, limit=10):
+        values = [_decode_snapshot(document.to_dict()) for document in self._backups.stream()]
+        values = [value for value in values if value]
+        values.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
+        return [_backup_metadata(item) for item in values[:max(1, min(int(limit), 10))]]
+
+    def get_backup(self, backup_id):
+        document = self._backups.document(str(backup_id or "")).get()
+        return _decode_snapshot(document.to_dict()) if document.exists else None
 
 
 class MemoryTenantDirectory:

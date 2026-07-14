@@ -71,7 +71,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.22",
+    title="排課引擎 API", version="1.23",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -686,6 +686,55 @@ def delete_admin_draft(expected_draft_revision: str = "",
     if deleted:
         _record_usage(principal, "draft_delete")
     return {"deleted": deleted, "published_schedule_preserved": True}
+
+
+@app.post("/admin/backups")
+def create_admin_backup(authorization: str = Header("")):
+    principal, store = _require_admin(authorization)
+    draft = store.get_draft(principal.email)
+    if not draft:
+        raise HTTPException(status_code=404, detail="目前沒有可建立還原點的雲端案件")
+    backup = store.create_backup(
+        draft["snapshot"], principal.email, draft.get("active_revision", ""),
+        draft.get("draft_revision", ""))
+    _record_usage(principal, "backup_create")
+    return {key: backup[key] for key in (
+        "backup_id", "created_at", "created_by", "active_revision",
+        "source_draft_revision", "summary")}
+
+
+@app.get("/admin/backups")
+def list_admin_backups(limit: int = 10, authorization: str = Header("")):
+    _, store = _require_admin(authorization)
+    return {"backups": store.list_backups(min(max(limit, 1), 10))}
+
+
+@app.post("/admin/backups/{backup_id}/restore")
+def restore_admin_backup(backup_id: str, payload: dict = Body(...),
+                         authorization: str = Header("")):
+    principal, store = _require_admin(authorization)
+    backup = store.get_backup(backup_id[:100])
+    if not backup:
+        raise HTTPException(status_code=404, detail="找不到指定的案件還原點")
+    expected_draft_revision = str(payload.get("expected_draft_revision") or "")[:100]
+    active_state = store.get_active_state() or {}
+    active_revision = str(active_state.get("revision") or "")[:100]
+    try:
+        draft = store.save_draft(
+            backup["snapshot"], principal.email,
+            active_revision,
+            expected_draft_revision)
+    except schedule_store.StoreConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _record_usage(principal, "backup_restore")
+    return {
+        "backup_id": backup["backup_id"],
+        "restored_at": draft["saved_at"],
+        "restored_by": principal.email,
+        "draft_revision": draft["draft_revision"],
+        "active_revision": draft["active_revision"],
+        "snapshot": draft["snapshot"],
+    }
 
 
 @app.get("/admin/teacher-updates")
