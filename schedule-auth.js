@@ -7,7 +7,8 @@
     autoSaveTimer: null, saveInFlight: null, savePending: false, pendingManual: false,
     autoSaveInterval: null, sessionExpired: false, deletingDraft: false, loadingDraft: false,
     publishing: false, syncingUpdates: false, importingTeacherCsv: false,
-    savingSchool: false, loadingUsage: false, savingPlacements: false, schools: [], usage: null};
+    savingSchool: false, loadingUsage: false, savingPlacements: false,
+    loadingVersions: false, restoringVersion: false, versions: [], schools: [], usage: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -131,6 +132,7 @@
         state.updateSequence = Number(sessionStorage.getItem(userStorageKey("schedule_teacher_update_sequence")) || 0);
         status("服務正常｜雲端暫存已啟用｜導師存檔：手動讀取", "ok");
         await refreshDraftStatus();
+        await loadVersions();
         startAdminAutomation();
       } else if (state.profile.school_id) {
         await loadWorkspace();
@@ -381,6 +383,7 @@
       sessionStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
       sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
       document.getElementById("teacherSyncStatus").textContent = "導師儲存後，請按「讀取導師存檔」取得更新。";
+      document.getElementById("versionHistoryStatus").textContent = "已保留本次正式版本，可由「正式版本」查看或還原。";
       status(`正式課表已發布（${new Date(result.published_at).toLocaleString("zh-TW")}）。`, "ok");
     } catch (error) {
       status(error.message, "error");
@@ -451,6 +454,12 @@
       sync.disabled = state.syncingUpdates || !adminReady || !state.draftReady || !state.activeRevision;
       sync.textContent = state.syncingUpdates ? "正在讀取…" : "讀取導師存檔";
       sync.title = state.activeRevision ? "" : "請先發布正式教師課表";
+    }
+    const versions = document.getElementById("versionHistoryButton");
+    if (versions) {
+      versions.disabled = state.loadingVersions || state.restoringVersion || !adminReady;
+      versions.textContent = state.loadingVersions ? "正在載入…" : (state.restoringVersion ? "正在還原…" : "正式版本");
+      versions.title = "查看與還原正式課表版本";
     }
     const loadDraftButton = document.getElementById("cloudContinueButton");
     if (loadDraftButton) loadDraftButton.disabled = state.loadingDraft || !!state.saveInFlight || state.deletingDraft || state.sessionExpired;
@@ -846,22 +855,113 @@
       const result = await request(`/admin/teacher-updates${query}`);
       const changed = Object.keys(result.placements || {});
       if (changed.length) {
-        const applied = root.applyServerTeacherUpdates(result.placements);
-        if (!applied.applied) {
-          element.textContent = applied.reason || "收到導師更新，但承辦端尚未能套用。";
+        const preview = root.previewServerTeacherUpdates(result.placements);
+        if (!preview.applied) {
+          element.textContent = preview.reason || "收到導師更新，但承辦端尚未能套用。";
           return;
         }
-        element.textContent = `已讀取並匯入：${applied.codes.join("、")}（${new Date(result.updated_at).toLocaleString("zh-TW")}）。`;
+        const approvalMap = {};
+        changed.forEach((code) => { approvalMap[code] = Number((result.updates[code] || {}).sequence || 0); });
+        const approved = await request("/admin/teacher-updates/approve", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({revision: result.revision, updates: approvalMap}),
+        });
+        const applied = root.applyServerTeacherUpdates(result.placements);
+        if (!applied.applied) throw new Error(applied.reason || "承辦端未能套用已確認的導師存檔");
+        element.textContent = `已確認並套用：${applied.codes.join("、")}（${new Date(approved.updated_at).toLocaleString("zh-TW")}）。`;
         state.lastDraftHash = "";
+        state.updateSequence = Number(approved.update_sequence || result.update_sequence || state.updateSequence);
+        sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
+        saveDraft(false);
       } else {
-        element.textContent = "目前沒有新的導師存檔。";
+        element.textContent = "目前沒有等待確認的導師存檔。";
       }
-      state.updateSequence = Number(result.update_sequence || state.updateSequence);
-      sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), String(state.updateSequence));
     } catch (error) {
-      element.textContent = error.status === 409 ? "正式課表版本已變更，請重新發布或載入對應暫存。" : `導師課表同步失敗：${error.message}`;
+      element.textContent = error.status === 409 ? "導師存檔或正式版本已更新，請重新讀取後再確認。" : `導師課表同步失敗：${error.message}`;
     } finally {
       state.syncingUpdates = false;
+      updateActionButtons();
+    }
+  }
+
+  function closeVersionHistory() {
+    const dialog = document.getElementById("versionHistoryDialog");
+    if (dialog && dialog.open) dialog.close();
+  }
+
+  function renderVersions() {
+    const list = document.getElementById("versionHistoryList");
+    if (!list) return;
+    if (!state.versions.length) {
+      list.innerHTML = '<div class="version-history-empty">目前沒有正式版本紀錄。</div>';
+      return;
+    }
+    list.innerHTML = state.versions.map((version, index) => {
+      const current = version.revision === state.activeRevision;
+      const restored = version.restored_from ? "｜由舊版還原建立" : "";
+      return `<div class="version-history-row"><div><b>${current ? "目前版本" : `歷史版本 ${index + 1}`}</b>` +
+        `<span>${root.esc(new Date(version.published_at).toLocaleString("zh-TW"))}｜${root.esc(version.published_by || "管理員")}${restored}</span></div>` +
+        `<button class="btn soft sm" type="button" data-restore-version="${root.esc(version.revision)}" ${current || !state.draftReady || state.draftConflict ? "disabled" : ""}>還原</button></div>`;
+    }).join("");
+    list.querySelectorAll("[data-restore-version]").forEach((button) => {
+      button.addEventListener("click", () => restoreVersion(button.dataset.restoreVersion));
+    });
+  }
+
+  async function loadVersions() {
+    if (!state.profile || !state.profile.is_admin || state.loadingVersions) return;
+    state.loadingVersions = true;
+    updateActionButtons();
+    try {
+      const result = await request("/admin/published-versions?limit=20");
+      if (result.active_revision) {
+        state.activeRevision = result.active_revision;
+        sessionStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
+      }
+      state.versions = result.versions || [];
+      renderVersions();
+    } catch (error) {
+      document.getElementById("versionHistoryList").innerHTML = `<div class="version-history-empty">${root.esc(error.message)}</div>`;
+    } finally {
+      state.loadingVersions = false;
+      updateActionButtons();
+    }
+  }
+
+  function openVersionHistory() {
+    if (!state.profile || !state.profile.is_admin) return;
+    const dialog = document.getElementById("versionHistoryDialog");
+    if (!dialog) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    loadVersions();
+  }
+
+  async function restoreVersion(revision) {
+    if (!revision || state.restoringVersion) return;
+    if (!state.draftReady || state.draftConflict) {
+      alert("請先載入學校雲端案件，再執行正式版本還原。");
+      return;
+    }
+    if (!confirm("確定還原此正式課表版本？系統會建立新的正式版本，教師目前開啟的舊版本將需要重新載入。")) return;
+    state.restoringVersion = true;
+    updateActionButtons();
+    const versionStatus = document.getElementById("versionHistoryStatus");
+    try {
+      const result = await request(`/admin/published-versions/${encodeURIComponent(revision)}/restore`, {method: "POST"});
+      state.activeRevision = result.revision;
+      state.updateSequence = 0;
+      sessionStorage.setItem(userStorageKey("schedule_active_revision"), state.activeRevision);
+      sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), "0");
+      root.applyAdminDraft(result.snapshot);
+      state.lastDraftHash = "";
+      await saveDraft(true);
+      versionStatus.textContent = `已還原並建立新正式版本：${new Date(result.published_at).toLocaleString("zh-TW")}。`;
+      status("正式課表已還原；教師重新載入後即可查看。", "ok");
+      await loadVersions();
+    } catch (error) {
+      versionStatus.textContent = `正式版本還原失敗：${error.message}`;
+    } finally {
+      state.restoringVersion = false;
       updateActionButtons();
     }
   }
@@ -901,8 +1001,8 @@
         method: "PUT", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({revision, placements}),
       });
-      status(`${code} 課表已儲存，承辦人可讀取此存檔。`, "ok");
-      alert("課表調整已儲存，承辦人按「讀取導師存檔」即可匯入。");
+      status(`${code} 調整已送出，等待排課承辦人確認。`, "ok");
+      alert("課表調整已送出；承辦人確認前，正式課表仍維持上一版。");
       await loadWorkspace();
     } catch (error) {
       status(error.message, "error");
@@ -926,5 +1026,6 @@
   root.ScheduleAuth = {initialize, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons,
     publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
-    syncTeacherUpdates, savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
+    syncTeacherUpdates, openVersionHistory, closeVersionHistory, loadVersions, restoreVersion,
+    savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

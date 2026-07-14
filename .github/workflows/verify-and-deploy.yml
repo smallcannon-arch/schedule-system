@@ -1,0 +1,71 @@
+name: Verify and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install backend test dependencies
+        working-directory: backend
+        run: pip install -r requirements-dev.txt pip-audit
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: pip-audit -r requirements.txt
+      - name: Run backend and frontend tests
+        working-directory: backend
+        run: python -m pytest -q
+      - name: Check frontend JavaScript syntax
+        run: |
+          node --check schedule-auth.js
+          node --check setup-builder.js
+          node --check schedule-editor.js
+          node --check schedule-exports.js
+          node --check schedule-policy.js
+          node --check teacher-workflow.js
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Prepare static site
+        run: |
+          mkdir _site
+          cp index.html app-config.js auth-config.js data.js schedule-auth.js schedule-editor.js schedule-exports.js schedule-policy.js setup-builder.js teacher-workflow.js template.xlsx _headers _site/
+          cp -R vendor _site/vendor
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy verified site
+        id: deployment
+        uses: actions/deploy-pages@v4

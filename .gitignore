@@ -1,2 +1,9 @@
 desktop.ini
 .wrangler/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/__pycache__/
+backend/tests/__pycache__/
+backend/.pytest_cache/
+backend/*.pyc

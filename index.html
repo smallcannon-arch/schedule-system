@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com https://accounts.google.com; connect-src 'self' https://schedule-engine-936805396528.asia-east1.run.app https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; font-src 'self' data:; worker-src 'self' blob:">
 <title>國民小學課務排程輔助系統 DEMO｜示範資料（已匿名化）</title>
-<script src="app-config.js?v=20260714-1"></script>
+<script src="app-config.js?v=20260714-2"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -203,6 +203,10 @@ body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution):not(.
 .clear-project-body{padding:18px 22px}.clear-project-body ul{margin:0 0 16px;padding-left:22px;color:#655f68;font-size:14px;line-height:1.8}.clear-project-body li::marker{color:var(--bad)}
 .clear-project-confirm{display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px solid #ecd1d7;background:#fff7f8;font-size:14px;font-weight:800;line-height:1.55}.clear-project-confirm input{width:19px;height:19px;flex:0 0 auto;margin-top:1px}
 .clear-project-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--line);background:#fbfaf9}
+.version-history-dialog .clear-project-head h2{color:var(--ink)}
+.version-history-list{display:grid;gap:0;border:1px solid var(--line);max-height:360px;overflow:auto}
+.version-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
+.version-history-row:last-child{border-bottom:0}.version-history-row b,.version-history-row span{display:block}.version-history-row span{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.5}.version-history-empty{padding:24px;text-align:center;color:var(--muted)}
 .setup-overview-panel{margin-bottom:18px;border:1px solid var(--line);box-shadow:none;background:#fbfaf9}.setup-overview-panel #statLine{white-space:nowrap;overflow-x:auto;padding-bottom:2px}
 .setup-class-format{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.setup-class-format h3{font-size:17px;margin-bottom:10px}
 .platform-school-actions{margin-bottom:0}
@@ -330,7 +334,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.18</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.19</b></span></div>
   </div>
 </section>
 
@@ -388,6 +392,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <button class="btn soft sm cloud-draft-resolution" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
       <button class="btn soft sm cloud-draft-resolution" id="localBackupButton" type="button" onclick="ScheduleAuth.useLocalBackup()" hidden>改用這台電腦的備份</button>
       <button class="btn soft sm" id="syncTeacherUpdatesButton" type="button" onclick="ScheduleAuth.syncTeacherUpdates()">讀取導師存檔</button>
+      <button class="btn soft sm" id="versionHistoryButton" type="button" onclick="ScheduleAuth.openVersionHistory()">正式版本</button>
       <button class="btn danger sm" id="deleteCloudDraftButton" type="button" onclick="ScheduleAuth.openDeleteDraftDialog()" disabled>刪除雲端案件</button>
     </div>
     <div class="admin-dock-notes">
@@ -395,6 +400,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span id="teacherCsvImportHint">請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
       <span id="cloudDraftStatus">雲端暫存尚未啟動。</span>
       <span id="teacherSyncStatus">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
+      <span id="versionHistoryStatus">每次發布與版本還原都會保留紀錄。</span>
     </div>
   </div>
 </details>
@@ -945,6 +951,19 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
 </dialog>
 
+<dialog class="clear-project-dialog version-history-dialog" id="versionHistoryDialog" aria-labelledby="versionHistoryTitle">
+  <div class="clear-project-head">
+    <h2 id="versionHistoryTitle">正式課表版本</h2>
+    <p>每次發布都保留獨立版本。還原會建立一個新的正式版本，不會刪除既有紀錄。</p>
+  </div>
+  <div class="clear-project-body">
+    <div class="version-history-list" id="versionHistoryList"><div class="version-history-empty">正在載入版本紀錄…</div></div>
+  </div>
+  <div class="clear-project-actions">
+    <button class="btn soft sm" type="button" onclick="ScheduleAuth.closeVersionHistory()">關閉</button>
+  </div>
+</dialog>
+
 <dialog class="clear-project-dialog" id="deleteCloudDraftDialog" aria-labelledby="deleteCloudDraftTitle">
   <div class="clear-project-head">
     <h2 id="deleteCloudDraftTitle">刪除學校雲端案件</h2>
@@ -980,7 +999,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.18</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.19</span></small>
     <small><a href="mailto:chihhung1988@gmail.com?subject=課務排程系統%20BETA%20問題回報">BETA 問題回報</a>｜回報時請附上操作頁面與錯誤訊息，勿寄送教師身分證資料。</small>
   </div>
 </footer>
@@ -2395,7 +2414,7 @@ function buildTeacherData(code,busySlots){
 function openServerTeacherPackage(pkg){
   if(!pkg||pkg.schema!=='schedule-server-teacher-v1'||!pkg.data||!pkg.class_code)
     throw new Error('伺服器回傳的教師工作區格式不正確');
-  TEACHER_MODE={server:true,code:pkg.class_code,teacher:pkg.teacher,revision:pkg.revision};
+  TEACHER_MODE={server:true,code:pkg.class_code,teacher:pkg.teacher,revision:pkg.revision,pendingReview:!!pkg.pending_review};
   ADMIN_SNAPSHOT=null;FORMAL_AUTO_TUTOR=false;pickSubj=null;
   document.body.classList.add('teacher-mode','server-teacher-mode');
   applyData(TeacherWorkflow.clone(pkg.data),`${pkg.class_code} 正式教師工作區`);
@@ -2405,7 +2424,9 @@ function openServerTeacherPackage(pkg){
   renderAll();
   const sel=document.getElementById('tutorSel');sel.value=pkg.class_code;sel.disabled=true;
   document.getElementById('serverTeacherModeBadge').textContent=`${pkg.class_code} ${pkg.teacher||''} 教師調整模式`;
-  setHandoffMessage('登入身分已由後端確認；只能調整此班導師課，資源班綁課與固定課維持鎖定。');
+  setHandoffMessage(pkg.pending_review?
+    '這份調整已送出，正在等待排課承辦人確認；確認前正式課表仍維持上一版。':
+    '登入身分已由後端確認；只能調整此班導師課，資源班綁課與固定課維持鎖定。');
 }
 function getScheduleAuthSnapshot(){return currentSnapshot()}
 function applyAdminDraft(snapshot){
@@ -2421,18 +2442,26 @@ function applyAdminDraft(snapshot){
   SCHEDULE_READY=snapshot.schedule_ready===true||Object.keys(snapshot.schedule||{}).length>0||(snapshot.overlay||[]).length>0;
   rebuildLim();editorResetHistory();renderAll();saveLS(snapshot.label||'雲端排課暫存');
 }
-function applyServerTeacherUpdates(placements){
+function previewServerTeacherUpdates(placements){
   if(!SCHEDULE_READY)return {applied:0,reason:'承辦端尚未載入已發布的正式課表'};
-  const old=TeacherWorkflow.clone(tutorPlaced),codes=[];
+  const old=TeacherWorkflow.clone(tutorPlaced),next=TeacherWorkflow.clone(tutorPlaced),codes=[];
   for(const [code,value] of Object.entries(placements||{})){
     if(!CODE2C[code])continue;
-    tutorPlaced[code]=TeacherWorkflow.clone(value||{});codes.push(code);
+    next[code]=TeacherWorkflow.clone(value||{});codes.push(code);
   }
   if(!codes.length)return {applied:0,reason:''};
+  tutorPlaced=next;
   const hard=validateSchedule().hard;
-  if(hard.length){tutorPlaced=old;return {applied:0,reason:`同步後會產生 ${hard.length} 項硬規則問題，已保留承辦端原內容`}}
-  editorResetHistory();renderAll();saveLS();
+  tutorPlaced=old;
+  if(hard.length)return {applied:0,reason:`套用後會產生 ${hard.length} 項硬規則問題，已保留承辦端原內容`};
   return {applied:codes.length,codes};
+}
+function applyServerTeacherUpdates(placements){
+  const preview=previewServerTeacherUpdates(placements);
+  if(!preview.applied)return preview;
+  for(const code of preview.codes)tutorPlaced[code]=TeacherWorkflow.clone((placements||{})[code]||{});
+  editorResetHistory();renderAll();saveLS();
+  return preview;
 }
 function getServerTeacherSubmission(){
   if(!TEACHER_MODE||!TEACHER_MODE.server)return null;
@@ -2753,7 +2782,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.18');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.19');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3324,7 +3353,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260714-1"></script>
+<script src="schedule-auth.js?v=20260714-2"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>
