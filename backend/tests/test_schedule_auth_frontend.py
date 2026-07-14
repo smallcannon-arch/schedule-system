@@ -204,8 +204,10 @@ def test_beta_feedback_button_does_not_collapse_into_vertical_text():
 
 
 def test_formal_network_errors_are_localized_and_school_save_status_persists():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
+    assert '<script src="app-config.js?v=20260714-4"></script>' in html
     assert "目前無法連線至雲端服務，請確認網路後重新整理再試。" in script
     assert "目前無法連線至排課引擎，請確認網路後再試。" in script
     assert "async function loadSchools(statusMessage)" in script
