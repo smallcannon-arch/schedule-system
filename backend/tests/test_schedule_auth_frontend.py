@@ -200,6 +200,17 @@ def test_platform_admin_usage_overview_is_wired_without_personal_fields():
     assert "openUsageDetail" in script
     assert "usageProgressLabel" in script
     assert "csvExportCell" in script
+    assert '["已開通學校", totals.enabled_schools]' in script
+    assert 'unknown: "無法取得"' in script
+    assert 'return details.metadata_unavailable ? "—"' in script
+    assert 'usageCaseMetric(details, "classes")' in script
+    assert script.count('usageCaseMetric(details, "backup_count")') == 2
+    assert ".platform-progress.unknown" in html
+    assert 'if (typeof dialog.showModal === "function") dialog.showModal();' in script
+    assert 'openUsageDetail(button.dataset.usageSchool, button)' in script
+    assert 'dialog.addEventListener("cancel"' in script
+    assert 'event.key === "Escape"' in script
+    assert 'state.usageTrigger.focus()' in script
 
 
 def test_beta_feedback_button_does_not_collapse_into_vertical_text():

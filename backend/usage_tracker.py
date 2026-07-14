@@ -15,6 +15,10 @@ ALLOWED_ROLES = {
 }
 
 
+def normalize_school_id(value):
+    return str(value or "").strip().lower()
+
+
 def _utc_now():
     return datetime.now(timezone.utc)
 
@@ -55,7 +59,7 @@ def _overview(schools, daily_rows, summary_rows, days, now):
 
     for raw in daily_rows:
         row = raw or {}
-        school_id = str(row.get("school_id") or "").strip().lower()
+        school_id = normalize_school_id(row.get("school_id"))
         try:
             activity_date = datetime.strptime(str(row.get("date") or ""), "%Y-%m-%d").date()
         except ValueError:
@@ -85,7 +89,7 @@ def _overview(schools, daily_rows, summary_rows, days, now):
     for row in summary_rows:
         if not row or not row.get("school_id"):
             continue
-        school_id = str(row.get("school_id") or "").strip().lower()
+        school_id = normalize_school_id(row.get("school_id"))
         last_active[school_id] = _iso(row.get("last_active_at"))
         target = school_last_events.setdefault(school_id, {})
         for event in ALLOWED_EVENTS:
@@ -100,7 +104,7 @@ def _overview(schools, daily_rows, summary_rows, days, now):
 
     school_items = []
     for school in schools:
-        school_id = str(school.get("school_id") or "").strip().lower()
+        school_id = normalize_school_id(school.get("school_id"))
         school_items.append({
             "school_id": school_id,
             "moe_code": str(school.get("moe_code") or ""),
@@ -134,16 +138,27 @@ def _overview(schools, daily_rows, summary_rows, days, now):
 def enrich_overview(overview, case_overviews, now=None):
     """Add operational progress without exposing timetable or personal data."""
     result = deepcopy(overview or {})
+    schools = result.setdefault("schools", [])
+    case_lookup = {}
+    for raw_school_id, case in ((case_overviews or {}).items()
+                                if isinstance(case_overviews, dict) else []):
+        school_id = normalize_school_id(raw_school_id)
+        if school_id:
+            case_lookup[school_id] = case
     current = _as_datetime(now) or _as_datetime(result.get("generated_at")) or _utc_now()
     stage_totals = {
         "not_started": 0, "building": 0, "scheduled": 0,
         "published": 0, "needs_attention": 0,
     }
-    for school in result.get("schools") or []:
-        school_id = str(school.get("school_id") or "").strip().lower()
-        case = deepcopy((case_overviews or {}).get(school_id) or {})
+    for school in schools:
+        school_id = normalize_school_id(school.get("school_id"))
+        case = deepcopy(case_lookup.get(school_id) or {})
         attention = []
-        if not school.get("active", True):
+        metadata_unavailable = bool(case.get("metadata_unavailable"))
+        if metadata_unavailable:
+            progress = "unknown"
+            attention.append("案件狀態暫時無法取得")
+        elif not school.get("active", True):
             progress = "disabled"
         elif case.get("has_published"):
             progress = "published"
@@ -156,6 +171,14 @@ def enrich_overview(overview, case_overviews, now=None):
         else:
             progress = "not_started"
 
+        if not metadata_unavailable:
+            draft_saved_at = _as_datetime(case.get("draft_saved_at"))
+            published_at = _as_datetime(case.get("published_at"))
+            case["has_unpublished_changes"] = bool(
+                draft_saved_at and published_at and draft_saved_at > published_at)
+            if case["has_unpublished_changes"]:
+                attention.append("有未發布草稿變更")
+
         if school.get("active", True):
             last_active_at = _as_datetime(school.get("last_active_at"))
             created_at = _as_datetime(school.get("created_at"))
@@ -163,17 +186,16 @@ def enrich_overview(overview, case_overviews, now=None):
                 attention.append("超過 7 日未操作")
             elif not last_active_at and created_at and current - created_at >= timedelta(days=7):
                 attention.append("開通超過 7 日尚未使用")
-            if progress == "signed_in":
-                attention.append("已登入但尚未建立雲端案件")
-            events = school.get("events") or {}
-            if int(events.get("solve_failed") or 0) >= 3 and int(events.get("solve_failed") or 0) > int(events.get("solve_success") or 0):
-                attention.append("近 30 日多次排課失敗")
-            if case.get("has_draft") and int(case.get("backup_count") or 0) == 0:
-                attention.append("尚未建立案件還原點")
-            if progress == "scheduled":
-                attention.append("已完成排課但尚未發布")
-            if case.get("metadata_unavailable"):
-                attention.append("案件狀態暫時無法取得")
+            if not metadata_unavailable:
+                if progress == "signed_in":
+                    attention.append("已登入但尚未建立雲端案件")
+                events = school.get("events") or {}
+                if int(events.get("solve_failed") or 0) >= 3 and int(events.get("solve_failed") or 0) > int(events.get("solve_success") or 0):
+                    attention.append("近 30 日多次排課失敗")
+                if case.get("has_draft") and int(case.get("backup_count") or 0) == 0:
+                    attention.append("尚未建立案件還原點")
+                if progress == "scheduled":
+                    attention.append("已完成排課但尚未發布")
 
         school["case"] = case
         school["progress"] = progress
@@ -189,7 +211,7 @@ def enrich_overview(overview, case_overviews, now=None):
         if attention:
             stage_totals["needs_attention"] += 1
 
-    result["schools"].sort(
+    schools.sort(
         key=lambda item: (
             bool(item.get("attention")),
             _as_datetime(item.get("last_active_at")) or datetime.min.replace(
@@ -208,7 +230,7 @@ class MemoryUsageTracker:
         self._lock = threading.RLock()
 
     def record(self, school_id, event, role="", at=None):
-        school_id = str(school_id or "").strip().lower()
+        school_id = normalize_school_id(school_id)
         event = str(event or "").strip().lower()
         role = str(role or "").strip().lower()
         if not school_id or event not in ALLOWED_EVENTS:
@@ -248,7 +270,7 @@ class FirestoreUsageTracker:
         self._summary = self._client.collection("schedule_usage")
 
     def record(self, school_id, event, role="", at=None):
-        school_id = str(school_id or "").strip().lower()
+        school_id = normalize_school_id(school_id)
         event = str(event or "").strip().lower()
         role = str(role or "").strip().lower()
         if not school_id or event not in ALLOWED_EVENTS:

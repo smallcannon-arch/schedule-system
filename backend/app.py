@@ -574,7 +574,9 @@ def platform_usage(days: int = 30, authorization: str = Header("")):
         TENANT_DIRECTORY.list_schools(), days=min(max(days, 1), 90))
     case_overviews = {}
     for school in overview.get("schools") or []:
-        school_id = str(school.get("school_id") or "")
+        school_id = usage_tracker.normalize_school_id(school.get("school_id"))
+        if not school_id:
+            continue
         try:
             case_overviews[school_id] = TENANT_DIRECTORY.get_store(school_id).get_case_overview()
         except Exception:  # pragma: no cover - defensive isolation for the platform view
