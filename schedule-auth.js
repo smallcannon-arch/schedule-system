@@ -161,6 +161,18 @@
       return;
     }
     try {
+      const expectedVersion = String((root.SCHEDULE_APP_CONFIG || {}).version || "");
+      try {
+        const health = await request("/health");
+        const notice = document.getElementById("appVersionNotice");
+        const message = document.getElementById("appVersionMessage");
+        if (notice && message && expectedVersion && health.version !== expectedVersion) {
+          message.textContent = `系統已更新（網頁 ${expectedVersion}／服務 ${health.version || "未知"}），請重新載入後再繼續編修。`;
+          notice.hidden = false;
+        }
+      } catch (_) {
+        // OAuth 初始化會在下一個請求顯示正式的連線錯誤。
+      }
       const config = await request("/auth/config");
       if (!config.enabled || !config.client_id) {
         status("後端尚未設定 Google OAuth Client ID。", "disabled");
@@ -347,7 +359,7 @@
     try {
       if (!state.draftReady || state.draftConflict) throw new Error("請先載入學校雲端案件，再發布正式課表");
       const snapshot = root.getScheduleAuthSnapshot();
-      if (!snapshot || !snapshot.sol) throw new Error("請先完成排課，再發布正式課表");
+      if (!snapshot || !snapshot.scheduleReady) throw new Error("請先完成排課，再發布正式課表");
       if (root.schedulePublishability) {
         const result = root.schedulePublishability();
         if (!result.ready) throw new Error(`課表尚未完成：${result.hard} 項硬規則問題、${result.pending} 項待排課程`);

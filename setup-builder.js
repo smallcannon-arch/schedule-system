@@ -309,13 +309,16 @@
       ["科目", c.subjects, c.subjects > 0],
       ["配課", `${c.assignments}/${c.assignmentTotal}`, c.assignmentTotal > 0 && !c.assignmentMissing],
     ];
+    const issues = [...result.hard.map((text) => ({text, kind: "bad"})),
+      ...result.warnings.map((text) => ({text, kind: "warn"}))];
     target.innerHTML = `<div class="setup-stepbar">${steps.map(([label, value, done]) =>
       `<button type="button" class="setup-step ${done ? "done" : ""}" onclick="ScheduleSetup.show('${label === "班級" ? "classes" : label === "教師" ? "teachers" : label === "科目" ? "subjects" : "assign"}')"><span>${esc(label)}</span><b>${esc(value)}</b></button>`).join("")}</div>
       <div class="setup-health ${result.hard.length ? "bad" : "ok"}">
         <b>${result.hard.length ? `尚有 ${result.hard.length} 項必填資料` : "基礎資料完整，可以執行排課"}</b>
         <span>${result.hard[0] ? esc(result.hard[0]) : (result.warnings[0] ? esc(result.warnings[0]) : esc(lastMessage || "資料變更會自動保存。"))}</span>
-        ${result.hard.length ? '<button class="btn soft sm" type="button" onclick="ScheduleSetup.showIssues()">查看問題</button>' : ""}
-      </div>`;
+        ${issues.length ? '<button class="btn soft sm" type="button" onclick="ScheduleSetup.showIssues()">查看全部</button>' : ""}
+      </div>
+      ${issues.length ? `<details class="setup-issue-details" id="setupIssueDetails"><summary>完整檢核清單（${issues.length} 項）</summary><ul class="setup-issue-list">${issues.map((issue) => `<li class="${issue.kind}">${esc(issue.text)}</li>`).join("")}</ul></details>` : ""}`;
   }
 
   function renderClasses() {
@@ -324,12 +327,12 @@
     if (!target) return;
     target.innerHTML = `<thead><tr><th>年級</th><th>班序</th><th>班級代碼</th><th>導師</th><th>資源班學生</th><th></th></tr></thead><tbody>${d.classes.map((item, index) =>
       `<tr>
-        <td><select class="edit" onchange="ScheduleSetup.setClass(${index},'g',this.value)">${[1, 2, 3, 4, 5, 6].map((grade) => `<option value="${grade}" ${+item.g === grade ? "selected" : ""}>${grade} 年級</option>`).join("")}</select></td>
-        <td><input class="numin" type="number" min="1" max="20" value="${Number(item.i) || 1}" onchange="ScheduleSetup.setClass(${index},'i',this.value)"></td>
-        <td><input value="${esc(item.code)}" maxlength="20" onchange="ScheduleSetup.renameClass(${index},this.value)"></td>
-        <td><input class="setup-wide-select" list="setupTutorNames" value="${esc(item.tutor)}" placeholder="輸入導師姓名" maxlength="40" onchange="ScheduleSetup.setClass(${index},'tutor',this.value)"></td>
-        <td><input type="checkbox" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
-        <td><button class="icon-btn" type="button" title="刪除班級" aria-label="刪除班級" onclick="ScheduleSetup.removeClass(${index})">×</button></td>
+        <td><select class="edit" aria-label="${esc(item.code || `第 ${index + 1} 班`)}年級" onchange="ScheduleSetup.setClass(${index},'g',this.value)">${[1, 2, 3, 4, 5, 6].map((grade) => `<option value="${grade}" ${+item.g === grade ? "selected" : ""}>${grade} 年級</option>`).join("")}</select></td>
+        <td><input class="numin" type="number" min="1" max="20" aria-label="${esc(item.code || `第 ${index + 1} 班`)}班序" value="${Number(item.i) || 1}" onchange="ScheduleSetup.setClass(${index},'i',this.value)"></td>
+        <td><input value="${esc(item.code)}" maxlength="20" aria-label="第 ${index + 1} 筆班級代碼" onchange="ScheduleSetup.renameClass(${index},this.value)"></td>
+        <td><input class="setup-wide-select" list="setupTutorNames" value="${esc(item.tutor)}" placeholder="輸入導師姓名" maxlength="40" aria-label="${esc(item.code || `第 ${index + 1} 班`)}導師" onchange="ScheduleSetup.setClass(${index},'tutor',this.value)"></td>
+        <td><input type="checkbox" aria-label="${esc(item.code || `第 ${index + 1} 班`)}有資源班學生" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
+        <td><button class="icon-btn" type="button" title="刪除班級" aria-label="刪除 ${esc(item.code || `第 ${index + 1} 班`)}" onclick="ScheduleSetup.removeClass(${index})">×</button></td>
       </tr>`).join("")}</tbody>`;
     const tutorNames = document.getElementById("setupTutorNames");
     if (tutorNames) tutorNames.innerHTML = Object.keys(d.roster).map((name) => `<option value="${esc(name)}"></option>`).join("");
@@ -351,6 +354,8 @@
     const scope = config.region && config.academicYear ? `${config.region}｜${config.academicYear} 學年度` : "請填寫縣市／適用單位與學年度";
     const statusTitle = result.blocking.length ? `${result.blocking.length} 項規則必須修正` :
       (result.warnings.length ? `${result.warnings.length} 項資料待確認` : "學校自訂規則檢核通過");
+    const policyIssues = [...result.blocking.map((text) => ({text, kind: "bad"})),
+      ...result.warnings.map((text) => ({text, kind: "warn"}))];
     target.innerHTML = `<div class="policy-heading"><div><h2>學校自訂規則</h2><div class="sub">${esc(scope)}｜每節 ${config.periodMinutes} 分鐘｜教師每日最多 ${config.dailyHardCap} 節（系統硬規則）</div></div><span class="chip ok">各縣市適用</span></div>
       <div class="policy-grid policy-context-grid">
         <label>縣市／適用單位<small>自由填寫，例：新竹市、全國</small><input maxlength="30" value="${esc(config.region)}" placeholder="請填寫" onchange="ScheduleSetup.setPolicy('region',this.value)"></label>
@@ -369,7 +374,8 @@
         <label><input type="checkbox" ${config.schedulePlanApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('schedulePlanApproved',this.checked)"> 學生作息與課表已納入課程計畫</label>
         <input type="date" value="${esc(config.schedulePlanMeetingDate)}" aria-label="課程計畫通過日期" onchange="ScheduleSetup.setPolicy('schedulePlanMeetingDate',this.value)">
       </div>
-      <div class="policy-status ${result.blocking.length ? "bad" : "ok"}"><b>${statusTitle}</b><span>${esc(result.blocking[0] || result.warnings[0] || "發布時會再次由後端驗證。")}</span></div>`;
+      <div class="policy-status ${result.blocking.length ? "bad" : "ok"}"><b>${statusTitle}</b><span>${esc(result.blocking[0] || result.warnings[0] || "發布時會再次由後端驗證。")}</span></div>
+      ${policyIssues.length ? `<details class="policy-issue-details"><summary>展開全部 ${policyIssues.length} 項規則檢核</summary><ul class="setup-issue-list">${policyIssues.map((issue) => `<li class="${issue.kind}">${esc(issue.text)}</li>`).join("")}</ul></details>` : ""}`;
   }
 
   function renderTeachers() {
@@ -383,17 +389,17 @@
       const load = teachingSummary(d, name);
       const targetHours = root.SchedulePolicy ? root.SchedulePolicy.teacherTarget(d, name) : 0;
       return `<tr>
-        <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
-        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setTeacher(${index},'role',this.value)">${ROLES.map((role) => `<option ${d.roster[name] === role ? "selected" : ""}>${role}</option>`).join("")}</select></td>
-        <td><input type="email" value="${esc(d.teacherAccounts[name] || "")}" placeholder="name@school.edu.tw" onchange="ScheduleSetup.setTeacher(${index},'email',this.value)"></td>
-        <td><input class="setup-subject-skills" value="${esc(subjectValues(d.teacherSubjects[name]).join("、"))}" placeholder="例：自然科學、音樂" onchange="ScheduleSetup.setTeacher(${index},'subjects',this.value)"></td>
-        <td><input value="${esc(nativeValues(d.teacherNativeLangs[name]).join("、"))}" placeholder="例：閩南語、客語" onchange="ScheduleSetup.setTeacher(${index},'nativeLangs',this.value)"></td>
+        <td><input value="${esc(name)}" maxlength="40" aria-label="第 ${index + 1} 位教師姓名" onchange="ScheduleSetup.renameTeacher(${index},this.value)"></td>
+        <td><select class="edit setup-wide-select" aria-label="${esc(name)}身分" onchange="ScheduleSetup.setTeacher(${index},'role',this.value)">${ROLES.map((role) => `<option ${d.roster[name] === role ? "selected" : ""}>${role}</option>`).join("")}</select></td>
+        <td><input type="email" value="${esc(d.teacherAccounts[name] || "")}" placeholder="name@school.edu.tw" aria-label="${esc(name)}學校 Google 帳號" onchange="ScheduleSetup.setTeacher(${index},'email',this.value)"></td>
+        <td><input class="setup-subject-skills" value="${esc(subjectValues(d.teacherSubjects[name]).join("、"))}" placeholder="例：自然科學、音樂" aria-label="${esc(name)}可授一般科目" onchange="ScheduleSetup.setTeacher(${index},'subjects',this.value)"></td>
+        <td><input value="${esc(nativeValues(d.teacherNativeLangs[name]).join("、"))}" placeholder="例：閩南語、客語" aria-label="${esc(name)}可授本土語別" onchange="ScheduleSetup.setTeacher(${index},'nativeLangs',this.value)"></td>
         <td><span class="teaching-load"><b>${load.total}${targetHours ? `／${targetHours}` : ""} 節</b><small>本班 ${load.retained}｜跨班 ${load.cross}｜釋出 ${load.released}</small></span></td>
         <td><b>${base || "依聘任"}</b></td>
-        <td><input class="numin" type="number" min="0" max="20" value="${Number(cap.extra) || 0}" onchange="ScheduleSetup.setTeacher(${index},'extra',this.value)"></td>
-        <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.minus) || 0}" onchange="ScheduleSetup.setTeacher(${index},'minus',this.value)"></td>
-        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setTeacher(${index},'reason',this.value)">${REDUCTION_REASONS.map((reason) => `<option value="${esc(reason)}" ${String(cap.reason || "") === reason ? "selected" : ""}>${esc(reason || "未指定")}</option>`).join("")}</select></td>
-        <td><button class="icon-btn" type="button" title="刪除教師" aria-label="刪除教師" onclick="ScheduleSetup.removeTeacher(${index})">×</button></td>
+        <td><input class="numin" type="number" min="0" max="20" value="${Number(cap.extra) || 0}" aria-label="${esc(name)}超鐘點節數" onchange="ScheduleSetup.setTeacher(${index},'extra',this.value)"></td>
+        <td><input class="numin" type="number" min="0" max="40" value="${Number(cap.minus) || 0}" aria-label="${esc(name)}減課節數" onchange="ScheduleSetup.setTeacher(${index},'minus',this.value)"></td>
+        <td><select class="edit setup-wide-select" aria-label="${esc(name)}減課原因" onchange="ScheduleSetup.setTeacher(${index},'reason',this.value)">${REDUCTION_REASONS.map((reason) => `<option value="${esc(reason)}" ${String(cap.reason || "") === reason ? "selected" : ""}>${esc(reason || "未指定")}</option>`).join("")}</select></td>
+        <td><button class="icon-btn" type="button" title="刪除教師" aria-label="刪除 ${esc(name)}" onclick="ScheduleSetup.removeTeacher(${index})">×</button></td>
       </tr>`;
     }).join("")}</tbody>`;
     const status = document.getElementById("setupTeacherSyncStatus");
@@ -415,12 +421,12 @@
       const subject = d.subjects[name];
       const hours = subject.hours || [0, 0, 0, 0, 0, 0];
       return `<tr>
-        <td><input value="${esc(name)}" maxlength="40" onchange="ScheduleSetup.renameSubject(${index},this.value)"></td>
-        ${hours.map((value, gradeIndex) => `<td><input class="numin" type="number" min="0" max="12" value="${Number(value) || 0}" onchange="ScheduleSetup.setSubject(${index},'hours',this.value,${gradeIndex})"></td>`).join("")}
-        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setSubject(${index},'self',this.value)"><option value="false" ${!subject.self ? "selected" : ""}>系統排課</option><option value="true" ${subject.self ? "selected" : ""}>導師可調整</option></select></td>
-        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setSubject(${index},'room',this.value)">${rooms.map((room) => `<option value="${esc(room)}" ${subject.room === room ? "selected" : ""}>${room === "R00" ? "原班教室" : esc(room)}</option>`).join("")}</select></td>
-        <td><select class="edit setup-wide-select" onchange="ScheduleSetup.setSubject(${index},'block',this.value)"><option value="" ${!subject.block ? "selected" : ""}>一般</option><option value="2連堂" ${subject.block === "2連堂" ? "selected" : ""}>兩節連堂</option><option value="2+1" ${subject.block === "2+1" ? "selected" : ""}>2+1 分兩天</option></select></td>
-        <td><button class="icon-btn" type="button" title="刪除科目" aria-label="刪除科目" onclick="ScheduleSetup.removeSubject(${index})">×</button></td>
+        <td><input value="${esc(name)}" maxlength="40" aria-label="第 ${index + 1} 筆科目名稱" onchange="ScheduleSetup.renameSubject(${index},this.value)"></td>
+        ${hours.map((value, gradeIndex) => `<td><input class="numin" type="number" min="0" max="12" value="${Number(value) || 0}" aria-label="${esc(name)} ${gradeIndex + 1} 年級每週節數" onchange="ScheduleSetup.setSubject(${index},'hours',this.value,${gradeIndex})"></td>`).join("")}
+        <td><select class="edit setup-wide-select" aria-label="${esc(name)}排課方式" onchange="ScheduleSetup.setSubject(${index},'self',this.value)"><option value="false" ${!subject.self ? "selected" : ""}>系統排課</option><option value="true" ${subject.self ? "selected" : ""}>導師可調整</option></select></td>
+        <td><select class="edit setup-wide-select" aria-label="${esc(name)}上課場地" onchange="ScheduleSetup.setSubject(${index},'room',this.value)">${rooms.map((room) => `<option value="${esc(room)}" ${subject.room === room ? "selected" : ""}>${room === "R00" ? "原班教室" : esc(room)}</option>`).join("")}</select></td>
+        <td><select class="edit setup-wide-select" aria-label="${esc(name)}連堂設定" onchange="ScheduleSetup.setSubject(${index},'block',this.value)"><option value="" ${!subject.block ? "selected" : ""}>一般</option><option value="2連堂" ${subject.block === "2連堂" ? "selected" : ""}>兩節連堂</option><option value="2+1" ${subject.block === "2+1" ? "selected" : ""}>2+1 分兩天</option></select></td>
+        <td><button class="icon-btn" type="button" title="刪除科目" aria-label="刪除 ${esc(name)}" onclick="ScheduleSetup.removeSubject(${index})">×</button></td>
       </tr>`;
     }).join("")}</tbody>`;
   }
@@ -439,9 +445,9 @@
         const retained = selected && selected === item.tutor;
         const arrangeable = retained && isTutorArrangeable(d, item, subject);
         const state = !selected ? "待配課" : retained ? "本班保留" : "已釋出";
-        return `<td class="assignment-cell"><select class="${selected ? "" : "empty"}" data-code="${esc(item.code)}" data-subject="${esc(subject)}" onchange="ScheduleSetup.setAssignment(this.dataset.code,this.dataset.subject,this.value)">${teacherOptions(selected, true, subject)}</select>
+        return `<td class="assignment-cell"><select class="${selected ? "" : "empty"}" data-code="${esc(item.code)}" data-subject="${esc(subject)}" aria-label="${esc(item.code)} ${esc(subjectLabel(subject))}授課教師" onchange="ScheduleSetup.setAssignment(this.dataset.code,this.dataset.subject,this.value)">${teacherOptions(selected, true, subject)}</select>
           <small class="assignment-state ${!selected ? "missing" : retained ? "retained" : "released"}">${hours} 節｜${state}</small>
-          ${retained ? `<label class="assignment-mode"><input type="checkbox" data-code="${esc(item.code)}" data-subject="${esc(subject)}" ${arrangeable ? "checked" : ""} onchange="ScheduleSetup.setAssignmentMode(this.dataset.code,this.dataset.subject,this.checked)"> 導師自排</label>` : ""}</td>`;
+          ${retained ? `<label class="assignment-mode"><input type="checkbox" data-code="${esc(item.code)}" data-subject="${esc(subject)}" aria-label="${esc(item.code)} ${esc(subjectLabel(subject))}開放導師自排" ${arrangeable ? "checked" : ""} onchange="ScheduleSetup.setAssignmentMode(this.dataset.code,this.dataset.subject,this.checked)"> 導師自排</label>` : ""}</td>`;
       }).join("")}</tr>`).join("")}</tbody>`;
   }
 
@@ -794,8 +800,10 @@
 
   function showIssues() {
     const result = validate();
-    alert(["必須修正：", ...result.hard.map((item) => `• ${item}`),
-      ...(result.warnings.length ? ["", "登入名冊提醒：", ...result.warnings.map((item) => `• ${item}`)] : [])].join("\n"));
+    const details = document.getElementById("setupIssueDetails");
+    if (!details) return alert(result.hard.length || result.warnings.length ? "請重新開啟資料建置頁查看檢核清單。" : "基礎資料檢核已通過。");
+    details.open = true;
+    details.scrollIntoView({behavior: "smooth", block: "center"});
   }
 
   function startBlank() {
