@@ -196,6 +196,23 @@ def test_platform_admin_usage_overview_is_wired_without_personal_fields():
     assert "loadUsage" in script
 
 
+def test_beta_feedback_button_does_not_collapse_into_vertical_text():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert ".beta-feedback-notice .btn,.formal-beta-feedback .btn" in html
+    assert "min-width:96px;white-space:nowrap" in html
+
+
+def test_formal_network_errors_are_localized_and_school_save_status_persists():
+    script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
+
+    assert "目前無法連線至雲端服務，請確認網路後重新整理再試。" in script
+    assert "目前無法連線至排課引擎，請確認網路後再試。" in script
+    assert "async function loadSchools(statusMessage)" in script
+    assert "statusMessage || `共 ${state.schools.length} 間學校。`" in script
+    assert "await loadSchools(`${payload.name}（${schoolCode}）已儲存。`);" in script
+
+
 def test_formal_network_action_buttons_prevent_duplicate_submissions():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")

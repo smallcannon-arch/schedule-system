@@ -210,6 +210,7 @@ body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution):not(.
 .beta-feedback-notice,.formal-beta-feedback{display:flex;align-items:center;justify-content:space-between;gap:18px;border-left:4px solid var(--sky-d);background:#f3f8fb;color:#455b68}
 .beta-feedback-notice{margin-bottom:14px;padding:10px 13px}.beta-feedback-notice span{font-size:13.5px;line-height:1.55}.beta-feedback-notice b,.formal-beta-feedback b{color:#315f7d}
 .formal-beta-feedback{margin-top:18px;padding:12px 14px}.formal-beta-feedback span{font-size:13.5px;line-height:1.55}
+.beta-feedback-notice span,.formal-beta-feedback span{min-width:0;flex:1 1 auto}.beta-feedback-notice .btn,.formal-beta-feedback .btn{flex:0 0 auto;min-width:96px;white-space:nowrap;text-align:center}
 .feedback-dialog{width:min(680px,calc(100% - 32px));max-height:calc(100vh - 24px);overflow:auto}.feedback-dialog .clear-project-head{position:sticky;top:0;z-index:2;background:#fff}.feedback-dialog .clear-project-head h2{color:var(--ink)}.feedback-dialog .clear-project-actions{position:sticky;bottom:0;z-index:2}
 .feedback-grid{display:grid;grid-template-columns:180px minmax(0,1fr);gap:12px}.feedback-field{display:grid;gap:5px;color:var(--ink);font-size:13px;font-weight:900}.feedback-field.wide{grid-column:1/-1}
 .feedback-field input,.feedback-field select,.feedback-field textarea{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font:inherit;font-size:14px}.feedback-field textarea{min-height:92px;resize:vertical;line-height:1.55}
@@ -347,7 +348,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.21</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.22</b></span></div>
   </div>
 </section>
 
@@ -1053,7 +1054,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.21</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.22</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -2837,7 +2838,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.21');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.22');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3408,7 +3409,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260714-2"></script>
+<script src="schedule-auth.js?v=20260714-3"></script>
 <script>ScheduleAuth.initialize();</script>
 </body>
 </html>

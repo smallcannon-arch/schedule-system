@@ -1,4 +1,4 @@
 window.SCHEDULE_APP_CONFIG = {
   mode: "formal",
-  version: "1.21",
+  version: "1.22",
 };

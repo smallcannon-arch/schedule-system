@@ -35,9 +35,21 @@
     if (!state.apiBaseUrl) throw new Error("正式教師入口尚未設定 API 網址");
     const headers = new Headers((options && options.headers) || {});
     if (state.credential) headers.set("Authorization", `Bearer ${state.credential}`);
-    const response = await fetch(`${state.apiBaseUrl}${path}`, {...(options || {}), headers});
+    let response;
+    try {
+      response = await fetch(`${state.apiBaseUrl}${path}`, {...(options || {}), headers});
+    } catch (_error) {
+      throw new Error("目前無法連線至雲端服務，請確認網路後重新整理再試。");
+    }
     const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json") ? await response.json() : null;
+    let payload = null;
+    if (contentType.includes("application/json")) {
+      try {
+        payload = await response.json();
+      } catch (_error) {
+        payload = null;
+      }
+    }
     if (!response.ok) {
       const error = new Error((payload && (payload.detail || payload.error)) || `伺服器回應 ${response.status}`);
       error.status = response.status;
@@ -50,11 +62,15 @@
   async function solveData(payload) {
     if (!state.apiBaseUrl) throw new Error("正式排課引擎尚未設定");
     if (!state.credential) throw new Error("請先使用學校 Google 帳號登入");
-    return fetch(`${state.apiBaseUrl}/solve-data`, {
-      method: "POST",
-      headers: {Authorization: `Bearer ${state.credential}`, "Content-Type": "application/json"},
-      body: JSON.stringify(payload),
-    });
+    try {
+      return await fetch(`${state.apiBaseUrl}/solve-data`, {
+        method: "POST",
+        headers: {Authorization: `Bearer ${state.credential}`, "Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+    } catch (_error) {
+      throw new Error("目前無法連線至排課引擎，請確認網路後再試。");
+    }
   }
 
   function roleLabel(role) {
@@ -277,13 +293,13 @@
     </tr>`).join("") || '<tr><td colspan="4">尚未建立學校</td></tr>';
   }
 
-  async function loadSchools() {
+  async function loadSchools(statusMessage) {
     const element = document.getElementById("platformSchoolStatus");
     try {
       const result = await request("/platform/schools");
       state.schools = result.schools || [];
       renderSchools();
-      if (element) element.textContent = `共 ${state.schools.length} 間學校。`;
+      if (element) element.textContent = statusMessage || `共 ${state.schools.length} 間學校。`;
     } catch (error) {
       if (element) element.textContent = error.message;
     }
@@ -345,8 +361,7 @@
         method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
       });
       document.getElementById("platformSchoolRecordId").value = schoolId;
-      element.textContent = `${payload.name}（${schoolCode}）已儲存。`;
-      await loadSchools();
+      await loadSchools(`${payload.name}（${schoolCode}）已儲存。`);
     } catch (error) {
       element.textContent = error.message;
     } finally {
