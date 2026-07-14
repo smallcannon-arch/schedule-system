@@ -191,9 +191,15 @@ def test_platform_admin_usage_overview_is_wired_without_personal_fields():
 
     assert 'id="platformUsageSummary"' in html
     assert 'id="platformUsageList"' in html
-    assert "不保存個人資料或課表內容" in html
+    assert 'id="platformUsageExportButton"' in html
+    assert 'id="platformUsageDetailDialog"' in html
+    assert "不保存姓名、Email、IP 或課表內容" in html
     assert 'request("/platform/usage?days=30")' in script
     assert "loadUsage" in script
+    assert "downloadUsageCsv" in script
+    assert "openUsageDetail" in script
+    assert "usageProgressLabel" in script
+    assert "csvExportCell" in script
 
 
 def test_beta_feedback_button_does_not_collapse_into_vertical_text():
@@ -207,7 +213,7 @@ def test_formal_network_errors_are_localized_and_school_save_status_persists():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
-    assert '<script src="app-config.js?v=20260714-4"></script>' in html
+    assert '<script src="app-config.js?v=20260714-5"></script>' in html
     assert "目前無法連線至雲端服務，請確認網路後重新整理再試。" in script
     assert "目前無法連線至排課引擎，請確認網路後再試。" in script
     assert "async function loadSchools(statusMessage)" in script

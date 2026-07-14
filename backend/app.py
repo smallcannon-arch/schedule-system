@@ -71,7 +71,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.23",
+    title="排課引擎 API", version="1.24",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -570,8 +570,17 @@ def list_schools(authorization: str = Header("")):
 @app.get("/platform/usage")
 def platform_usage(days: int = 30, authorization: str = Header("")):
     _require_super_admin(authorization)
-    return USAGE_TRACKER.get_overview(
+    overview = USAGE_TRACKER.get_overview(
         TENANT_DIRECTORY.list_schools(), days=min(max(days, 1), 90))
+    case_overviews = {}
+    for school in overview.get("schools") or []:
+        school_id = str(school.get("school_id") or "")
+        try:
+            case_overviews[school_id] = TENANT_DIRECTORY.get_store(school_id).get_case_overview()
+        except Exception:  # pragma: no cover - defensive isolation for the platform view
+            LOGGER.exception("Unable to read usage case overview for %s", school_id)
+            case_overviews[school_id] = {"metadata_unavailable": True}
+    return usage_tracker.enrich_overview(overview, case_overviews)
 
 
 @app.put("/platform/schools/{school_id}")

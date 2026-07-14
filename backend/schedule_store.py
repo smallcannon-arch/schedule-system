@@ -120,6 +120,12 @@ def _snapshot_summary(snapshot):
     }
 
 
+def _case_overview_summary(snapshot):
+    summary = _snapshot_summary(snapshot)
+    summary.pop("label", None)
+    return summary
+
+
 def _backup_metadata(backup):
     return {key: deepcopy(backup.get(key)) for key in (
         "backup_id", "created_at", "created_by", "active_revision",
@@ -331,6 +337,24 @@ class MemoryScheduleStore:
         with self._lock:
             value = self._backups.get(str(backup_id or ""))
             return deepcopy(value) if value else None
+
+    def get_case_overview(self):
+        with self._lock:
+            draft = self._drafts.get(SHARED_DRAFT_ID)
+            if not draft:
+                legacy = [item for key, item in self._drafts.items()
+                          if key != SHARED_DRAFT_ID and item]
+                draft = max(legacy, key=lambda item: str(item.get("saved_at") or "")) if legacy else None
+            active = self._state
+            snapshot = (draft or active or {}).get("snapshot") or {}
+            return {
+                "has_draft": bool(draft),
+                "draft_saved_at": str((draft or {}).get("saved_at") or ""),
+                "has_published": bool(active),
+                "published_at": str((active or {}).get("published_at") or ""),
+                "backup_count": len(self._backups),
+                **_case_overview_summary(snapshot),
+            }
 
 
 class FirestoreScheduleStore:
@@ -637,6 +661,30 @@ class FirestoreScheduleStore:
     def get_backup(self, backup_id):
         document = self._backups.document(str(backup_id or "")).get()
         return _decode_snapshot(document.to_dict()) if document.exists else None
+
+    def get_case_overview(self):
+        draft_document = self._drafts.document(SHARED_DRAFT_ID).get()
+        draft = _decode_snapshot(draft_document.to_dict()) if draft_document.exists else None
+        if not draft:
+            legacy = []
+            for document in self._drafts.stream():
+                if str(getattr(document, "id", "") or "") == SHARED_DRAFT_ID:
+                    continue
+                value = _decode_snapshot(document.to_dict())
+                if value and value.get("snapshot"):
+                    legacy.append(value)
+            draft = max(legacy, key=lambda item: str(item.get("saved_at") or "")) if legacy else None
+        active_document = self._state.get()
+        active = _decode_snapshot(active_document.to_dict()) if active_document.exists else None
+        snapshot = (draft or active or {}).get("snapshot") or {}
+        return {
+            "has_draft": bool(draft),
+            "draft_saved_at": str((draft or {}).get("saved_at") or ""),
+            "has_published": bool(active),
+            "published_at": str((active or {}).get("published_at") or ""),
+            "backup_count": sum(1 for _ in self._backups.limit(10).stream()),
+            **_case_overview_summary(snapshot),
+        }
 
 
 class MemoryTenantDirectory:

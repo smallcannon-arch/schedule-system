@@ -10,7 +10,7 @@
     savingSchool: false, loadingUsage: false, savingPlacements: false,
     loadingVersions: false, restoringVersion: false, versions: [],
     loadingBackups: false, creatingBackup: false, restoringBackup: false, backups: [],
-    schools: [], usage: null};
+    schools: [], usage: null, usageSchoolId: ""};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -278,6 +278,11 @@
     return `"${text.replace(/"/g, '""')}"`;
   }
 
+  function csvExportCell(value) {
+    const text = String(value == null ? "" : value);
+    return csvCell(/^[=+\-@\t\r]/.test(text) ? `'${text}` : text);
+  }
+
   async function importTeacherRecords(records) {
     if (!state.profile || !state.profile.is_admin) throw new Error("只有學校系統管理員可以同步教師名冊");
     if (!Array.isArray(records) || !records.length) throw new Error("尚未建立可同步的教師資料");
@@ -524,6 +529,8 @@
       usageButton.disabled = state.loadingUsage;
       usageButton.textContent = state.loadingUsage ? "正在整理…" : "重新整理";
     }
+    const usageExportButton = document.getElementById("platformUsageExportButton");
+    if (usageExportButton) usageExportButton.disabled = state.loadingUsage || !state.usage;
     const placementButton = document.getElementById("teacherPlacementSaveButton");
     if (placementButton) {
       placementButton.disabled = state.savingPlacements || state.sessionExpired;
@@ -570,12 +577,29 @@
     URL.revokeObjectURL(url);
   }
 
-  function formatUsageDate(value) {
+  const USAGE_EVENT_LABELS = {
+    login: "登入系統", draft_save: "儲存雲端案件", draft_delete: "刪除雲端案件",
+    solve_success: "完成排課", solve_failed: "排課失敗", publish: "發布正式課表",
+    teacher_open: "教師開啟課表", teacher_save: "教師送出調整",
+    teacher_import: "同步教師帳號", backup_create: "建立案件還原點",
+    backup_restore: "從還原點復原",
+  };
+  const USAGE_PROGRESS_LABELS = {
+    not_started: "尚未開始", signed_in: "已登入", building: "資料建置中",
+    scheduled: "已完成排課", published: "已發布", disabled: "已停用",
+  };
+
+  function formatUsageDate(value, includeYear) {
     if (!value) return "尚無紀錄";
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? "尚無紀錄" : date.toLocaleString("zh-TW", {
+      year: includeYear ? "numeric" : undefined,
       month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
     });
+  }
+
+  function usageProgressLabel(value) {
+    return USAGE_PROGRESS_LABELS[value] || "尚未開始";
   }
 
   function renderUsage() {
@@ -584,20 +608,99 @@
     if (!summary || !body || !state.usage) return;
     const totals = state.usage.totals || {};
     const metrics = [
-      ["已開通學校", totals.configured_schools], ["近 7 日活躍", totals.active_7d],
-      ["近 30 日活躍", totals.active_period], ["登入", totals.login],
-      ["求解完成", totals.solve_success], ["正式發布", totals.publish],
-      ["教師送出", totals.teacher_save],
+      ["已開通學校", totals.enabled_schools], ["近 7 日活躍", totals.active_7d],
+      ["尚未開始", totals.not_started], ["資料建置中", totals.building],
+      ["已完成排課", totals.scheduled], ["已正式發布", totals.published],
+      ["需關注", totals.needs_attention],
     ];
     summary.innerHTML = metrics.map(([label, value]) =>
       `<div><span>${label}</span><b>${Number(value || 0).toLocaleString("zh-TW")}</b></div>`).join("");
     body.innerHTML = (state.usage.schools || []).map((school) => {
       const events = school.events || {};
+      const attention = school.attention || [];
+      const progress = school.progress || "not_started";
       return `<tr><td><b>${root.esc(school.name)}</b><small>${root.esc(school.moe_code || school.school_id)}</small></td>
+        <td><span class="platform-progress ${root.esc(progress)}">${root.esc(usageProgressLabel(progress))}</span></td>
         <td>${formatUsageDate(school.last_active_at)}</td>
-        <td>${Number(events.login || 0)}</td><td>${Number(events.solve_success || 0)}</td>
-        <td>${Number(events.publish || 0)}</td><td>${Number(events.teacher_save || 0)}</td></tr>`;
+        <td class="usage-counts">登入 ${Number(events.login || 0)}｜排課 ${Number(events.solve_success || 0)}<br>發布 ${Number(events.publish || 0)}｜教師送出 ${Number(events.teacher_save || 0)}</td>
+        <td><div class="usage-attention ${attention.length ? "" : "ok"}">${attention.length ? attention.slice(0, 2).map((item) => `<span>${root.esc(item)}</span>`).join("") : "<span>目前正常</span>"}</div></td>
+        <td><button class="btn soft sm" type="button" data-usage-school="${root.esc(school.school_id)}">查看</button></td></tr>`;
     }).join("") || '<tr><td colspan="6">尚無學校使用紀錄</td></tr>';
+    body.querySelectorAll("[data-usage-school]").forEach((button) => {
+      button.addEventListener("click", () => openUsageDetail(button.dataset.usageSchool));
+    });
+  }
+
+  function closeUsageDetail() {
+    const dialog = document.getElementById("platformUsageDetailDialog");
+    if (dialog && dialog.open) dialog.close();
+  }
+
+  function openUsageDetail(schoolId) {
+    const school = (state.usage && state.usage.schools || []).find((item) => item.school_id === schoolId);
+    const dialog = document.getElementById("platformUsageDetailDialog");
+    if (!school || !dialog) return;
+    state.usageSchoolId = schoolId;
+    const details = school.case || {};
+    document.getElementById("platformUsageDetailTitle").textContent = school.name;
+    document.getElementById("platformUsageDetailMeta").textContent =
+      `教育部代碼 ${school.moe_code || school.school_id}｜${usageProgressLabel(school.progress)}｜最後操作 ${formatUsageDate(school.last_active_at, true)}`;
+    document.getElementById("platformUsageDetailSummary").innerHTML = [
+      ["班級", Number(details.classes || 0)], ["教師", Number(details.teachers || 0)],
+      ["科目", Number(details.subjects || 0)], ["還原點", Number(details.backup_count || 0)],
+    ].map(([label, value]) => `<div><span>${label}</span><b>${value}</b></div>`).join("");
+    const attention = school.attention || [];
+    const attentionBox = document.getElementById("platformUsageDetailAttention");
+    attentionBox.className = `usage-detail-attention ${attention.length ? "" : "ok"}`;
+    attentionBox.textContent = attention.length ? `需關注：${attention.join("；")}` : "目前沒有需要處理的異常。";
+    const events = school.events || {};
+    const timeline = Object.entries(school.last_events || {})
+      .filter(([event, value]) => USAGE_EVENT_LABELS[event] && value)
+      .sort((left, right) => String(right[1]).localeCompare(String(left[1])))
+      .slice(0, 10);
+    document.getElementById("platformUsageTimeline").innerHTML = timeline.length ? timeline.map(([event, value]) =>
+      `<div class="usage-timeline-row"><time>${root.esc(formatUsageDate(value, true))}</time><span>${root.esc(USAGE_EVENT_LABELS[event])}</span><b>近 30 日 ${Number(events[event] || 0)} 次</b></div>`).join("") :
+      '<div class="backup-empty">尚無可顯示的操作紀錄。</div>';
+    const editButton = document.getElementById("platformUsageEditSchoolButton");
+    if (editButton) editButton.disabled = !state.schools.some((item) => item.school_id === schoolId);
+    if (typeof dialog.showModal === "function") dialog.showModal();
+  }
+
+  function editUsageSchool() {
+    const schoolId = state.usageSchoolId;
+    closeUsageDetail();
+    editSchool(schoolId);
+    const field = document.getElementById("platformSchoolId");
+    if (field) field.scrollIntoView({behavior: "smooth", block: "center"});
+  }
+
+  function downloadUsageCsv() {
+    if (!state.usage) return;
+    const rows = [["學校", "教育部代碼", "狀態", "目前進度", "最後操作", "最後登入", "最後雲端存檔",
+      "最後排課完成", "最後正式發布", "最後教師送出", "班級", "教師", "科目", "還原點",
+      "登入次數", "排課成功", "排課失敗", "發布次數", "教師送出", "需關注"]];
+    (state.usage.schools || []).forEach((school) => {
+      const events = school.events || {};
+      const last = school.last_events || {};
+      const details = school.case || {};
+      rows.push([school.name, school.moe_code || school.school_id, school.active ? "啟用" : "停用",
+        usageProgressLabel(school.progress), formatUsageDate(school.last_active_at, true),
+        formatUsageDate(last.login, true), formatUsageDate(last.draft_save, true),
+        formatUsageDate(last.solve_success, true), formatUsageDate(last.publish, true),
+        formatUsageDate(last.teacher_save, true), Number(details.classes || 0),
+        Number(details.teachers || 0), Number(details.subjects || 0), Number(details.backup_count || 0),
+        Number(events.login || 0), Number(events.solve_success || 0), Number(events.solve_failed || 0),
+        Number(events.publish || 0), Number(events.teacher_save || 0), (school.attention || []).join("；") || "無"]);
+    });
+    const csv = "\ufeff" + rows.map((row) => row.map(csvExportCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `廣測使用概況_${new Date().toLocaleDateString("en-CA")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   async function loadUsage() {
@@ -609,7 +712,7 @@
       if (element) element.textContent = "正在整理近 30 日使用概況…";
       state.usage = await request("/platform/usage?days=30");
       renderUsage();
-      if (element) element.textContent = "本使用概況只彙整學校、日期、角色與操作次數；不保存姓名、Email、IP 或課表內容。";
+      if (element) element.textContent = "本使用概況只彙整學校、日期、角色、案件階段與操作次數；不保存姓名、Email、IP 或課表內容。";
     } catch (error) {
       if (element) element.textContent = `使用概況載入失敗：${error.message}`;
     } finally {
@@ -1191,5 +1294,6 @@
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     openBackups, closeBackups, loadBackups, createBackup, restoreBackup,
     syncTeacherUpdates, openVersionHistory, closeVersionHistory, loadVersions, restoreVersion,
-    savePlacements, loadSchools, loadUsage, saveSchool, editSchool, newSchool, logout};
+    savePlacements, loadSchools, loadUsage, downloadUsageCsv, openUsageDetail, closeUsageDetail, editUsageSchool,
+    saveSchool, editSchool, newSchool, logout};
 }(typeof globalThis !== "undefined" ? globalThis : window));

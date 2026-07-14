@@ -8,7 +8,7 @@ import threading
 
 ALLOWED_EVENTS = {
     "login", "draft_save", "draft_delete", "publish", "solve_success", "solve_failed",
-    "teacher_open", "teacher_save", "teacher_import",
+    "teacher_open", "teacher_save", "teacher_import", "backup_create", "backup_restore",
 }
 ALLOWED_ROLES = {
     "admin", "homeroom_teacher", "subject_teacher", "resource_teacher",
@@ -49,6 +49,7 @@ def _overview(schools, daily_rows, summary_rows, days, now):
     seven_day_cutoff = now.date() - timedelta(days=6)
     school_events = {}
     school_roles = {}
+    school_last_events = {}
     active_7d = set()
     active_period = set()
 
@@ -68,15 +69,30 @@ def _overview(schools, daily_rows, summary_rows, days, now):
         for event, count in _safe_counter(row.get("events")).items():
             if event in ALLOWED_EVENTS:
                 event_target[event] = event_target.get(event, 0) + count
+                event_at = _as_datetime(row.get(f"last_{event}_at"))
+                if not event_at:
+                    event_at = _as_datetime(f"{activity_date.isoformat()}T00:00:00+00:00")
+                current = _as_datetime(
+                    school_last_events.setdefault(school_id, {}).get(event))
+                if event_at and (not current or event_at > current):
+                    school_last_events[school_id][event] = _iso(event_at)
         role_target = school_roles.setdefault(school_id, {})
         for role, count in _safe_counter(row.get("roles")).items():
             if role in ALLOWED_ROLES:
                 role_target[role] = role_target.get(role, 0) + count
 
-    last_active = {
-        str(row.get("school_id") or "").strip().lower(): _iso(row.get("last_active_at"))
-        for row in summary_rows if row and row.get("school_id")
-    }
+    last_active = {}
+    for row in summary_rows:
+        if not row or not row.get("school_id"):
+            continue
+        school_id = str(row.get("school_id") or "").strip().lower()
+        last_active[school_id] = _iso(row.get("last_active_at"))
+        target = school_last_events.setdefault(school_id, {})
+        for event in ALLOWED_EVENTS:
+            event_at = _as_datetime(row.get(f"last_{event}_at"))
+            current = _as_datetime(target.get(event))
+            if event_at and (not current or event_at > current):
+                target[event] = _iso(event_at)
     event_totals = {event: 0 for event in sorted(ALLOWED_EVENTS)}
     for events in school_events.values():
         for event, count in events.items():
@@ -90,7 +106,9 @@ def _overview(schools, daily_rows, summary_rows, days, now):
             "moe_code": str(school.get("moe_code") or ""),
             "name": str(school.get("name") or school_id),
             "active": bool(school.get("active", True)),
+            "created_at": _iso(school.get("created_at")),
             "last_active_at": last_active.get(school_id, ""),
+            "last_events": school_last_events.get(school_id, {}),
             "events": school_events.get(school_id, {}),
             "roles": school_roles.get(school_id, {}),
         })
@@ -111,6 +129,76 @@ def _overview(schools, daily_rows, summary_rows, days, now):
         },
         "schools": school_items,
     }
+
+
+def enrich_overview(overview, case_overviews, now=None):
+    """Add operational progress without exposing timetable or personal data."""
+    result = deepcopy(overview or {})
+    current = _as_datetime(now) or _as_datetime(result.get("generated_at")) or _utc_now()
+    stage_totals = {
+        "not_started": 0, "building": 0, "scheduled": 0,
+        "published": 0, "needs_attention": 0,
+    }
+    for school in result.get("schools") or []:
+        school_id = str(school.get("school_id") or "").strip().lower()
+        case = deepcopy((case_overviews or {}).get(school_id) or {})
+        attention = []
+        if not school.get("active", True):
+            progress = "disabled"
+        elif case.get("has_published"):
+            progress = "published"
+        elif case.get("schedule_ready"):
+            progress = "scheduled"
+        elif case.get("has_draft"):
+            progress = "building"
+        elif int((school.get("events") or {}).get("login") or 0) > 0:
+            progress = "signed_in"
+        else:
+            progress = "not_started"
+
+        if school.get("active", True):
+            last_active_at = _as_datetime(school.get("last_active_at"))
+            created_at = _as_datetime(school.get("created_at"))
+            if last_active_at and current - last_active_at >= timedelta(days=7):
+                attention.append("超過 7 日未操作")
+            elif not last_active_at and created_at and current - created_at >= timedelta(days=7):
+                attention.append("開通超過 7 日尚未使用")
+            if progress == "signed_in":
+                attention.append("已登入但尚未建立雲端案件")
+            events = school.get("events") or {}
+            if int(events.get("solve_failed") or 0) >= 3 and int(events.get("solve_failed") or 0) > int(events.get("solve_success") or 0):
+                attention.append("近 30 日多次排課失敗")
+            if case.get("has_draft") and int(case.get("backup_count") or 0) == 0:
+                attention.append("尚未建立案件還原點")
+            if progress == "scheduled":
+                attention.append("已完成排課但尚未發布")
+            if case.get("metadata_unavailable"):
+                attention.append("案件狀態暫時無法取得")
+
+        school["case"] = case
+        school["progress"] = progress
+        school["attention"] = attention[:4]
+        if progress in {"not_started", "signed_in"}:
+            stage_totals["not_started"] += 1
+        elif progress == "building":
+            stage_totals["building"] += 1
+        elif progress == "scheduled":
+            stage_totals["scheduled"] += 1
+        elif progress == "published":
+            stage_totals["published"] += 1
+        if attention:
+            stage_totals["needs_attention"] += 1
+
+    result["schools"].sort(
+        key=lambda item: (
+            bool(item.get("attention")),
+            _as_datetime(item.get("last_active_at")) or datetime.min.replace(
+                tzinfo=timezone.utc),
+        ),
+        reverse=True,
+    )
+    result.setdefault("totals", {}).update(stage_totals)
+    return result
 
 
 class MemoryUsageTracker:
@@ -135,8 +223,11 @@ class MemoryUsageTracker:
             if role in ALLOWED_ROLES:
                 row["roles"][role] = row["roles"].get(role, 0) + 1
             row["last_active_at"] = timestamp
+            row[f"last_{event}_at"] = timestamp
             self._summary[school_id] = {
+                **self._summary.get(school_id, {}),
                 "school_id": school_id, "last_active_at": timestamp,
+                f"last_{event}_at": timestamp,
             }
         return True
 
@@ -167,6 +258,7 @@ class FirestoreUsageTracker:
         payload = {
             "school_id": school_id,
             "last_active_at": timestamp,
+            f"last_{event}_at": timestamp,
             "events": {event: self._firestore.Increment(1)},
         }
         if role in ALLOWED_ROLES:
