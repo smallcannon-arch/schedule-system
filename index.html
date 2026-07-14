@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com https://accounts.google.com; connect-src 'self' https://schedule-engine-936805396528.asia-east1.run.app https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; font-src 'self' data:; worker-src 'self' blob:">
 <title>國民小學課務排程輔助系統 DEMO｜示範資料（已匿名化）</title>
-<script src="app-config.js?v=20260714-2"></script>
+<script src="app-config.js?v=20260714-3"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -197,7 +197,7 @@ body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution):not(.
 .setup-source-strip{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;padding:14px 16px;border:1px solid var(--line);border-radius:7px;background:#fbfaf9}
 .setup-source-copy{min-width:0;flex:1}.setup-source-copy .sub{margin:0;font-size:13.5px;line-height:1.55}.setup-source-copy #setupEntryHelp{margin-top:3px}.setup-source-copy #lsMsg{margin-top:5px;color:var(--mint-d)}
 .setup-source-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.setup-source-actions .btn{padding:8px 12px;border-radius:6px;font-size:13.5px;white-space:nowrap}
-.clear-project-dialog{width:min(560px,calc(100% - 32px));padding:0;border:0;border-radius:8px;box-shadow:0 22px 70px rgba(45,35,44,.28);color:var(--ink)}
+.clear-project-dialog{width:min(560px,calc(100% - 32px));margin:auto;padding:0;border:0;border-radius:8px;box-shadow:0 22px 70px rgba(45,35,44,.28);color:var(--ink)}
 .clear-project-dialog::backdrop{background:rgba(38,32,40,.48)}
 .clear-project-head{padding:20px 22px 14px;border-bottom:1px solid var(--line)}.clear-project-head h2{font-size:21px;margin-bottom:5px;color:var(--bad)}.clear-project-head p{color:var(--muted);font-size:14px;line-height:1.6}
 .clear-project-body{padding:18px 22px}.clear-project-body ul{margin:0 0 16px;padding-left:22px;color:#655f68;font-size:14px;line-height:1.8}.clear-project-body li::marker{color:var(--bad)}
@@ -207,6 +207,15 @@ body.cloud-draft-pending .auth-admin-actions>:not(.cloud-draft-resolution):not(.
 .version-history-list{display:grid;gap:0;border:1px solid var(--line);max-height:360px;overflow:auto}
 .version-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
 .version-history-row:last-child{border-bottom:0}.version-history-row b,.version-history-row span{display:block}.version-history-row span{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.5}.version-history-empty{padding:24px;text-align:center;color:var(--muted)}
+.beta-feedback-notice,.formal-beta-feedback{display:flex;align-items:center;justify-content:space-between;gap:18px;border-left:4px solid var(--sky-d);background:#f3f8fb;color:#455b68}
+.beta-feedback-notice{margin-bottom:14px;padding:10px 13px}.beta-feedback-notice span{font-size:13.5px;line-height:1.55}.beta-feedback-notice b,.formal-beta-feedback b{color:#315f7d}
+.formal-beta-feedback{margin-top:18px;padding:12px 14px}.formal-beta-feedback span{font-size:13.5px;line-height:1.55}
+.feedback-dialog{width:min(680px,calc(100% - 32px));max-height:calc(100vh - 24px);overflow:auto}.feedback-dialog .clear-project-head{position:sticky;top:0;z-index:2;background:#fff}.feedback-dialog .clear-project-head h2{color:var(--ink)}.feedback-dialog .clear-project-actions{position:sticky;bottom:0;z-index:2}
+.feedback-grid{display:grid;grid-template-columns:180px minmax(0,1fr);gap:12px}.feedback-field{display:grid;gap:5px;color:var(--ink);font-size:13px;font-weight:900}.feedback-field.wide{grid-column:1/-1}
+.feedback-field input,.feedback-field select,.feedback-field textarea{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font:inherit;font-size:14px}.feedback-field textarea{min-height:92px;resize:vertical;line-height:1.55}
+.feedback-environment{margin:0;padding:10px 12px;border:1px solid var(--line);background:#f7f8f9;color:#5c6268;font:12px/1.6 Consolas,"Microsoft JhengHei",sans-serif;white-space:pre-wrap;overflow-wrap:anywhere}
+.feedback-privacy{display:flex;align-items:flex-start;gap:9px;margin-top:13px;padding:11px 12px;border-left:4px solid var(--lemon-d);background:#fffaf0;color:#62594a;font-size:13px;font-weight:800;line-height:1.55}.feedback-privacy input{width:18px;height:18px;flex:0 0 auto;margin-top:1px}
+.feedback-status{margin-top:10px;color:var(--muted);font-size:12.5px;line-height:1.55}.feedback-actions-note{margin-right:auto;align-self:center;color:var(--muted);font-size:12px}.app-footer-feedback{padding:0;border:0;background:none;color:var(--sky-d);font:inherit;font-weight:900;text-decoration:underline;cursor:pointer}
 .setup-overview-panel{margin-bottom:18px;border:1px solid var(--line);box-shadow:none;background:#fbfaf9}.setup-overview-panel #statLine{white-space:nowrap;overflow-x:auto;padding-bottom:2px}
 .setup-class-format{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.setup-class-format h3{font-size:17px;margin-bottom:10px}
 .platform-school-actions{margin-bottom:0}
@@ -287,7 +296,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
   .step-help ol{grid-template-columns:1fr;gap:8px}.step-help li{padding-right:0}
   .setup-health{align-items:flex-start;flex-wrap:wrap}.setup-health span{flex-basis:100%}
-  .app-footer{align-items:flex-start;flex-direction:column;gap:10px}.app-footer-meta{text-align:left}.app-footer-session{margin-left:0;padding:10px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);width:100%}.version-notice,.tutor-prerequisite{align-items:flex-start;flex-direction:column}
+  .app-footer{align-items:flex-start;flex-direction:column;gap:10px}.app-footer-meta{text-align:left}.app-footer-session{margin-left:0;padding:10px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);width:100%}.version-notice,.tutor-prerequisite,.beta-feedback-notice,.formal-beta-feedback{align-items:flex-start;flex-direction:column}.feedback-grid{grid-template-columns:1fr}.feedback-actions-note{width:100%;margin:0 0 4px}.clear-project-actions{flex-wrap:wrap}
   .editor-grid{grid-template-columns:1fr;min-width:0}.editor-center{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .editor-table{min-width:620px}.editor-toolbar input,.editor-toolbar select{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
@@ -334,9 +343,49 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.19</b></span></div>
+    <div class="formal-beta-feedback" role="note">
+      <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
+      <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
+    </div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.20</b></span></div>
   </div>
 </section>
+
+<dialog class="clear-project-dialog feedback-dialog" id="feedbackDialog" aria-labelledby="feedbackTitle" tabindex="-1">
+  <div class="clear-project-head">
+    <h2 id="feedbackTitle">BETA 錯誤回報</h2>
+    <p>請描述發生問題前的操作，系統會自動附上版本與瀏覽器資訊。回報不會在背景自動上傳。</p>
+  </div>
+  <div class="clear-project-body">
+    <div class="feedback-grid">
+      <label class="feedback-field">問題類型
+        <select id="feedbackType" onchange="ScheduleFeedback.update()">
+          <option>操作無法完成</option><option>資料或課表錯誤</option><option>匯入或匯出問題</option><option>畫面顯示問題</option><option>功能建議</option>
+        </select>
+      </label>
+      <label class="feedback-field">問題摘要
+        <input id="feedbackSummary" type="text" maxlength="120" placeholder="例如：匯入母版後班級數量不正確" oninput="ScheduleFeedback.update()">
+      </label>
+      <label class="feedback-field wide">操作步驟
+        <textarea id="feedbackSteps" maxlength="500" placeholder="例如：進入資料建置 → 從 Excel 匯入 → 選擇檔案後出現錯誤" oninput="ScheduleFeedback.update()"></textarea>
+      </label>
+      <label class="feedback-field wide">實際結果或錯誤訊息
+        <textarea id="feedbackResult" maxlength="400" placeholder="請貼上畫面顯示的錯誤文字；若沒有錯誤訊息，也可描述實際看到的結果。"></textarea>
+      </label>
+      <div class="feedback-field wide">系統自動帶入
+        <pre class="feedback-environment" id="feedbackEnvironment"></pre>
+      </div>
+    </div>
+    <label class="feedback-privacy"><input id="feedbackPrivacy" type="checkbox" onchange="ScheduleFeedback.update()"><span>我已確認回報文字與截圖不含學生姓名、身分證字號、教師 Google 帳號或完整課表資料。</span></label>
+    <div class="feedback-status" id="feedbackStatus" role="status"></div>
+  </div>
+  <div class="clear-project-actions">
+    <span class="feedback-actions-note">Email 開啟後，請再附上問題畫面截圖。</span>
+    <button class="btn soft sm" type="button" onclick="ScheduleFeedback.close()">取消</button>
+    <button class="btn soft sm" id="feedbackCopyButton" type="button" onclick="ScheduleFeedback.copy()" disabled>複製回報內容</button>
+    <button class="btn mint sm" id="feedbackEmailButton" type="button" onclick="ScheduleFeedback.email()" disabled>開啟 Email</button>
+  </div>
+</dialog>
 
 <aside>
   <div class="logo">
@@ -367,6 +416,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <div class="version-notice" id="appVersionNotice" role="alert" hidden>
   <span id="appVersionMessage"></span>
   <button class="btn soft sm" type="button" onclick="location.reload()">重新載入</button>
+</div>
+
+<div class="beta-feedback-notice formal-only" role="note">
+  <span><b>BETA 廣測中</b>　若遇到資料異常或功能無法使用，請先保留問題畫面並送出錯誤回報。</span>
+  <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
 </div>
 
 <details class="admin-dock auth-panel" id="adminDock">
@@ -999,8 +1053,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.19</span></small>
-    <small><a href="mailto:chihhung1988@gmail.com?subject=課務排程系統%20BETA%20問題回報">BETA 問題回報</a>｜回報時請附上操作頁面與錯誤訊息，勿寄送教師身分證資料。</small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.20</span></small>
+    <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
 
@@ -1012,6 +1066,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="schedule-policy.js?v=20260713-2"></script>
 <script src="setup-builder.js?v=20260713-3"></script>
 <script src="schedule-exports.js?v=20260713-1"></script>
+<script src="feedback.js?v=20260714-1"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -2782,7 +2837,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.19');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.20');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';

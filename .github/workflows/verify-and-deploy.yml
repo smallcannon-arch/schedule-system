@@ -43,6 +43,7 @@ jobs:
           node --check schedule-exports.js
           node --check schedule-policy.js
           node --check teacher-workflow.js
+          node --check feedback.js
 
   deploy:
     if: github.event_name == 'push'
@@ -61,7 +62,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir _site
-          cp index.html app-config.js auth-config.js data.js schedule-auth.js schedule-editor.js schedule-exports.js schedule-policy.js setup-builder.js teacher-workflow.js template.xlsx _headers _site/
+          cp index.html app-config.js auth-config.js data.js schedule-auth.js schedule-editor.js schedule-exports.js schedule-policy.js setup-builder.js teacher-workflow.js feedback.js template.xlsx _headers _site/
           cp -R vendor _site/vendor
       - uses: actions/upload-pages-artifact@v3
         with:

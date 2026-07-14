@@ -231,6 +231,26 @@ def test_teacher_updates_require_admin_approval_and_versions_can_be_restored():
     assert "還原會建立一個新的正式版本" in html
 
 
+def test_beta_feedback_collects_diagnostics_without_background_upload():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    script = (FORMAL / "feedback.js").read_text(encoding="utf-8")
+
+    assert 'id="feedbackDialog"' in html
+    assert 'id="feedbackSummary"' in html
+    assert 'id="feedbackSteps"' in html
+    assert 'id="feedbackPrivacy"' in html
+    assert "BETA 廣測中" in html
+    assert "複製回報內容" in html
+    assert "開啟 Email" in html
+    assert "系統版本" in script
+    assert "操作頁面" in script
+    assert "使用角色" in script
+    assert "navigator.userAgent" in script
+    assert "mailto:" in script
+    assert "fetch(" not in script
+    assert "XMLHttpRequest" not in script
+
+
 def test_platform_school_save_validates_workspace_admin_accounts():
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
