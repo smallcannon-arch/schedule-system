@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>排課輔助系統 DEMO｜示範資料（已匿名化）</title>
+<title>國民小學課務排程輔助系統 DEMO｜示範資料（已匿名化）</title>
 <script src="app-config.js?v=20260712-2"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>
@@ -293,8 +293,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="formal-gate-head">
       <div class="formal-gate-mark" aria-hidden="true">▦</div>
       <div>
-        <div class="formal-gate-eyebrow">學校課務排程與協作平台</div>
-        <h1 id="formalGateTitle">排課輔助系統</h1>
+        <div class="formal-gate-eyebrow">教師配課、課務排程與課表協作平台</div>
+        <h1 id="formalGateTitle">國民小學課務排程輔助系統</h1>
         <p class="formal-gate-lead">使用已核准的學校 Google 帳號進入正式排課。</p>
       </div>
     </div>
@@ -310,20 +310,20 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <p>請自行撰寫申請信，或使用右側按鈕帶入格式。</p>
         <a class="formal-request-email" href="mailto:chihhung1988@gmail.com">chihhung1988@gmail.com</a>
       </div>
-      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=排課輔助系統使用申請&amp;body=您好，我想申請使用排課輔助系統。%0D%0A%0D%0A學校全名：%0D%0A縣市：%0D%0A教育部六碼學校代碼：%0D%0A申請人姓名／職稱：%0D%0A學校 Google Workspace 網域：%0D%0A排課管理員 1 Google 帳號（須為同網域）：%0D%0A排課管理員 2 Google 帳號（選填，須為同網域）：%0D%0A預計使用學期：">撰寫申請信</a>
+      <a class="formal-request-link" href="mailto:chihhung1988@gmail.com?subject=國民小學課務排程輔助系統使用申請&amp;body=您好，我想申請使用國民小學課務排程輔助系統。%0D%0A%0D%0A學校全名：%0D%0A縣市：%0D%0A教育部六碼學校代碼：%0D%0A申請人姓名／職稱：%0D%0A學校 Google Workspace 網域：%0D%0A排課管理員 1 Google 帳號（須為同網域）：%0D%0A排課管理員 2 Google 帳號（選填，須為同網域）：%0D%0A預計使用學期：">撰寫申請信</a>
       <div class="formal-request-details">
         <b>申請信請提供：</b>
         <ul><li>學校全名與所在縣市</li><li>教育部六碼學校代碼</li><li>申請人姓名與職稱</li><li>學校 Google Workspace 網域</li><li>排課管理員 Google 帳號（可填主任與組長，皆須為同網域）</li><li>預計使用學期</li></ul>
       </div>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>排課輔助系統 1.16</span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 1.17</span></div>
   </div>
 </section>
 
 <aside>
   <div class="logo">
     <div class="mark" aria-hidden="true">▦</div>
-    <div class="logo-copy"><b id="appBrandName">排課輔助系統 DEMO</b><small id="appBrandMeta">示範資料・已匿名化</small></div>
+    <div class="logo-copy"><b id="appBrandName">課務排程系統 DEMO</b><small id="appBrandMeta">示範資料・已匿名化</small></div>
   </div>
   <nav>
     <div class="nav-group">資料準備</div>
@@ -946,7 +946,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <footer class="app-footer" aria-label="系統版權資訊">
   <div class="app-footer-brand">
     <span class="app-footer-mark" aria-hidden="true">▦</span>
-    <div><b>排課輔助系統</b><small>CP-SAT 排課引擎｜學校課務排程與協作平台</small></div>
+    <div><b>國民小學課務排程輔助系統</b><small>CP-SAT 排課引擎｜教師配課、課務排程與課表協作平台</small></div>
   </div>
   <div class="app-footer-session" id="platformFooterSession" hidden>
     <div class="app-footer-session-copy">
@@ -958,7 +958,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜排課輔助系統．版權所有　版本 1.16</small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 1.17</small>
   </div>
 </footer>
 
@@ -2671,8 +2671,8 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  document.title='排課輔助系統｜正式版';
-  document.getElementById('appBrandName').textContent='排課輔助系統';
+  document.title='國民小學課務排程輔助系統｜正式版';
+  document.getElementById('appBrandName').textContent='課務排程系統';
   document.getElementById('appBrandMeta').textContent='';
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
