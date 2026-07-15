@@ -77,6 +77,8 @@ def test_custom_county_policy_frontend_is_wired_and_valid():
     assert "適用學年度" in builder
     assert "各縣市適用" in builder
     assert "套用新竹市建議值" not in builder
+    assert "授課節數編配原則已經校務會議審議通過" not in builder
+    assert "學生作息與課表已納入課程計畫" not in builder
 
 
 def test_custom_policy_calculates_role_individual_and_daily_targets():

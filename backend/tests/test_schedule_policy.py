@@ -67,19 +67,12 @@ def test_national_grade_total_is_blocking():
     assert any("1年級每週學習總節數 21 節" in issue for issue in result["blocking"])
 
 
-def test_publish_requires_school_approval_dates():
+def test_publish_does_not_require_administrative_confirmation_fields():
     data = case_data()
 
     result = schedule_policy.validate_case(data, require_approval=True)
-    assert len(result["blocking"]) == 2
-
-    data["policy"].update({
-        "staffingPrinciplesApproved": True,
-        "staffingMeetingDate": "2026-06-30",
-        "schedulePlanApproved": True,
-        "schedulePlanMeetingDate": "2026-07-01",
-    })
-    assert schedule_policy.validate_case(data, require_approval=True)["blocking"] == []
+    assert result["blocking"] == []
+    assert not any("校務會議" in issue or "課程計畫" in issue for issue in result["warnings"])
 
 
 def test_school_can_set_daily_hard_cap_but_never_allow_seven_periods():
@@ -102,21 +95,18 @@ def test_legacy_hsinchu_profile_migrates_without_losing_existing_values():
     assert config["weeklyTargets"] == {"導師": 16, "科任": 20, "組長": 9, "主任": 3}
 
 
-def test_publish_requires_custom_scope_and_school_approvals():
+def test_publish_requires_custom_scope():
     data = case_data()
-    data["policy"].update({
-        "region": "", "academicYear": 0,
-        "staffingPrinciplesApproved": True, "staffingMeetingDate": "2026-06-30",
-        "schedulePlanApproved": True, "schedulePlanMeetingDate": "2026-07-01",
-    })
+    data["policy"].update({"region": "", "academicYear": 0})
 
     result = schedule_policy.validate_case(data, require_approval=True)
 
     assert result["blocking"] == ["正式發布前須填寫縣市或適用規則名稱及學年度"]
 
 
-def test_server_publish_normalization_enforces_custom_policy_approvals():
+def test_server_publish_normalization_enforces_custom_policy_scope():
     data = case_data()
+    data["policy"].update({"region": "", "academicYear": 0})
     payload = {
         "data": data,
         "schedule": {"1班1|一|1": {"s": "領域課程", "t": "王導師", "room": "R00"}},
@@ -125,11 +115,6 @@ def test_server_publish_normalization_enforces_custom_policy_approvals():
     with pytest.raises(ValueError, match="正式發布前的學校自訂規則檢核未通過"):
         app._normalize_schedule_snapshot(payload, require_schedule=True)
 
-    data["policy"].update({
-        "staffingPrinciplesApproved": True,
-        "staffingMeetingDate": "2026-06-30",
-        "schedulePlanApproved": True,
-        "schedulePlanMeetingDate": "2026-07-01",
-    })
+    data["policy"].update({"region": "新北市", "academicYear": 115})
     snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
     assert snapshot["policy_compliance"]["blocking"] == []

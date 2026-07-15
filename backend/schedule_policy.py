@@ -164,22 +164,10 @@ def validate_case(data, require_approval=False):
         warnings.append("尚未填寫適用學年度")
     if not any(config["weeklyTargets"].values()):
         warnings.append("尚未填寫教師每週基準節數；填 0 的職務將不檢核應授節數")
-    if not config["staffingPrinciplesApproved"]:
-        warnings.append("授課節數編配原則尚未確認經校務會議審議通過")
-    elif not config["staffingMeetingDate"]:
-        warnings.append("尚未填寫授課節數編配原則的校務會議日期")
-    if not config["schedulePlanApproved"]:
-        warnings.append("學生作息與課表尚未確認納入課程計畫")
-    elif not config["schedulePlanMeetingDate"]:
-        warnings.append("尚未填寫課程計畫通過日期")
 
     if require_approval:
         if not config["region"] or not config["academicYear"]:
             blocking.append("正式發布前須填寫縣市或適用規則名稱及學年度")
-        if not config["staffingPrinciplesApproved"] or not config["staffingMeetingDate"]:
-            blocking.append("正式發布前須確認授課節數編配原則已經校務會議審議通過並填寫日期")
-        if not config["schedulePlanApproved"] or not config["schedulePlanMeetingDate"]:
-            blocking.append("正式發布前須確認學生作息與課表已納入課程計畫並填寫通過日期")
     return {"blocking": list(dict.fromkeys(blocking)), "warnings": list(dict.fromkeys(warnings))}
 
 
