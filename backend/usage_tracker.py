@@ -154,12 +154,13 @@ def enrich_overview(overview, case_overviews, now=None):
         school_id = normalize_school_id(school.get("school_id"))
         case = deepcopy(case_lookup.get(school_id) or {})
         attention = []
+        is_active = bool(school.get("active", True))
         metadata_unavailable = bool(case.get("metadata_unavailable"))
-        if metadata_unavailable:
+        if not is_active:
+            progress = "disabled"
+        elif metadata_unavailable:
             progress = "unknown"
             attention.append("案件狀態暫時無法取得")
-        elif not school.get("active", True):
-            progress = "disabled"
         elif case.get("has_published"):
             progress = "published"
         elif case.get("schedule_ready"):
@@ -171,7 +172,7 @@ def enrich_overview(overview, case_overviews, now=None):
         else:
             progress = "not_started"
 
-        if not metadata_unavailable:
+        if is_active and not metadata_unavailable:
             draft_saved_at = _as_datetime(case.get("draft_saved_at"))
             published_at = _as_datetime(case.get("published_at"))
             case["has_unpublished_changes"] = bool(
@@ -179,7 +180,7 @@ def enrich_overview(overview, case_overviews, now=None):
             if case["has_unpublished_changes"]:
                 attention.append("有未發布草稿變更")
 
-        if school.get("active", True):
+        if is_active:
             last_active_at = _as_datetime(school.get("last_active_at"))
             created_at = _as_datetime(school.get("created_at"))
             if last_active_at and current - last_active_at >= timedelta(days=7):

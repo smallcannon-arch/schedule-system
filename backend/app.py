@@ -574,6 +574,8 @@ def platform_usage(days: int = 30, authorization: str = Header("")):
         TENANT_DIRECTORY.list_schools(), days=min(max(days, 1), 90))
     case_overviews = {}
     for school in overview.get("schools") or []:
+        if not school.get("active", True):
+            continue
         school_id = usage_tracker.normalize_school_id(school.get("school_id"))
         if not school_id:
             continue

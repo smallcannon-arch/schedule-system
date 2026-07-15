@@ -155,6 +155,26 @@ def test_metadata_failure_is_unknown_and_attention_has_priority():
     assert result["totals"]["not_started"] == 0
 
 
+def test_disabled_school_ignores_unavailable_metadata_and_attention():
+    overview = {"schools": [{
+        "school_id": "school-a", "name": "停用學校", "active": False,
+        "events": {"solve_failed": 5}, "roles": {}, "last_events": {},
+    }]}
+
+    result = enrich_overview(overview, {"school-a": {
+        "metadata_unavailable": True, "has_draft": True,
+        "draft_saved_at": "2026-07-02T00:00:01+00:00",
+        "published_at": "2026-07-02T00:00:00+00:00",
+    }})
+    school = result["schools"][0]
+
+    assert school["progress"] == "disabled"
+    assert school["attention"] == []
+    assert "has_unpublished_changes" not in school["case"]
+    assert result["totals"]["needs_attention"] == 0
+    assert result["totals"]["not_started"] == 0
+
+
 @pytest.mark.parametrize(("draft_saved_at", "published_at", "expected"), [
     ("2026-07-02T00:00:01+00:00", "2026-07-02T00:00:00+00:00", True),
     ("2026-07-01T23:59:59+00:00", "2026-07-02T00:00:00+00:00", False),
@@ -259,7 +279,28 @@ def test_datetime_inputs_and_legacy_fallback_remain_timezone_aware():
         "2026-07-10T12:30:00+00:00")
 
 
-def test_case_overview_counts_all_backups_without_reading_backup_documents():
+def test_extract_aggregation_count_matches_firestore_2_28_contract():
+    # google-cloud-firestore 2.28.0 returns QueryResultsList rows containing
+    # AggregationResult objects, represented here by the nested list shape.
+    assert schedule_store._extract_aggregation_count(
+        [[SimpleNamespace(value=12)]]) == 12
+    assert schedule_store._extract_aggregation_count(
+        [[SimpleNamespace(value=0)]]) == 0
+    assert schedule_store._extract_aggregation_count([]) == 0
+
+
+@pytest.mark.parametrize("results", [
+    [[]],
+    [[SimpleNamespace(value=None)]],
+    [[SimpleNamespace(value="12")]],
+    [SimpleNamespace()],
+])
+def test_extract_aggregation_count_rejects_malformed_results(results):
+    with pytest.raises(TypeError):
+        schedule_store._extract_aggregation_count(results)
+
+
+def test_case_overview_counts_all_backups_without_reading_backup_documents(caplog):
     class FakeSnapshot:
         def __init__(self, key, value):
             self.id = key
@@ -278,8 +319,9 @@ def test_case_overview_counts_all_backups_without_reading_backup_documents():
             return FakeSnapshot(self.key, self.value)
 
     class FakeDraftQuery:
-        def __init__(self, values):
+        def __init__(self, values, ordered):
             self.values = values
+            self.ordered = ordered
             self.limit_value = None
 
         def limit(self, value):
@@ -287,15 +329,17 @@ def test_case_overview_counts_all_backups_without_reading_backup_documents():
             return self
 
         def stream(self):
-            ordered = sorted(
-                self.values.items(), key=lambda item: item[1].get("saved_at", ""),
-                reverse=True)
-            return [FakeSnapshot(key, value) for key, value in ordered[:self.limit_value]]
+            values = list(self.values.items())
+            if self.ordered:
+                values = [item for item in values if "saved_at" in item[1]]
+                values.sort(key=lambda item: item[1].get("saved_at", ""), reverse=True)
+            return [FakeSnapshot(key, value) for key, value in values[:self.limit_value]]
 
     class FakeDraftCollection:
         def __init__(self, values):
             self.values = values
             self.query = None
+            self.compatibility_query = None
 
         def document(self, key):
             return FakeDocument(key, self.values.get(key))
@@ -303,15 +347,20 @@ def test_case_overview_counts_all_backups_without_reading_backup_documents():
         def order_by(self, field, direction=None):
             assert field == "saved_at"
             assert direction == "DESCENDING"
-            self.query = FakeDraftQuery(self.values)
+            self.query = FakeDraftQuery(self.values, ordered=True)
             return self.query
+
+        def limit(self, value):
+            self.compatibility_query = FakeDraftQuery(self.values, ordered=False)
+            return self.compatibility_query.limit(value)
 
     class FakeCountQuery:
         def __init__(self, value):
             self.value = value
 
         def get(self):
-            return [SimpleNamespace(value=self.value)]
+            # Matches google-cloud-firestore 2.28.0 QueryResultsList row shape.
+            return [[SimpleNamespace(value=self.value)]]
 
     class FakeBackupCollection:
         def __init__(self, value):
@@ -337,6 +386,7 @@ def test_case_overview_counts_all_backups_without_reading_backup_documents():
     store._drafts = FakeDraftCollection({"old": older, "latest": latest})
     store._state = FakeDocument("active")
     store._backups = FakeBackupCollection(12)
+    store._school = SimpleNamespace(id="school-a")
     store._firestore = SimpleNamespace(
         Query=SimpleNamespace(DESCENDING="DESCENDING"))
 
@@ -346,6 +396,31 @@ def test_case_overview_counts_all_backups_without_reading_backup_documents():
     assert result["classes"] == 1
     assert store._backups.alias == "backup_count"
     assert store._drafts.query.limit_value == schedule_store.LEGACY_DRAFT_SCAN_LIMIT
+    assert store._drafts.compatibility_query is None
+
+    missing_saved_at = schedule_store._encode_snapshot_document({
+        "saved_by": "legacy@school.test",
+        "snapshot": {"data": {"classes": [{"code": "1A"}]},
+                     "schedule_ready": False},
+    })
+    legacy_store = object.__new__(FirestoreScheduleStore)
+    legacy_store._drafts = FakeDraftCollection({"missing": missing_saved_at})
+    legacy_store._state = FakeDocument("active")
+    legacy_store._backups = FakeBackupCollection(0)
+    legacy_store._school = SimpleNamespace(id="school-a")
+    legacy_store._firestore = SimpleNamespace(
+        Query=SimpleNamespace(DESCENDING="DESCENDING"))
+
+    with caplog.at_level("WARNING"):
+        legacy_result = legacy_store.get_case_overview()
+
+    assert legacy_result["has_draft"] is True
+    assert legacy_result["draft_saved_at"] == ""
+    assert legacy_result["backup_count"] == 0
+    assert legacy_store._drafts.query.limit_value == schedule_store.LEGACY_DRAFT_SCAN_LIMIT
+    assert legacy_store._drafts.compatibility_query.limit_value == schedule_store.LEGACY_DRAFT_SCAN_LIMIT
+    assert "bounded legacy draft fallback without saved_at" in caplog.text
+    assert "legacy@school.test" not in caplog.text
 
     memory = MemoryScheduleStore()
     memory._backups = {str(index): {} for index in range(12)}
@@ -449,6 +524,42 @@ def test_platform_usage_isolates_one_school_metadata_failure(monkeypatch, school
     assert schools["broken-school"]["attention"][0] == "案件狀態暫時無法取得"
     assert schools["broken-school"]["case"] == {"metadata_unavailable": True}
     assert schools["default-school"]["progress"] == "not_started"
+
+
+def test_platform_usage_skips_case_metadata_for_disabled_school(
+        monkeypatch, school_directory):
+    directory, _ = school_directory
+    directory.upsert_school({
+        "school_id": "disabled-school", "moe_code": "654321", "name": "停用學校",
+        "domains": ["disabled.test"], "admin_emails": ["admin@disabled.test"],
+        "active": False,
+    })
+    original_get_store = directory.get_store
+    calls = []
+
+    def get_store(school_id):
+        calls.append(school_id)
+        if school_id == "disabled-school":
+            raise AssertionError("disabled school metadata must not be queried")
+        return original_get_store(school_id)
+
+    monkeypatch.setattr(directory, "get_store", get_store)
+    monkeypatch.setattr(app, "SUPER_ADMIN_EMAILS", ("owner@gmail.com",))
+    monkeypatch.setattr(app.auth_service, "verify_google_token", lambda *args:
+                        auth_service.GoogleIdentity(
+                            "owner-sub", "owner@gmail.com", "平台管理員", ""))
+
+    response = CLIENT.get("/platform/usage?days=30",
+                          headers={"Authorization": "Bearer owner-token"})
+
+    assert response.status_code == 200
+    schools = {item["school_id"]: item for item in response.json()["schools"]}
+    assert calls == ["default-school"]
+    assert schools["disabled-school"]["progress"] == "disabled"
+    assert schools["disabled-school"]["attention"] == []
+    assert schools["disabled-school"]["case"] == {}
+    assert response.json()["totals"]["configured_schools"] == 2
+    assert response.json()["totals"]["enabled_schools"] == 1
 
 
 def test_school_admin_cannot_read_platform_usage(monkeypatch, school_directory):
