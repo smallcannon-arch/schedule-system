@@ -3,12 +3,16 @@
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
+import logging
 import os
 import re
 import threading
 import uuid
 
 from auth_service import normalize_email
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class StoreConflictError(RuntimeError):
@@ -18,6 +22,7 @@ class StoreConflictError(RuntimeError):
 SCHOOL_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{2,49}$")
 MOE_SCHOOL_CODE_PATTERN = re.compile(r"^\d{6}$")
 SHARED_DRAFT_ID = "shared"
+LEGACY_DRAFT_SCAN_LIMIT = 20
 
 
 def normalize_domain(value):
@@ -96,6 +101,21 @@ def _decode_snapshot(document):
     encoded = value.pop("snapshot_json", None)
     if encoded is not None:
         value["snapshot"] = json.loads(encoded)
+    return value
+
+
+def _extract_aggregation_count(results):
+    """Read Firestore count results without hiding malformed SDK responses."""
+    if not results:
+        return 0
+    result = results[0]
+    if isinstance(result, (list, tuple)):
+        if not result:
+            raise TypeError("Firestore count aggregation returned an empty result row")
+        result = result[0]
+    value = getattr(result, "value", None)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("Firestore count aggregation result has no integer value")
     return value
 
 
@@ -666,23 +686,39 @@ class FirestoreScheduleStore:
         draft_document = self._drafts.document(SHARED_DRAFT_ID).get()
         draft = _decode_snapshot(draft_document.to_dict()) if draft_document.exists else None
         if not draft:
-            legacy = []
-            for document in self._drafts.stream():
+            query = self._drafts.order_by(
+                "saved_at", direction=self._firestore.Query.DESCENDING).limit(
+                    LEGACY_DRAFT_SCAN_LIMIT)
+            for document in query.stream():
                 if str(getattr(document, "id", "") or "") == SHARED_DRAFT_ID:
                     continue
                 value = _decode_snapshot(document.to_dict())
                 if value and value.get("snapshot"):
-                    legacy.append(value)
-            draft = max(legacy, key=lambda item: str(item.get("saved_at") or "")) if legacy else None
+                    draft = value
+                    break
+        if not draft:
+            compatibility_query = self._drafts.limit(LEGACY_DRAFT_SCAN_LIMIT)
+            for document in compatibility_query.stream():
+                if str(getattr(document, "id", "") or "") == SHARED_DRAFT_ID:
+                    continue
+                value = _decode_snapshot(document.to_dict())
+                if value and value.get("snapshot") and not value.get("saved_at"):
+                    LOGGER.warning(
+                        "Using bounded legacy draft fallback without saved_at for school %s",
+                        str(getattr(getattr(self, "_school", None), "id", "") or "unknown"))
+                    draft = value
+                    break
         active_document = self._state.get()
         active = _decode_snapshot(active_document.to_dict()) if active_document.exists else None
         snapshot = (draft or active or {}).get("snapshot") or {}
+        backup_results = self._backups.count(alias="backup_count").get()
+        backup_count = _extract_aggregation_count(backup_results)
         return {
             "has_draft": bool(draft),
             "draft_saved_at": str((draft or {}).get("saved_at") or ""),
             "has_published": bool(active),
             "published_at": str((active or {}).get("published_at") or ""),
-            "backup_count": sum(1 for _ in self._backups.limit(10).stream()),
+            "backup_count": backup_count,
             **_case_overview_summary(snapshot),
         }
 

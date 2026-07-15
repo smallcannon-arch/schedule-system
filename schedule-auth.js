@@ -10,7 +10,7 @@
     savingSchool: false, loadingUsage: false, savingPlacements: false,
     loadingVersions: false, restoringVersion: false, versions: [],
     loadingBackups: false, creatingBackup: false, restoringBackup: false, backups: [],
-    schools: [], usage: null, usageSchoolId: ""};
+    schools: [], usage: null, usageSchoolId: "", usageTrigger: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -587,6 +587,7 @@
   const USAGE_PROGRESS_LABELS = {
     not_started: "尚未開始", signed_in: "已登入", building: "資料建置中",
     scheduled: "已完成排課", published: "已發布", disabled: "已停用",
+    unknown: "無法取得",
   };
 
   function formatUsageDate(value, includeYear) {
@@ -600,6 +601,10 @@
 
   function usageProgressLabel(value) {
     return USAGE_PROGRESS_LABELS[value] || "尚未開始";
+  }
+
+  function usageCaseMetric(details, key) {
+    return details.metadata_unavailable ? "—" : Number(details[key] || 0);
   }
 
   function renderUsage() {
@@ -627,27 +632,44 @@
         <td><button class="btn soft sm" type="button" data-usage-school="${root.esc(school.school_id)}">查看</button></td></tr>`;
     }).join("") || '<tr><td colspan="6">尚無學校使用紀錄</td></tr>';
     body.querySelectorAll("[data-usage-school]").forEach((button) => {
-      button.addEventListener("click", () => openUsageDetail(button.dataset.usageSchool));
+      button.addEventListener("click", () => openUsageDetail(button.dataset.usageSchool, button));
     });
   }
 
   function closeUsageDetail() {
     const dialog = document.getElementById("platformUsageDetailDialog");
     if (dialog && dialog.open) dialog.close();
+    if (state.usageTrigger && typeof state.usageTrigger.focus === "function") {
+      state.usageTrigger.focus();
+    }
   }
 
-  function openUsageDetail(schoolId) {
+  function openUsageDetail(schoolId, trigger) {
     const school = (state.usage && state.usage.schools || []).find((item) => item.school_id === schoolId);
     const dialog = document.getElementById("platformUsageDetailDialog");
     if (!school || !dialog) return;
     state.usageSchoolId = schoolId;
+    state.usageTrigger = trigger || document.activeElement;
+    if (!dialog.dataset.usageKeyboardBound) {
+      dialog.dataset.usageKeyboardBound = "true";
+      dialog.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        closeUsageDetail();
+      });
+      dialog.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeUsageDetail();
+        }
+      });
+    }
     const details = school.case || {};
     document.getElementById("platformUsageDetailTitle").textContent = school.name;
     document.getElementById("platformUsageDetailMeta").textContent =
       `教育部代碼 ${school.moe_code || school.school_id}｜${usageProgressLabel(school.progress)}｜最後操作 ${formatUsageDate(school.last_active_at, true)}`;
     document.getElementById("platformUsageDetailSummary").innerHTML = [
-      ["班級", Number(details.classes || 0)], ["教師", Number(details.teachers || 0)],
-      ["科目", Number(details.subjects || 0)], ["還原點", Number(details.backup_count || 0)],
+      ["班級", usageCaseMetric(details, "classes")], ["教師", usageCaseMetric(details, "teachers")],
+      ["科目", usageCaseMetric(details, "subjects")], ["還原點", usageCaseMetric(details, "backup_count")],
     ].map(([label, value]) => `<div><span>${label}</span><b>${value}</b></div>`).join("");
     const attention = school.attention || [];
     const attentionBox = document.getElementById("platformUsageDetailAttention");
@@ -687,8 +709,8 @@
         usageProgressLabel(school.progress), formatUsageDate(school.last_active_at, true),
         formatUsageDate(last.login, true), formatUsageDate(last.draft_save, true),
         formatUsageDate(last.solve_success, true), formatUsageDate(last.publish, true),
-        formatUsageDate(last.teacher_save, true), Number(details.classes || 0),
-        Number(details.teachers || 0), Number(details.subjects || 0), Number(details.backup_count || 0),
+        formatUsageDate(last.teacher_save, true), usageCaseMetric(details, "classes"),
+        usageCaseMetric(details, "teachers"), usageCaseMetric(details, "subjects"), usageCaseMetric(details, "backup_count"),
         Number(events.login || 0), Number(events.solve_success || 0), Number(events.solve_failed || 0),
         Number(events.publish || 0), Number(events.teacher_save || 0), (school.attention || []).join("；") || "無"]);
     });
