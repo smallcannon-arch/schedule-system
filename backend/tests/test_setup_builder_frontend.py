@@ -46,6 +46,20 @@ def test_setup_builder_javascript_has_valid_syntax():
     )
 
 
+def test_assignment_table_has_viewport_bottom_horizontal_scroller():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    script = (FORMAL / "setup-builder.js").read_text(encoding="utf-8")
+
+    assert 'id="setupAssignmentsScroll"' in html
+    assert 'id="setupAssignmentsScrollDock"' in html
+    assert 'aria-label="配課表水平捲動"' in html
+    assert ".assignment-scroll-dock{position:fixed;bottom:0" in html
+    assert "function bindAssignmentScroll()" in script
+    assert 'scroller.addEventListener("scroll", fromTable' in script
+    assert 'dock.addEventListener("scroll", fromDock' in script
+    assert "scroller.scrollWidth > scroller.clientWidth + 1" in script
+
+
 def test_custom_county_policy_frontend_is_wired_and_valid():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     policy = FORMAL / "schedule-policy.js"

@@ -12,6 +12,8 @@
   let lastMessage = "";
   let syncMessage = "";
   let syncingTeachers = false;
+  let assignmentScrollCleanup = null;
+  let updateAssignmentScrollDock = () => {};
 
   function data() {
     const value = adapter.getData();
@@ -476,6 +478,59 @@
       }).join("")}</tr>`).join("")}</tbody>`;
   }
 
+  function bindAssignmentScroll() {
+    if (assignmentScrollCleanup) assignmentScrollCleanup();
+    const scroller = document.getElementById("setupAssignmentsScroll");
+    const dock = document.getElementById("setupAssignmentsScrollDock");
+    const track = document.getElementById("setupAssignmentsScrollTrack");
+    if (!scroller || !dock || !track) return;
+
+    let syncing = false;
+    const sync = (source, target) => {
+      if (syncing || source.scrollLeft === target.scrollLeft) return;
+      syncing = true;
+      target.scrollLeft = source.scrollLeft;
+      syncing = false;
+    };
+    const fromTable = () => sync(scroller, dock);
+    const fromDock = () => sync(dock, scroller);
+    const update = () => {
+      const rect = scroller.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+      const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+      const left = Math.max(0, rect.left);
+      const right = Math.min(viewportWidth, rect.right);
+      const isAssignmentTab = document.getElementById("setup-assign")?.classList.contains("on");
+      const isVisible = rect.bottom > 0 && rect.top < viewportHeight;
+      const hasOverflow = scroller.scrollWidth > scroller.clientWidth + 1;
+      dock.hidden = !(isAssignmentTab && isVisible && hasOverflow && right > left);
+      if (dock.hidden) return;
+      dock.style.left = `${left}px`;
+      dock.style.width = `${right - left}px`;
+      track.style.width = `${scroller.scrollWidth}px`;
+      dock.scrollLeft = scroller.scrollLeft;
+    };
+
+    updateAssignmentScrollDock = update;
+    scroller.addEventListener("scroll", fromTable, {passive: true});
+    dock.addEventListener("scroll", fromDock, {passive: true});
+    window.addEventListener("scroll", update, {passive: true});
+    window.addEventListener("resize", update, {passive: true});
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(update) : null;
+    resizeObserver?.observe(scroller);
+    resizeObserver?.observe(document.getElementById("setupAssignmentsTable"));
+    requestAnimationFrame(update);
+
+    assignmentScrollCleanup = () => {
+      scroller.removeEventListener("scroll", fromTable);
+      dock.removeEventListener("scroll", fromDock);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      resizeObserver?.disconnect();
+      updateAssignmentScrollDock = () => {};
+    };
+  }
+
   function render() {
     if (!adapter || typeof document === "undefined") return;
     renderSummary();
@@ -484,6 +539,7 @@
     renderTeachers();
     renderSubjects();
     renderAssignments();
+    bindAssignmentScroll();
     show(activeTab);
   }
 
@@ -512,6 +568,7 @@
       button.classList.toggle("on", button.dataset.setupTab === name));
     document.querySelectorAll(".setup-pane").forEach((pane) =>
       pane.classList.toggle("on", pane.id === `setup-${name}`));
+    requestAnimationFrame(updateAssignmentScrollDock);
   }
 
   function addClass() {
