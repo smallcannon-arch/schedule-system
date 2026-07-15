@@ -12,6 +12,8 @@
   let lastMessage = "";
   let syncMessage = "";
   let syncingTeachers = false;
+  let assignmentScrollCleanup = null;
+  let updateAssignmentScrollDock = () => {};
 
   function data() {
     const value = adapter.getData();
@@ -393,12 +395,6 @@
         ${["導師", "科任", "組長", "主任"].map((role) => `<label>${role}每週基準節數<small>依縣市規定或校內核定填寫</small><input type="number" min="0" max="30" value="${resolved[role]}" onchange="ScheduleSetup.setWeeklyTarget('${role}',this.value)"></label>`).join("")}
       </div>
       <div class="policy-actions"><span>以上節數由學校依所在地規定自行填寫；教師個別差異請在教師頁填寫「超鐘點」或「減課」。</span></div>
-      <div class="policy-approvals">
-        <label><input type="checkbox" ${config.staffingPrinciplesApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('staffingPrinciplesApproved',this.checked)"> 授課節數編配原則已經校務會議審議通過</label>
-        <input type="date" value="${esc(config.staffingMeetingDate)}" aria-label="授課節數編配原則會議日期" onchange="ScheduleSetup.setPolicy('staffingMeetingDate',this.value)">
-        <label><input type="checkbox" ${config.schedulePlanApproved ? "checked" : ""} onchange="ScheduleSetup.setPolicy('schedulePlanApproved',this.checked)"> 學生作息與課表已納入課程計畫</label>
-        <input type="date" value="${esc(config.schedulePlanMeetingDate)}" aria-label="課程計畫通過日期" onchange="ScheduleSetup.setPolicy('schedulePlanMeetingDate',this.value)">
-      </div>
       <div class="policy-status ${result.blocking.length ? "bad" : "ok"}"><b>${statusTitle}</b><span>${esc(result.blocking[0] || result.warnings[0] || "發布時會再次由後端驗證。")}</span></div>
       ${policyIssues.length ? `<details class="policy-issue-details"><summary>展開全部 ${policyIssues.length} 項規則檢核</summary><ul class="setup-issue-list">${policyIssues.map((issue) => `<li class="${issue.kind}">${esc(issue.text)}</li>`).join("")}</ul></details>` : ""}`;
   }
@@ -476,6 +472,59 @@
       }).join("")}</tr>`).join("")}</tbody>`;
   }
 
+  function bindAssignmentScroll() {
+    if (assignmentScrollCleanup) assignmentScrollCleanup();
+    const scroller = document.getElementById("setupAssignmentsScroll");
+    const dock = document.getElementById("setupAssignmentsScrollDock");
+    const track = document.getElementById("setupAssignmentsScrollTrack");
+    if (!scroller || !dock || !track) return;
+
+    let syncing = false;
+    const sync = (source, target) => {
+      if (syncing || source.scrollLeft === target.scrollLeft) return;
+      syncing = true;
+      target.scrollLeft = source.scrollLeft;
+      syncing = false;
+    };
+    const fromTable = () => sync(scroller, dock);
+    const fromDock = () => sync(dock, scroller);
+    const update = () => {
+      const rect = scroller.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+      const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+      const left = Math.max(0, rect.left);
+      const right = Math.min(viewportWidth, rect.right);
+      const isAssignmentTab = document.getElementById("setup-assign")?.classList.contains("on");
+      const isVisible = rect.bottom > 0 && rect.top < viewportHeight;
+      const hasOverflow = scroller.scrollWidth > scroller.clientWidth + 1;
+      dock.hidden = !(isAssignmentTab && isVisible && hasOverflow && right > left);
+      if (dock.hidden) return;
+      dock.style.left = `${left}px`;
+      dock.style.width = `${right - left}px`;
+      track.style.width = `${scroller.scrollWidth}px`;
+      dock.scrollLeft = scroller.scrollLeft;
+    };
+
+    updateAssignmentScrollDock = update;
+    scroller.addEventListener("scroll", fromTable, {passive: true});
+    dock.addEventListener("scroll", fromDock, {passive: true});
+    window.addEventListener("scroll", update, {passive: true});
+    window.addEventListener("resize", update, {passive: true});
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(update) : null;
+    resizeObserver?.observe(scroller);
+    resizeObserver?.observe(document.getElementById("setupAssignmentsTable"));
+    requestAnimationFrame(update);
+
+    assignmentScrollCleanup = () => {
+      scroller.removeEventListener("scroll", fromTable);
+      dock.removeEventListener("scroll", fromDock);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      resizeObserver?.disconnect();
+      updateAssignmentScrollDock = () => {};
+    };
+  }
+
   function render() {
     if (!adapter || typeof document === "undefined") return;
     renderSummary();
@@ -484,6 +533,7 @@
     renderTeachers();
     renderSubjects();
     renderAssignments();
+    bindAssignmentScroll();
     show(activeTab);
   }
 
@@ -512,6 +562,7 @@
       button.classList.toggle("on", button.dataset.setupTab === name));
     document.querySelectorAll(".setup-pane").forEach((pane) =>
       pane.classList.toggle("on", pane.id === `setup-${name}`));
+    requestAnimationFrame(updateAssignmentScrollDock);
   }
 
   function addClass() {

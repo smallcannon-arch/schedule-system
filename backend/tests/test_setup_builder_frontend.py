@@ -9,6 +9,9 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
     assert 'data-v="build"' in html
+    assert "<title>國民小學課務排程輔助系統｜正式版</title>" in html
+    assert 'name="application-name" content="國民小學課務排程輔助系統"' in html
+    assert "DEMO｜示範資料（已匿名化）" not in html
     assert 'id="setupClassesTable"' in html
     assert 'id="setupTeachersTable"' in html
     assert 'id="setupSubjectsTable"' in html
@@ -46,6 +49,20 @@ def test_setup_builder_javascript_has_valid_syntax():
     )
 
 
+def test_assignment_table_has_viewport_bottom_horizontal_scroller():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    script = (FORMAL / "setup-builder.js").read_text(encoding="utf-8")
+
+    assert 'id="setupAssignmentsScroll"' in html
+    assert 'id="setupAssignmentsScrollDock"' in html
+    assert 'aria-label="配課表水平捲動"' in html
+    assert ".assignment-scroll-dock{position:fixed;bottom:0" in html
+    assert "function bindAssignmentScroll()" in script
+    assert 'scroller.addEventListener("scroll", fromTable' in script
+    assert 'dock.addEventListener("scroll", fromDock' in script
+    assert "scroller.scrollWidth > scroller.clientWidth + 1" in script
+
+
 def test_custom_county_policy_frontend_is_wired_and_valid():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     policy = FORMAL / "schedule-policy.js"
@@ -63,6 +80,8 @@ def test_custom_county_policy_frontend_is_wired_and_valid():
     assert "適用學年度" in builder
     assert "各縣市適用" in builder
     assert "套用新竹市建議值" not in builder
+    assert "授課節數編配原則已經校務會議審議通過" not in builder
+    assert "學生作息與課表已納入課程計畫" not in builder
 
 
 def test_custom_policy_calculates_role_individual_and_daily_targets():

@@ -148,20 +148,10 @@
     if (!Object.values(config.weeklyTargets).some(Boolean)) {
       warnings.push("尚未填寫教師每週基準節數；填 0 的職務將不檢核應授節數");
     }
-    if (!config.staffingPrinciplesApproved) warnings.push("授課節數編配原則尚未確認經校務會議審議通過");
-    else if (!config.staffingMeetingDate) warnings.push("尚未填寫授課節數編配原則的校務會議日期");
-    if (!config.schedulePlanApproved) warnings.push("學生作息與課表尚未確認納入課程計畫");
-    else if (!config.schedulePlanMeetingDate) warnings.push("尚未填寫課程計畫通過日期");
 
     if (options && options.requireApproval) {
       if (!config.region || !config.academicYear) {
         blocking.push("正式發布前須填寫縣市或適用規則名稱及學年度");
-      }
-      if (!config.staffingPrinciplesApproved || !config.staffingMeetingDate) {
-        blocking.push("正式發布前須確認授課節數編配原則已經校務會議審議通過並填寫日期");
-      }
-      if (!config.schedulePlanApproved || !config.schedulePlanMeetingDate) {
-        blocking.push("正式發布前須確認學生作息與課表已納入課程計畫並填寫通過日期");
       }
     }
     return {blocking: [...new Set(blocking)], warnings: [...new Set(warnings)]};
