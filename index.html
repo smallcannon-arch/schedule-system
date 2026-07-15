@@ -232,8 +232,10 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .usage-detail-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:12px 0}.usage-detail-summary div{padding:10px 12px;border-right:1px solid var(--line)}.usage-detail-summary div:last-child{border-right:0}.usage-detail-summary span{display:block;color:var(--muted);font-size:12px}.usage-detail-summary b{display:block;margin-top:3px;font-size:18px}.usage-detail-attention{margin:10px 0 16px;padding:10px 12px;border-left:4px solid var(--lemon-d);background:#fffaf0;color:#7d6213;font-size:13px;line-height:1.65}.usage-detail-attention.ok{border-color:var(--mint-d);background:#f2fbf7;color:var(--mint-d)}.usage-timeline{display:grid}.usage-timeline-row{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13px}.usage-timeline-row:first-child{border-top:0}.usage-timeline-row time{color:var(--muted)}.usage-timeline-row span{font-weight:900}.usage-timeline-row b{color:var(--muted);font-size:12px}
 .platform-school-divider{margin:24px 0 18px;padding-top:18px;border-top:1px solid var(--line)}.platform-school-divider h2{margin-bottom:4px}
 .platform-school-form{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(170px,1.15fr) minmax(190px,1.3fr) auto auto;gap:8px;align-items:end}
+.platform-school-form-mode{grid-column:1/-1;padding:8px 10px;border-left:3px solid var(--mint-d);background:#f2fbf7;color:var(--mint-d);font-size:13px;font-weight:900}
 .platform-school-form label{font-size:12px;font-weight:800;color:var(--muted)}
 .platform-school-form input[type="text"],.platform-school-form input[type="email"]{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;color:var(--ink);background:#fff}
+.platform-school-form input[readonly]{background:#f2f2f2;color:#666;cursor:not-allowed}
 .platform-school-form .btn{white-space:nowrap;padding:9px 13px}
 .platform-school-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
@@ -506,13 +508,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </table></div>
     <div class="platform-school-divider"><h2>學校管理</h2><div class="sub">建立可使用本系統的學校、Workspace 網域與學校系統管理員。</div></div>
     <div class="platform-school-form">
+      <div class="platform-school-form-mode" id="platformSchoolFormMode">新增學校</div>
       <label>教育部學校代碼（6碼）<input id="platformSchoolId" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="例如：183622"></label>
       <input id="platformSchoolRecordId" type="hidden">
       <label>學校名稱<input id="platformSchoolName" type="text" maxlength="120"></label>
       <label>Workspace 網域<input id="platformSchoolDomains" type="text" placeholder="school.edu.tw"></label>
       <label>排課管理員帳號（可多人）<input id="platformSchoolAdmins" type="text" placeholder="director@school.edu.tw, leader@school.edu.tw"></label>
       <label><input id="platformSchoolActive" type="checkbox" checked> 啟用</label>
-      <div class="platform-school-buttons"><button class="btn mint sm" id="platformSchoolSaveButton" type="button" onclick="ScheduleAuth.saveSchool()">儲存學校</button><button class="btn soft sm" id="platformSchoolNewButton" type="button" onclick="ScheduleAuth.newSchool()">新增學校</button></div>
+      <div class="platform-school-buttons"><button class="btn mint sm" id="platformSchoolSaveButton" type="button" onclick="ScheduleAuth.saveSchool()">建立學校</button><button class="btn soft sm" id="platformSchoolNewButton" type="button" onclick="ScheduleAuth.newSchool()">新增學校</button></div>
     </div>
     <div class="auth-status" id="platformSchoolStatus"></div>
     <table class="platform-school-list" aria-label="已建立學校">

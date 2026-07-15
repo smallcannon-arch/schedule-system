@@ -904,6 +904,29 @@ def test_only_super_admin_can_create_school(monkeypatch, tenant_directory):
     assert tenant_directory.get_school_by_domain("school-b.test")["name"] == "乙校"
 
 
+def test_existing_school_moe_code_cannot_be_changed(monkeypatch, tenant_directory):
+    monkeypatch.setattr(app, "GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setattr(app, "SUPER_ADMIN_EMAILS", ("owner@school.test",))
+    monkeypatch.setattr(app.auth_service, "verify_google_token", lambda *args: auth_service.GoogleIdentity(
+        "owner-sub", "owner@school.test", "平台管理員", "school.test"))
+    tenant_directory.upsert_school({
+        "school_id": "school-b", "moe_code": "123456", "name": "乙校",
+        "domains": ["school-b.test"], "admin_emails": ["admin@school-b.test"],
+        "active": True,
+    })
+
+    response = CLIENT.put(
+        "/platform/schools/school-b", headers={"Authorization": "Bearer owner-token"},
+        json={"moe_code": "654321", "name": "丙校", "domains": ["school-c.test"],
+              "admin_emails": ["admin@school-c.test"], "active": True},
+    )
+
+    assert response.status_code == 409
+    assert "教育部代碼不可" in response.json()["detail"]
+    assert tenant_directory.get_school("school-b")["name"] == "乙校"
+    assert tenant_directory.get_school("school-b")["moe_code"] == "123456"
+
+
 def test_moe_school_code_uses_six_digits_and_can_be_the_tenant_id():
     record = schedule_store.normalize_school_record({
         "school_id": "183622", "name": "內湖國小",

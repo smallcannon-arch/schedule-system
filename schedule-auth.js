@@ -331,31 +331,45 @@
     if (state.savingSchool) return;
     const school = state.schools.find((item) => item.school_id === schoolId);
     if (!school) return;
+    const schoolCode = school.moe_code || (/^\d{6}$/.test(school.school_id) ? school.school_id : "");
     document.getElementById("platformSchoolRecordId").value = school.school_id;
-    document.getElementById("platformSchoolId").value = school.moe_code || (/^\d{6}$/.test(school.school_id) ? school.school_id : "");
+    document.getElementById("platformSchoolId").value = schoolCode;
+    document.getElementById("platformSchoolId").readOnly = true;
     document.getElementById("platformSchoolName").value = school.name;
     document.getElementById("platformSchoolDomains").value = (school.domains || []).join(", ");
     document.getElementById("platformSchoolAdmins").value = (school.admin_emails || []).join(", ");
     document.getElementById("platformSchoolActive").checked = school.active !== false;
+    document.getElementById("platformSchoolFormMode").textContent = `正在編輯：${school.name}（${schoolCode || school.school_id}）`;
+    document.getElementById("platformSchoolStatus").textContent = "教育部代碼是學校識別值，編輯既有學校時不可變更。";
+    updateActionButtons();
+    document.getElementById("platformSchoolName").focus();
+  }
+
+  function resetSchoolForm(statusMessage) {
+    document.getElementById("platformSchoolRecordId").value = "";
+    document.getElementById("platformSchoolId").value = "";
+    document.getElementById("platformSchoolId").readOnly = false;
+    document.getElementById("platformSchoolName").value = "";
+    document.getElementById("platformSchoolDomains").value = "";
+    document.getElementById("platformSchoolAdmins").value = "";
+    document.getElementById("platformSchoolActive").checked = true;
+    document.getElementById("platformSchoolFormMode").textContent = "新增學校";
+    document.getElementById("platformSchoolStatus").textContent = statusMessage || "請輸入教育部六碼學校代碼。";
+    updateActionButtons();
     document.getElementById("platformSchoolId").focus();
   }
 
   function newSchool() {
     if (state.savingSchool) return;
-    document.getElementById("platformSchoolRecordId").value = "";
-    document.getElementById("platformSchoolId").value = "";
-    document.getElementById("platformSchoolName").value = "";
-    document.getElementById("platformSchoolDomains").value = "";
-    document.getElementById("platformSchoolAdmins").value = "";
-    document.getElementById("platformSchoolActive").checked = true;
-    document.getElementById("platformSchoolStatus").textContent = "請輸入教育部六碼學校代碼。";
-    document.getElementById("platformSchoolId").focus();
+    resetSchoolForm();
   }
 
   async function saveSchool() {
     if (state.savingSchool) return;
     const schoolCode = document.getElementById("platformSchoolId").value.trim();
-    const schoolId = document.getElementById("platformSchoolRecordId").value.trim().toLowerCase() || schoolCode;
+    const recordId = document.getElementById("platformSchoolRecordId").value.trim().toLowerCase();
+    const schoolId = recordId || schoolCode;
+    const editingSchool = recordId ? state.schools.find((item) => item.school_id === recordId) : null;
     const payload = {
       moe_code: schoolCode,
       name: document.getElementById("platformSchoolName").value.trim(),
@@ -366,6 +380,10 @@
     const element = document.getElementById("platformSchoolStatus");
     try {
       if (!/^\d{6}$/.test(schoolCode)) throw new Error("教育部學校代碼須為 6 位數字");
+      if (recordId && !editingSchool) throw new Error("找不到正在編輯的學校，請按「新增學校」後重新輸入");
+      if (editingSchool && schoolCode !== String(editingSchool.moe_code || "")) {
+        throw new Error("既有學校的教育部代碼不可變更；若要建立另一間學校，請先按「新增學校」");
+      }
       if (!payload.name) throw new Error("請填寫學校名稱");
       if (!payload.domains.length) throw new Error("請填寫至少一個 Google Workspace 網域");
       if (!payload.admin_emails.length) throw new Error("請填寫至少一位排課管理員帳號");
@@ -376,14 +394,15 @@
       if (invalidAdmin) throw new Error(`管理員帳號格式不正確：${invalidAdmin}`);
       const outsideDomain = payload.admin_emails.find((email) => !domains.includes(email.toLowerCase().split("@")[1] || ""));
       if (outsideDomain) throw new Error(`管理員帳號必須使用已填寫的 Workspace 網域：${outsideDomain}`);
+      if (editingSchool && !confirm(`確定更新「${editingSchool.name}（${schoolCode}）」的學校設定？`)) return;
       state.savingSchool = true;
       updateActionButtons();
       element.textContent = "正在儲存學校…";
       await request(`/platform/schools/${encodeURIComponent(schoolId)}`, {
         method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
       });
-      document.getElementById("platformSchoolRecordId").value = schoolId;
       await loadSchools(`${payload.name}（${schoolCode}）已儲存。`);
+      if (!recordId) resetSchoolForm(`${payload.name}（${schoolCode}）已建立；表單已清空，可繼續新增下一間學校。`);
     } catch (error) {
       element.textContent = error.message;
     } finally {
@@ -520,7 +539,8 @@
     const saveSchoolButton = document.getElementById("platformSchoolSaveButton");
     if (saveSchoolButton) {
       saveSchoolButton.disabled = state.savingSchool;
-      saveSchoolButton.textContent = state.savingSchool ? "正在儲存…" : "儲存學校";
+      const editingSchool = !!document.getElementById("platformSchoolRecordId")?.value;
+      saveSchoolButton.textContent = state.savingSchool ? "正在儲存…" : (editingSchool ? "儲存變更" : "建立學校");
     }
     const newSchoolButton = document.getElementById("platformSchoolNewButton");
     if (newSchoolButton) newSchoolButton.disabled = state.savingSchool;
