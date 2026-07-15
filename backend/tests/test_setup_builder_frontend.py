@@ -34,9 +34,13 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert "學校 Google 帳號" in script
     assert "教育部學校代碼（6碼）" in html
     assert 'id="platformSchoolRecordId"' in html
+    assert 'id="platformSchoolFormMode">新增學校' in html
     assert "教育部學校代碼須為 6 位數字" in auth
     assert 'moe_code: schoolCode' in auth
     assert 'school.moe_code || "尚未設定"' in auth
+    assert 'document.getElementById("platformSchoolId").readOnly = true' in auth
+    assert "既有學校的教育部代碼不可變更" in auth
+    assert "表單已清空，可繼續新增下一間學校" in auth
 
 
 def test_setup_builder_javascript_has_valid_syntax():
