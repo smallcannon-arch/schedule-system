@@ -9,6 +9,9 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
     assert 'data-v="build"' in html
+    assert "<title>國民小學課務排程輔助系統｜正式版</title>" in html
+    assert 'name="application-name" content="國民小學課務排程輔助系統"' in html
+    assert "DEMO｜示範資料（已匿名化）" not in html
     assert 'id="setupClassesTable"' in html
     assert 'id="setupTeachersTable"' in html
     assert 'id="setupSubjectsTable"' in html
