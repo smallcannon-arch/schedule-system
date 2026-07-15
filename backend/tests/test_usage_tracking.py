@@ -3,6 +3,8 @@ from copy import deepcopy
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import firestore
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 import pytest
 
@@ -287,6 +289,17 @@ def test_extract_aggregation_count_matches_firestore_2_28_contract():
     assert schedule_store._extract_aggregation_count(
         [[SimpleNamespace(value=0)]]) == 0
     assert schedule_store._extract_aggregation_count([]) == 0
+
+
+def test_firestore_store_uses_real_document_reference_for_school_context():
+    client = firestore.Client(
+        project="contract-test", credentials=AnonymousCredentials())
+
+    store = FirestoreScheduleStore("contract-test", "school-a", client=client)
+
+    assert isinstance(store._school, firestore.DocumentReference)
+    assert store._school.id == "school-a"
+    assert store._school.path == "schedule_schools/school-a"
 
 
 @pytest.mark.parametrize("results", [
