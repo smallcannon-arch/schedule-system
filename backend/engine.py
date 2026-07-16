@@ -194,6 +194,15 @@ def _text(value):
     return str(value or "").strip()
 
 
+def _whole_number(value):
+    if isinstance(value, bool) or value in (None, ""):
+        raise ValueError
+    number = float(value)
+    if not number.is_integer():
+        raise ValueError
+    return int(number)
+
+
 def _list_values(value):
     if isinstance(value, (list, tuple, set)):
         source = value
@@ -680,14 +689,17 @@ def _load_data_v5(wb):
 
     # 班級
     classes, seen_classes = [], set()
-    for row in wb["班級"].iter_rows(min_row=2, values_only=True):
+    for row_number, row in enumerate(
+            wb["班級"].iter_rows(min_row=2, values_only=True), start=2):
         code = _text(row[0] if len(row) > 0 else None)
         if not code:
+            if any(_text(value) for value in row):
+                raise ValueError(f"班級工作表第 {row_number} 列缺少班級代碼")
             continue
         try:
-            grade = int(row[1])
+            grade = _whole_number(row[1] if len(row) > 1 else None)
         except (TypeError, ValueError):
-            raise ValueError(f"班級「{code}」的年級必須是 1 到 6")
+            raise ValueError(f"班級工作表第 {row_number} 列：{code}的年級必須是 1 到 6")
         if not 1 <= grade <= 6:
             raise ValueError(f"班級「{code}」的年級超出 1 到 6")
         if code in seen_classes:
@@ -702,21 +714,47 @@ def _load_data_v5(wb):
     # 教師：v6 讀取合併工作表左側；v5 仍支援獨立教師工作表。
     roster = {c["tutor"]: "導師" for c in classes if c["tutor"]}
     teacher_caps = {}
+    teacher_rows = {}
     ws = wb["教師與配課"] if is_v6 else wb["教師"]
     header_row = 2 if is_v6 else 1
     first_data_row = header_row + 1
     headers = [_text(c.value).replace(" ▾", "") for c in ws[header_row]][:7]
     cap_col = next((i for i, h in enumerate(headers) if "上限" in h), 2)
     minus_col = next((i for i, h in enumerate(headers) if "減課" in h), 3)
-    for row in ws.iter_rows(min_row=first_data_row, max_col=7, values_only=True):
+    for row_number, row in enumerate(
+            ws.iter_rows(min_row=first_data_row, max_col=7, values_only=True),
+            start=first_data_row):
         name = _text(row[0] if row else None)
         if not name:
+            if any(_text(value) for value in (row or ())):
+                raise ValueError(f"教師工作表第 {row_number} 列缺少教師姓名")
             continue
         role = _text(row[1] if len(row) > 1 else None) or roster.get(name, "其他")
-        roster[name] = role
         cap = row[cap_col] if cap_col < len(row) else None
         minus = row[minus_col] if minus_col < len(row) else None
-        teacher_caps[name] = {"cap": int(cap or 0), "minus": int(minus or 0)}
+        try:
+            normalized_cap = 0 if cap in (None, "") else _whole_number(cap)
+            normalized_minus = 0 if minus in (None, "") else _whole_number(minus)
+        except (TypeError, ValueError):
+            raise ValueError(f"教師工作表第 {row_number} 列的節數上限與減課節數必須是整數")
+        if normalized_cap < 0 or normalized_minus < 0:
+            raise ValueError(f"教師工作表第 {row_number} 列的節數上限與減課節數不可為負數")
+        incoming = {"role": role, "cap": normalized_cap, "minus": normalized_minus,
+                    "row": row_number}
+        previous = teacher_rows.get(name)
+        if previous:
+            conflicts = [label for key, label in (("role", "身分"), ("cap", "每週節數上限"),
+                                                   ("minus", "減課節數"))
+                         if previous[key] != incoming[key]]
+            if conflicts:
+                raise ValueError(
+                    f"教師工作表第 {row_number} 列：{name}與第 {previous['row']} 列重複，且"
+                    + "、".join(conflicts) + "不一致")
+            notes.append(f"教師工作表第 {row_number} 列：{name}重複，已合併為同一位教師")
+            continue
+        teacher_rows[name] = incoming
+        roster[name] = role
+        teacher_caps[name] = {"cap": normalized_cap, "minus": normalized_minus}
     d["roster"], d["teacher_caps"] = roster, teacher_caps
 
     # 場地：v5 以場地名稱為識別；原班教室統一使用 R00。
@@ -744,9 +782,12 @@ def _load_data_v5(wb):
 
     # 科目節數
     subjects = {}
-    for row in wb["科目節數"].iter_rows(min_row=2, values_only=True):
+    for row_number, row in enumerate(
+            wb["科目節數"].iter_rows(min_row=2, values_only=True), start=2):
         name = _text(row[0] if row else None)
         if not name:
+            if row and any(_text(value) for value in row):
+                raise ValueError(f"科目節數第 {row_number} 列缺少科目名稱")
             continue
         if name in subjects:
             raise ValueError(f"科目重複：{name}")
@@ -754,7 +795,7 @@ def _load_data_v5(wb):
         for grade in range(1, 7):
             raw = row[grade] if grade < len(row) else 0
             try:
-                hours[grade] = int(raw or 0)
+                hours[grade] = 0 if raw in (None, "") else _whole_number(raw)
             except (TypeError, ValueError):
                 raise ValueError(f"科目「{name}」{grade}年級節數必須是整數")
             if hours[grade] < 0:
@@ -779,15 +820,20 @@ def _load_data_v5(wb):
     # 年段時段
     grade_slot = {}
     grades_seen = set()
-    for row in wb["年段時段"].iter_rows(min_row=2, values_only=True):
+    for row_number, row in enumerate(
+            wb["年段時段"].iter_rows(min_row=2, values_only=True), start=2):
         if not row or row[0] in (None, ""):
+            if row and any(_text(value) for value in row[1:]):
+                raise ValueError(f"年段時段第 {row_number} 列缺少年級")
             continue
         try:
-            grade = int(row[0])
+            grade = _whole_number(row[0])
         except (TypeError, ValueError):
-            continue
+            raise ValueError(f"年段時段第 {row_number} 列的年級必須是 1 到 6")
         if not 1 <= grade <= 6:
-            continue
+            raise ValueError(f"年段時段第 {row_number} 列的年級必須是 1 到 6")
+        if grade in grades_seen:
+            raise ValueError(f"年段時段第 {row_number} 列：{grade}年級重複設定")
         grades_seen.add(grade)
         for day_i, day in enumerate(DAYS):
             for p_i, period in enumerate(PERIODS):
@@ -816,18 +862,19 @@ def _load_data_v5(wb):
         "sources": native_col("來源班級", 8), "students": native_col("學生人數", 9),
         "mode": native_col("上課方式", 10),
     }
-    for row in native_ws.iter_rows(min_row=2, values_only=True):
-        if not row or row[native_idx["grade"]] in (None, ""):
+    for row_number, row in enumerate(
+            native_ws.iter_rows(min_row=2, values_only=True), start=2):
+        if not row or not any(_text(value) for value in row):
             continue
         try:
-            grade, period = int(row[native_idx["grade"]]), int(row[native_idx["period"]])
+            grade = _whole_number(row[native_idx["grade"]])
+            period = _whole_number(row[native_idx["period"]])
         except (TypeError, ValueError):
-            notes.append("本土語分組列的年級或節次無效，已略過")
-            continue
+            raise ValueError(f"本土語分組第 {row_number} 列的年級或節次無效")
         day = _text(row[native_idx["day"]])
         if grade not in range(1, 7) or day not in DAYS or period not in PERIODS:
-            notes.append(f"本土語分組時段無效，已略過：{grade}年級 週{day} 第{period}節")
-            continue
+            raise ValueError(
+                f"本土語分組第 {row_number} 列時段無效：{grade}年級 週{day} 第{period}節")
         previous = band_seen and next((x for x in band_seen if x[0] == grade), None)
         if previous and previous[1:] != (day, period):
             raise ValueError(f"本土語分組同一年級出現不同時段：{grade}年級")
@@ -861,9 +908,12 @@ def _load_data_v5(wb):
             if class_by_code[code]["grade"] != grade:
                 raise ValueError(f"{group_name}的來源班級 {code} 不屬於{grade}年級")
         try:
-            students = max(0, int(row[native_idx["students"]] or 0)) if len(row) > native_idx["students"] else 0
+            raw_students = row[native_idx["students"]] if len(row) > native_idx["students"] else None
+            students = 0 if raw_students in (None, "") else _whole_number(raw_students)
         except (TypeError, ValueError):
             raise ValueError(f"{group_name}的學生人數必須是整數")
+        if students < 0:
+            raise ValueError(f"{group_name}的學生人數不可為負數")
         mode = _text(row[native_idx["mode"]] if len(row) > native_idx["mode"] else None) or ("直播共學" if "直播" in language else "實體")
         if not teacher:
             raise ValueError(f"{group_name}尚未填寫授課教師")
@@ -898,7 +948,7 @@ def _load_data_v5(wb):
     class_map = {c["code"]: c for c in classes}
     cn_grade = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6}
 
-    def expand_classes(spec, subject):
+    def expand_classes(spec, subject, row_number):
         result = []
         for token in re.split(r"[、,，;；\s]+", _text(spec)):
             if not token:
@@ -913,32 +963,48 @@ def _load_data_v5(wb):
             elif token in class_map:
                 result.append(token)
             else:
-                notes.append(f"配課「{subject}」的班級「{token}」不存在，已略過")
+                raise ValueError(
+                    f"配課工作表第 {row_number} 列：{subject}的班級「{token}」不存在")
         return list(dict.fromkeys(result))
 
     assignment_ws = wb["教師與配課"] if is_v6 else wb["配課"]
     assignment_row = 3 if is_v6 else 2
     assignment_offset = 8 if is_v6 else 0
-    for row in assignment_ws.iter_rows(min_row=assignment_row, values_only=True):
+    explicit_assignments = {}
+    for row_number, row in enumerate(
+            assignment_ws.iter_rows(min_row=assignment_row, values_only=True),
+            start=assignment_row):
         teacher = _text(row[assignment_offset] if len(row) > assignment_offset else None)
         subject = _normalize_subject_name(
             row[assignment_offset + 1] if len(row) > assignment_offset + 1 else None)
         if not teacher and not subject:
+            target = _text(row[assignment_offset + 2] if len(row) > assignment_offset + 2 else None)
+            if target:
+                raise ValueError(f"配課工作表第 {row_number} 列缺少教師與科目")
             continue
         if not teacher or not subject:
-            notes.append(f"配課列缺少教師或科目，已略過：{row[assignment_offset:assignment_offset + 3]}")
-            continue
+            raise ValueError(f"配課工作表第 {row_number} 列必須完整填寫教師、科目與任教班級")
         if subject not in subjects:
-            notes.append(f"配課科目「{subject}」不在科目節數表，已略過")
-            continue
+            raise ValueError(f"配課工作表第 {row_number} 列：科目「{subject}」不在科目節數表")
         if teacher not in roster:
-            roster[teacher] = "其他"
-            notes.append(f"配課教師「{teacher}」未列於教師表，暫以「其他」角色處理")
-        targets = expand_classes(row[assignment_offset + 2] if len(row) > assignment_offset + 2 else None, subject)
+            raise ValueError(f"配課工作表第 {row_number} 列：教師「{teacher}」未列於教師表")
+        raw_targets = row[assignment_offset + 2] if len(row) > assignment_offset + 2 else None
+        if not _text(raw_targets):
+            raise ValueError(f"配課工作表第 {row_number} 列缺少任教班級")
+        targets = expand_classes(raw_targets, subject, row_number)
         if not targets:
-            notes.append(f"配課「{teacher}／{subject}」沒有有效任教班級")
+            notes.append(
+                f"配課工作表第 {row_number} 列：{teacher}／{subject}目前沒有符合的任教班級，已略過")
+            continue
         for code in targets:
             if subjects[subject]["hours"][class_map[code]["grade"]] > 0:
+                key = (code, subject)
+                previous = explicit_assignments.get(key)
+                if previous and previous["teacher"] != teacher:
+                    raise ValueError(
+                        f"配課工作表第 {row_number} 列：{code} {subject}已在第 {previous['row']} 列"
+                        f"配給{previous['teacher']}")
+                explicit_assignments[key] = {"teacher": teacher, "row": row_number}
                 assign[(code, subject)] = teacher
     d["assign"] = assign
     d["room_override"], d["prefs"] = {}, []
@@ -952,19 +1018,34 @@ def _load_data_v5(wb):
     if limit_sheet:
         cn_grade = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6}
         class_codes = {item["code"] for item in classes}
-        for row in limit_sheet.iter_rows(min_row=2, values_only=True):
+        for row_number, row in enumerate(
+                limit_sheet.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or not any(_text(value) for value in row):
+                continue
             target = _text(row[0] if len(row) > 0 else None)
             raw_day = _text(row[1] if len(row) > 1 else None)
             raw_period = _text(row[2] if len(row) > 2 else None)
             kind = _text(row[3] if len(row) > 3 else None) or "不可排"
-            if not target or kind != "不可排":
+            if not target or not raw_day or not raw_period:
+                raise ValueError(
+                    f"{limit_sheet.title}第 {row_number} 列必須完整填寫對象、星期與節次")
+            if kind != "不可排":
                 continue
+            if raw_day != "每日" and raw_day not in DAYS:
+                raise ValueError(f"{limit_sheet.title}第 {row_number} 列的星期不正確：{raw_day}")
+            if raw_period != "全部":
+                try:
+                    parsed_period = _whole_number(raw_period)
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        f"{limit_sheet.title}第 {row_number} 列的節次不正確：{raw_period}")
+                if parsed_period not in PERIODS:
+                    raise ValueError(
+                        f"{limit_sheet.title}第 {row_number} 列的節次不正確：{raw_period}")
             days = DAYS if raw_day == "每日" else [raw_day]
-            periods = PERIODS if raw_period == "全部" else ([int(raw_period)] if raw_period.isdigit() else [])
+            periods = PERIODS if raw_period == "全部" else [parsed_period]
             for day in days:
                 for period in periods:
-                    if day not in DAYS or period not in PERIODS:
-                        continue
                     if target in class_codes:
                         class_limit.add((target, day, period))
                     elif "年級" in target:
@@ -987,20 +1068,23 @@ def _load_data_v5(wb):
             teacher = _text(row[3] if len(row) > 3 else None)
             if not code and not subject and not teacher:
                 continue
-            if code not in class_map or subject not in subjects or not teacher:
-                notes.append(f"資源班綁課資料不完整，已略過：{group}")
-                continue
+            if not code or not subject or not teacher:
+                raise ValueError(
+                    f"資源班overlay第 {row_number} 列必須完整填寫來源班級、科目與教師")
+            if code not in class_map:
+                raise ValueError(f"資源班overlay第 {row_number} 列的來源班級不存在：{code}")
+            if subject not in subjects:
+                raise ValueError(f"資源班overlay第 {row_number} 列的科目不存在：{subject}")
+            if teacher not in roster:
+                raise ValueError(f"資源班overlay第 {row_number} 列的教師不在名冊：{teacher}")
             day = _text(row[4] if len(row) > 4 else None)
             raw_period = row[5] if len(row) > 5 else None
             try:
-                period = int(raw_period) if raw_period not in (None, "") else None
+                period = _whole_number(raw_period) if raw_period not in (None, "") else None
             except (TypeError, ValueError):
-                notes.append(f"資源班綁課節次不正確，已略過：{group}")
-                continue
+                raise ValueError(f"資源班overlay第 {row_number} 列的節次不正確：{group}")
             if day and day not in DAYS or period is not None and period not in PERIODS:
-                notes.append(f"資源班綁課時段不正確，已略過：{group}")
-                continue
-            roster.setdefault(teacher, "資源班教師")
+                raise ValueError(f"資源班overlay第 {row_number} 列的時段不正確：{group}")
             overlay.append({"grp": group, "class": code, "subj": subject, "t": teacher,
                             "day": day or None, "p": period})
     d["overlay"] = overlay

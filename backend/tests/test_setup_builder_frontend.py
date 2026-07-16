@@ -267,6 +267,57 @@ def test_teacher_quick_limits_and_combined_resource_groups_are_wired():
     assert limit_start < html.index('id="gGrid"') < teacher_grid < html.index('id="limTbl"') < limit_end
 
 
+def test_v6_browser_import_reports_invalid_rows_and_accepts_valid_fixture():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const XLSX=require(process.argv[2]);
+const html=fs.readFileSync(process.argv[1],'utf8');
+const source=html.slice(html.indexOf('function importRowHasData'),html.indexOf('ScheduleSetup.init'));
+const bytes=fs.readFileSync(process.argv[3]);
+function parse(workbook){
+  const context={DEMO0:{rules:[]},DAYS:['一','二','三','四','五'],
+    nativeSourceCodes:value=>String(value||'').split(/[、,，;；\s]+/).filter(Boolean),console};
+  context.__wb=workbook;context.__XLSX=XLSX;vm.createContext(context);vm.runInContext(source,context);
+  vm.runInContext(`globalThis.__S=n=>__XLSX.utils.sheet_to_json(__wb.Sheets[n],{header:1,defval:null});
+    globalThis.__opt=n=>__wb.Sheets[n]?__S(n):[];globalThis.__nd=parseV5(__wb,__S,__opt);`,context);
+  return context.__nd;
+}
+const baseline=parse(XLSX.read(bytes,{type:'buffer'}));
+const bad=XLSX.read(bytes,{type:'buffer'});
+function addRow(name,headers,row,origin){
+  if(!bad.Sheets[name]){bad.Sheets[name]=XLSX.utils.aoa_to_sheet([headers]);bad.SheetNames.push(name)}
+  XLSX.utils.sheet_add_aoa(bad.Sheets[name],[row],{origin});
+}
+XLSX.utils.sheet_add_aoa(bad.Sheets['班級'],[['7甲','七年級','王導師']],{origin:'A11'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,'組長',20,0]],{origin:'A11'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,null,'1甲']],{origin:'I12'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['科目節數'],[['閱讀','兩節',0,0,0,0,0,'原班教室','否','']],{origin:'A20'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['年段時段'],[['七年級',1,1]],{origin:'A9'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['本土語分組'],[[1,'一',1,'客語','名冊外教師','原班教室','','測試組','1甲',1,'實體']],{origin:'A20'});
+addRow('不排課時間',['對象','星期','節次','類型','備註'],['王導師','六',1,'不可排',''],'A20');
+addRow('資源班overlay',['組別','原班','科目','資源班教師','星期','節次'],['測試組','1甲','國語文','名冊外教師','',''],'A20');
+let error='';try{parse(bad)}catch(reason){error=String(reason.message||reason)}
+process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:baseline._warn,error}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html"),
+         str(FORMAL / "vendor" / "xlsx.full.min.js"),
+         str(FORMAL / "backend" / "tests" / "fixtures" / "排課母版_v6.xlsx")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["classes"] == 3
+    assert any("目前沒有符合的任教班級" in warning for warning in output["warnings"])
+    assert "班級 第 11 列" in output["error"]
+    assert "教師與配課 第 11 列" in output["error"]
+    assert "教師與配課 第 12 列" in output["error"]
+    assert "科目節數 第 20 列" in output["error"]
+    assert "年段時段 第 9 列" in output["error"]
+    assert "本土語分組 第 20 列" in output["error"]
+    assert "不排課時間 第 20 列" in output["error"]
+    assert "資源班overlay 第 20 列" in output["error"]
+
+
 def test_teacher_quick_limits_compact_rows_and_preserve_manual_rules():
     script = r"""
 const fs=require('fs'),vm=require('vm');

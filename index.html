@@ -3396,6 +3396,46 @@ async function importXlsx(inp){
   };
   rd.readAsArrayBuffer(f);inp.value='';
 }
+function importRowHasData(row,columns){
+  const values=Array.isArray(columns)?columns.map(index=>row?.[index]):(row||[]);
+  return values.some(value=>value!==null&&value!==undefined&&String(value).trim()!=='');
+}
+function importIssue(nd,level,sheet,row,message){
+  const target=level==='error'?'_errors':'_warn';nd[target]=nd[target]||[];
+  nd[target].push(`${sheet}${row>0?` 第 ${row} 列`:''}：${message}`);
+}
+function importNonNegativeInteger(nd,sheet,row,label,value,blankValue=0){
+  if(value===null||value===undefined||String(value).trim()==='')return blankValue;
+  const number=Number(value);
+  if(!Number.isInteger(number)||number<0){importIssue(nd,'error',sheet,row,`${label}必須是 0 以上整數`);return blankValue}
+  return number;
+}
+function finalizeImportedWorkbook(nd){
+  const codes=new Set(),activeGrades=new Set();
+  for(const classroom of nd.classes||[]){
+    const code=String(classroom.code||'').trim(),grade=Number(classroom.g);
+    if(!code)importIssue(nd,'error','班級',0,'班級代碼不可空白');
+    else if(codes.has(code))importIssue(nd,'error','班級',0,`班級代碼重複：${code}`);
+    codes.add(code);
+    if(!Number.isInteger(grade)||grade<1||grade>6)importIssue(nd,'error','班級',0,`${code||'未命名班級'}的年級必須是 1 到 6`);
+    else activeGrades.add(grade);
+  }
+  for(const grade of activeGrades)if(!Array.isArray(nd.gslot?.[grade]))importIssue(nd,'error','年段時段',0,`缺少 ${grade} 年級設定`);
+  for(const [subject,info] of Object.entries(nd.subjects||{}))for(const [index,hours] of (info.hours||[]).entries())
+    if(!Number.isInteger(hours)||hours<0)importIssue(nd,'error','科目節數',0,`${subject} ${index+1} 年級節數必須是 0 以上整數`);
+  for(const [code,row] of Object.entries(nd.assign||{})){
+    if(!codes.has(code))importIssue(nd,'error','配課',0,`引用不存在的班級：${code}`);
+    for(const [subject,teacher] of Object.entries(row||{})){
+      if(!Object.prototype.hasOwnProperty.call(nd.subjects||{},subject))importIssue(nd,'error','配課',0,`${code}引用不存在的科目：${subject}`);
+      if(teacher&&!Object.prototype.hasOwnProperty.call(nd.roster||{},teacher))importIssue(nd,'error','配課',0,`${code} ${subject}的教師「${teacher}」不在名冊`);
+    }
+  }
+  if(nd._errors?.length){
+    const errors=[...new Set(nd._errors)],shown=errors.slice(0,12),more=errors.length-shown.length;
+    throw new Error(`Excel 資料檢核未通過（${errors.length} 項）：\n${shown.join('\n')}${more?`\n另有 ${more} 項，請先修正上述資料後再匯入。`:''}`);
+  }
+  delete nd._errors;return nd;
+}
 function parseWorkbook(buf){
   const reader=window.SCHEDULE_XLSX_READER;
   if(!reader)throw new Error('安全的 Excel 讀取元件尚未載入');
@@ -3407,17 +3447,21 @@ function parseWorkbook(buf){
   };
   const opt=n=>wb.Sheets[n]?reader.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null}):[];
   if(wb.Sheets['班級']&&((wb.Sheets['配課']&&wb.Sheets['教師'])||wb.Sheets['教師與配課']))return parseV5(wb,S,opt);
-  const nd={};
+  const nd={_warn:[],_errors:[]};
   // 學校基本資料（選填）
   const sch=opt('學校基本資料');
   nd._school=sch.length>0&&sch[0]&&sch[0][1]?String(sch[0][1]):'';
   // 班級
-  nd.classes=[];const cnt={};
-  for(const r of S('班級基本資料').slice(1)){
-    if(!r||!r[0])continue;
-    const g=+r[1];if(!g)continue;
+  nd.classes=[];const cnt={},legacyClassCodes=new Set(),legacyClassRows=S('班級基本資料');
+  for(let index=1;index<legacyClassRows.length;index++){
+    const r=legacyClassRows[index];if(!importRowHasData(r))continue;
+    const code=String(r?.[0]||'').trim(),g=Number(r?.[1]);
+    if(!code){importIssue(nd,'error','班級基本資料',index+1,'缺少班級代碼');continue}
+    if(!Number.isInteger(g)||g<1||g>6){importIssue(nd,'error','班級基本資料',index+1,`${code}的年級必須是 1 到 6`);continue}
+    if(legacyClassCodes.has(code)){importIssue(nd,'error','班級基本資料',index+1,`班級代碼重複：${code}`);continue}
+    legacyClassCodes.add(code);
     cnt[g]=(cnt[g]||0)+1;
-    nd.classes.push({g,i:cnt[g],code:String(r[0]),tutor:String(r[2]||''),res:String(r[3]||'')==='是'});
+    nd.classes.push({g,i:cnt[g],code,tutor:String(r[2]||'').trim(),res:String(r[3]||'')==='是'});
   }
   if(!nd.classes.length)throw new Error('班級基本資料無有效班級');
   // 科目
@@ -3435,17 +3479,29 @@ function parseWorkbook(buf){
       pairMode:String(r[18]||'')};
   }
   // 教師
-  nd.roster={};
-  for(const r of S('教師名冊').slice(1))
-    if(r&&r[0])nd.roster[String(r[0])]=String(r[1]||'');
+  nd.roster={};const legacyTeacherRows=S('教師名冊');
+  for(let index=1;index<legacyTeacherRows.length;index++){
+    const r=legacyTeacherRows[index];if(!importRowHasData(r))continue;
+    const name=String(r?.[0]||'').trim(),role=String(r?.[1]||'').trim();
+    if(!name){importIssue(nd,'error','教師名冊',index+1,'資料列缺少教師姓名');continue}
+    if(Object.prototype.hasOwnProperty.call(nd.roster,name)){
+      if(role&&nd.roster[name]&&role!==nd.roster[name])importIssue(nd,'error','教師名冊',index+1,`${name}重複且身分不一致`);
+      else importIssue(nd,'warning','教師名冊',index+1,`${name}重複，已合併為同一位教師`);
+      continue;
+    }
+    nd.roster[name]=role;
+  }
   // 年段時段
-  nd.gslot={};
-  for(const r of S('設定_年段時段').slice(1)){
-    if(!r||!r[0])continue;
-    const g=+r[0];if(!g||g>6)continue;
+  nd.gslot={};const legacySlotRows=S('設定_年段時段');
+  for(let index=1;index<legacySlotRows.length;index++){
+    const r=legacySlotRows[index];if(!importRowHasData(r))continue;
+    const g=Number(r?.[0]);
+    if(!Number.isInteger(g)||g<1||g>6){importIssue(nd,'error','設定_年段時段',index+1,'年級必須是 1 到 6');continue}
+    if(nd.gslot[g]){importIssue(nd,'error','設定_年段時段',index+1,`${g} 年級重複設定`);continue}
     nd.gslot[g]=[0,1,2,3,4].map(d=>[0,1,2,3,4,5,6].map(p=>r[1+d*7+p]?1:0));
   }
-  for(let g=1;g<=6;g++)if(!nd.gslot[g])nd.gslot[g]=nd.gslot[Math.max(...Object.keys(nd.gslot))]||[[1,1,1,1,1,1,1]];
+  for(const g of new Set(nd.classes.map(c=>c.g)))if(!nd.gslot[g])importIssue(nd,'error','設定_年段時段',0,`缺少 ${g} 年級設定`);
+  for(let g=1;g<=6;g++)if(!nd.gslot[g])nd.gslot[g]=[[1,1,1,1,0,0,0],[1,1,1,1,1,1,1],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0]];
   // 場地
   nd.rooms={};const rname={},rprio={};
   for(const r of S('設定_場地表').slice(1)){
@@ -3515,20 +3571,24 @@ function parseWorkbook(buf){
   for(const r of opt('設定_排課規則清單').slice(1))
     if(r&&r[0])nd.rules.push([0,1,2,3,4,5].map(c=>String(r[c]==null?'':r[c])));
   if(!nd.rules.length)nd.rules=DEMO0.rules;
-  return nd;
+  return finalizeImportedWorkbook(nd);
 }
 
 /* ═══ 母版 v5 解析（極簡8分頁、教師中心配課）═══ */
 function parseV5(wb,S,opt){
-  const nd={_warn:[]};
+  const nd={_warn:[],_errors:[]};
   const sch=opt('學校基本資料');
   nd._school=sch.find(r=>r&&String(r[0]||'').includes('學校'))?.[1]||'';
   // 班級
-  nd.classes=[];const cnt={};
-  for(const r of S('班級').slice(1)){
-    if(!r||!r[0]||!+r[1])continue;
-    const g=+r[1];cnt[g]=(cnt[g]||0)+1;
-    nd.classes.push({g,i:cnt[g],code:String(r[0]).trim(),tutor:String(r[2]||'').trim(),res:String(r[3]||'')==='是'});
+  nd.classes=[];const cnt={},classCodes=new Set(),classRows=S('班級');
+  for(let index=1;index<classRows.length;index++){
+    const r=classRows[index];if(!importRowHasData(r))continue;
+    const code=String(r?.[0]||'').trim(),g=Number(r?.[1]);
+    if(!code){importIssue(nd,'error','班級',index+1,'缺少班級代碼');continue}
+    if(!Number.isInteger(g)||g<1||g>6){importIssue(nd,'error','班級',index+1,`${code}的年級必須是 1 到 6`);continue}
+    if(classCodes.has(code)){importIssue(nd,'error','班級',index+1,`班級代碼重複：${code}`);continue}
+    classCodes.add(code);cnt[g]=(cnt[g]||0)+1;
+    nd.classes.push({g,i:cnt[g],code,tutor:String(r[2]||'').trim(),res:String(r[3]||'')==='是'});
   }
   if(!nd.classes.length)throw new Error('「班級」分頁無有效資料（灰色範例列請改成貴校班級）');
   // 教師：v6 由「教師與配課」左側讀取；v5 仍支援獨立「教師」分頁。
@@ -3538,17 +3598,42 @@ function parseV5(wb,S,opt){
   }
   const mergedRows=wb.Sheets['教師與配課']?S('教師與配課'):null;
   const trows=mergedRows?mergedRows.slice(1).map(r=>(r||[]).slice(0,7)):S('教師');
+  const teacherSheetName=mergedRows?'教師與配課':'教師';
   const th=(trows[0]||[]).map(x=>String(x||''));
   const iCap=th.findIndex(x=>x.includes('上限')),iMinus=th.findIndex(x=>x.includes('減課')),
     iEmail=th.findIndex(x=>x.includes('Google')||x.includes('帳號')),
     iNative=th.findIndex(x=>x.includes('本土語專長')||x.includes('可授語別'));
-  for(const r of trows.slice(1)){
-    if(!r||!r[0])continue;
-    const nm=String(r[0]).trim();
-    nd.roster[nm]=String(r[1]||nd.roster[nm]||'').trim();
-    nd.tcap[nm]={cap:iCap>0?(+r[iCap]||0):0, minus:iMinus>0?(+r[iMinus]||0):0};
-    if(iEmail>0&&r[iEmail])nd.teacherAccounts[nm]=String(r[iEmail]).trim().toLowerCase();
-    nd.teacherNativeLangs[nm]=iNative>0?nativeSourceCodes(r[iNative]):[];
+  const teacherMeta=new Map();
+  for(let index=1;index<trows.length;index++){
+    const r=trows[index],excelRow=mergedRows?index+2:index+1;if(!importRowHasData(r,[0,1,2,3,4,5,6]))continue;
+    const nm=String(r?.[0]||'').trim();
+    if(!nm){importIssue(nd,'error',teacherSheetName,excelRow,'教師名冊資料缺少姓名');continue}
+    const role=String(r[1]||'').trim(),rawCap=iCap>0?r[iCap]:null,rawMinus=iMinus>0?r[iMinus]:null;
+    const hasCap=rawCap!==null&&rawCap!==undefined&&String(rawCap).trim()!=='',hasMinus=rawMinus!==null&&rawMinus!==undefined&&String(rawMinus).trim()!=='';
+    const cap=hasCap?importNonNegativeInteger(nd,teacherSheetName,excelRow,`${nm}每週節數上限`,rawCap):null;
+    const minus=hasMinus?importNonNegativeInteger(nd,teacherSheetName,excelRow,`${nm}減課節數`,rawMinus):null;
+    const email=iEmail>0?String(r[iEmail]||'').trim().toLowerCase():'',native=iNative>0?nativeSourceCodes(r[iNative]).sort():[];
+    const incoming={role,cap,minus,email,native,row:excelRow},previous=teacherMeta.get(nm);
+    if(previous){
+      const conflicts=[];
+      if(role&&previous.role&&role!==previous.role)conflicts.push('身分');
+      if(cap!==null&&previous.cap!==null&&cap!==previous.cap)conflicts.push('每週節數上限');
+      if(minus!==null&&previous.minus!==null&&minus!==previous.minus)conflicts.push('減課節數');
+      if(email&&previous.email&&email!==previous.email)conflicts.push('Google 帳號');
+      if(native.length&&previous.native.length&&native.join('|')!==previous.native.join('|'))conflicts.push('可授本土語別');
+      if(conflicts.length)importIssue(nd,'error',teacherSheetName,excelRow,`${nm}與第 ${previous.row} 列重複，且${conflicts.join('、')}不一致`);
+      else importIssue(nd,'warning',teacherSheetName,excelRow,`${nm}重複，已合併為同一位教師`);
+      previous.role=previous.role||role;previous.cap=previous.cap===null?cap:previous.cap;previous.minus=previous.minus===null?minus:previous.minus;
+      previous.email=previous.email||email;previous.native=previous.native.length?previous.native:native;
+      continue;
+    }
+    teacherMeta.set(nm,incoming);
+  }
+  for(const [nm,meta] of teacherMeta){
+    nd.roster[nm]=meta.role||nd.roster[nm]||'';
+    nd.tcap[nm]={cap:meta.cap===null?0:meta.cap,minus:meta.minus===null?0:meta.minus};
+    if(meta.email)nd.teacherAccounts[nm]=meta.email;
+    nd.teacherNativeLangs[nm]=meta.native;
   }
   // 場地（以名稱為識別；「原班」→不佔場地）
   nd.rooms={R00:99};const rprio={};
@@ -3560,12 +3645,16 @@ function parseV5(wb,S,opt){
     if(r[2]&&k!=='R00')rprio[k]=+r[2];
   }
   // 科目
-  nd.subjects={};
-  for(const r of S('科目節數').slice(1)){
-    if(!r||!r[0])continue;
+  nd.subjects={};const subjectRows=S('科目節數');
+  for(let index=1;index<subjectRows.length;index++){
+    const r=subjectRows[index];if(!importRowHasData(r))continue;
+    const name=String(r?.[0]||'').trim();
+    if(!name){importIssue(nd,'error','科目節數',index+1,'資料列缺少科目名稱');continue}
+    if(Object.prototype.hasOwnProperty.call(nd.subjects,name)){importIssue(nd,'error','科目節數',index+1,`科目重複：${name}`);continue}
     const rule=String(r[9]||'');
-    nd.subjects[String(r[0]).trim()]={
-      hours:[1,2,3,4,5,6].map(c=>+(r[c]||0)),
+    const hours=[1,2,3,4,5,6].map(grade=>importNonNegativeInteger(nd,'科目節數',index+1,`${name} ${grade} 年級節數`,r[grade]));
+    nd.subjects[name]={
+      hours,
       room:roomKey(r[7]),
       banned:/不排第4/.test(rule)?[4,5]:[],
       block:rule==='2+1分兩天'?'2+1':(rule==='兩節連堂'?'2連堂':''),
@@ -3573,43 +3662,59 @@ function parseV5(wb,S,opt){
       pairMode:''};
   }
   // 年段時段
-  nd.gslot={};
-  for(const r of S('年段時段').slice(1)){
-    if(!r||!+r[0])continue;
-    const g=+r[0];if(g>6)continue;
+  nd.gslot={};const slotRows=S('年段時段');
+  for(let index=1;index<slotRows.length;index++){
+    const r=slotRows[index];if(!importRowHasData(r))continue;
+    const g=Number(r?.[0]);
+    if(!Number.isInteger(g)||g<1||g>6){importIssue(nd,'error','年段時段',index+1,'年級必須是 1 到 6');continue}
+    if(nd.gslot[g]){importIssue(nd,'error','年段時段',index+1,`${g} 年級重複設定`);continue}
     nd.gslot[g]=[0,1,2,3,4].map(d=>[0,1,2,3,4,5,6].map(p=>r[1+d*7+p]?1:0));
+    if(!nd.gslot[g].flat().some(Boolean))importIssue(nd,'error','年段時段',index+1,`${g} 年級沒有任何可排時段`);
   }
+  for(const g of new Set(nd.classes.map(c=>c.g)))if(!nd.gslot[g])importIssue(nd,'error','年段時段',0,`缺少 ${g} 年級設定`);
   for(let g=1;g<=6;g++)if(!nd.gslot[g])nd.gslot[g]=[[1,1,1,1,0,0,0],[1,1,1,1,1,1,1],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0]];
   // 本土語分組 → 鎖定＋場地封鎖＋授課與協同教師硬封鎖
   nd.locks=[];nd.derived=[];nd.nativeBands=[];nd.nativeGroups=[];
-  const blocked=new Set();const bandDone=new Set();
+  const blocked=new Set();const bandDone=new Set(),nativeBandSlots=new Map(),nativeGroupNames=new Set(),nativeRoomLoad=new Map();
   const nativeSheet=opt('本土語分組'),nativeHeaders=(nativeSheet[0]||[]).map(value=>String(value||'').trim());
   const nativeColumn=(label,fallback)=>{const found=nativeHeaders.findIndex(value=>value.includes(label));return found>=0?found:fallback};
   const ni={g:nativeColumn('年級',0),d:nativeColumn('星期',1),p:nativeColumn('節次',2),lang:nativeColumn('語別',3),
     teacher:nativeColumn('授課教師',4),room:nativeColumn('教室',5),assistant:nativeColumn('協同教師',6),
     group:nativeColumn('分組名稱',7),sources:nativeColumn('來源班級',8),students:nativeColumn('學生人數',9),mode:nativeColumn('上課方式',10)};
-  for(const r of nativeSheet.slice(1)){
-    if(!r||!+r[ni.g]||!r[ni.d]||!r[ni.p])continue;
-    const g=+r[ni.g],d=String(r[ni.d]).trim(),p=+r[ni.p];
+  for(let index=1;index<nativeSheet.length;index++){
+    const r=nativeSheet[index];if(!importRowHasData(r))continue;
+    const excelRow=index+1,g=Number(r?.[ni.g]),d=String(r?.[ni.d]||'').trim(),p=Number(r?.[ni.p]);
+    if(!Number.isInteger(g)||g<1||g>6||!DAYS.includes(d)||!Number.isInteger(p)||p<1||p>7){
+      importIssue(nd,'error','本土語分組',excelRow,'年級、星期或節次格式不正確');continue;
+    }
+    const previousBand=nativeBandSlots.get(g);
+    if(previousBand&&previousBand!==`${d}|${p}`){importIssue(nd,'error','本土語分組',excelRow,`${g} 年級出現不同共同時段`);continue}
+    const teacher=String(r[ni.teacher]||'').trim(),assistant=String(r[ni.assistant]||'').trim();
+    if(!teacher){importIssue(nd,'error','本土語分組',excelRow,'缺少授課教師');continue}
+    const lang=String(r[ni.lang]||'本土語文').trim();
+    const rk=roomKey(r[ni.room]);
+    if(rk!=='R00'&&!Object.prototype.hasOwnProperty.call(nd.rooms,rk)){importIssue(nd,'error','本土語分組',excelRow,`教室「${rk}」不在場地表`);continue}
+    const groupName=String(r[ni.group]||`${g}年級${lang}${nd.nativeGroups.filter(item=>item.g===g).length+1}組`).trim();
+    if(nativeGroupNames.has(groupName)){importIssue(nd,'error','本土語分組',excelRow,`分組名稱重複：${groupName}`);continue}
+    const sources=nativeSourceCodes(r[ni.sources]||nd.classes.filter(c=>c.g===g).map(c=>c.code));
+    const invalidSource=sources.find(code=>!nd.classes.some(c=>c.code===code&&c.g===g));
+    if(invalidSource){importIssue(nd,'error','本土語分組',excelRow,`來源班級「${invalidSource}」不存在或不屬於 ${g} 年級`);continue}
+    const unknownTeacher=[teacher,assistant].filter(Boolean).find(name=>!Object.prototype.hasOwnProperty.call(nd.roster,name));
+    if(unknownTeacher){importIssue(nd,'error','本土語分組',excelRow,`教師「${unknownTeacher}」不在教師名冊`);continue}
+    const students=importNonNegativeInteger(nd,'本土語分組',excelRow,`${groupName}學生人數`,r[ni.students]);
+    const roomSlot=`${rk}|${d}|${p}`,roomLoad=(nativeRoomLoad.get(roomSlot)||0)+1;
+    if(rk!=='R00'&&roomLoad>nd.rooms[rk]){importIssue(nd,'error','本土語分組',excelRow,`${rk} 在週${d}第 ${p} 節超過可用容量`);continue}
+    nativeBandSlots.set(g,`${d}|${p}`);nativeGroupNames.add(groupName);nativeRoomLoad.set(roomSlot,roomLoad);
     if(!bandDone.has(g)){
       bandDone.add(g);
       nd.nativeBands.push({g,d,p});
       nd.classes.filter(c=>c.g===g).forEach(c=>nd.locks.push({c:c.code,d,p,s:'本土語文'}));
     }
-    const rk=roomKey(r[ni.room]);
-    if(rk!=='R00')blocked.add(rk+'|'+d+'|'+p);
-    const teacher=String(r[ni.teacher]||'').trim(),assistant=String(r[ni.assistant]||'').trim();
-    const lang=String(r[ni.lang]||'本土語文').trim();
+    if(rk!=='R00')blocked.add(roomSlot);
     nd.nativeGroups.push({g,d,p,lang,t:teacher,room:rk,assistant,
-      grp:String(r[ni.group]||`${g}年級${lang}${nd.nativeGroups.filter(item=>item.g===g).length+1}組`).trim(),
-      sources:nativeSourceCodes(r[ni.sources]||nd.classes.filter(c=>c.g===g).map(c=>c.code)),
-      students:Math.max(0,+r[ni.students]||0),mode:String(r[ni.mode]||(/直播/.test(lang)?'直播共學':'實體')).trim()});
+      grp:groupName,sources,students,mode:String(r[ni.mode]||(/直播/.test(lang)?'直播共學':'實體')).trim()});
     for(const name of [teacher,assistant])if(name){
       nd.derived.push([name,d,p]);
-      if(!Object.prototype.hasOwnProperty.call(nd.roster,name)){
-        nd.roster[name]='其他';nd.tcap[name]={cap:0,minus:0};nd.teacherNativeLangs[name]=[];nd.teacherSubjects[name]=[];
-        nd._warn.push(`本土語教師「${name}」未列在教師名冊，已自動加入名冊`);
-      }
     }
   }
   nd.blocked=[...blocked].map(x=>{const[a,b,c]=x.split('|');return[a,b,+c]});
@@ -3626,7 +3731,8 @@ function parseV5(wb,S,opt){
     }
   }
   const CN5={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6};
-  const expand=(spec,subj)=>{
+  const assignmentSheetName=mergedRows?'教師與配課':'配課';
+  const expand=(spec,subj,excelRow)=>{
     const out=[];
     for(let tk of String(spec||'').split(/[、,，;；\s]+/)){
       tk=tk.trim();if(!tk)continue;
@@ -3636,18 +3742,27 @@ function parseV5(wb,S,opt){
         const g=CN5[tk[0]]||+tk[0];
         out.push(...nd.classes.filter(c=>c.g===g).map(c=>c.code));
       }else if(gOf[tk])out.push(tk);
-      else nd._warn.push(`配課「${subj}」的班級「${tk}」找不到，已略過`);
+      else importIssue(nd,'error',assignmentSheetName,excelRow,`配課「${subj}」的班級「${tk}」找不到`);
     }
     return out;
   };
   const arows=mergedRows?mergedRows.slice(1).map(r=>[r?.[8],r?.[9],r?.[10]]):S('配課');
-  for(const r of arows.slice(1)){
-    if(!r||!r[0]||!r[1])continue;
+  const explicitAssignments=new Map();
+  for(let index=1;index<arows.length;index++){
+    const r=arows[index],excelRow=mergedRows?index+2:index+1;if(!importRowHasData(r))continue;
+    if(!r?.[0]||!r?.[1]||!r?.[2]){importIssue(nd,'error',assignmentSheetName,excelRow,'配課資料必須完整填寫教師、科目與任教班級');continue}
     const t=String(r[0]).trim(),rawSubj=String(r[1]).trim();
     const subj=/^(閩南語|臺語|台語|本土語文[（(]閩南語[）)])$/.test(rawSubj)?'本土語文':rawSubj;
-    if(!nd.subjects[subj]){nd._warn.push(`配課科目「${subj}」不在科目節數表，該列略過`);continue}
-    for(const code of expand(r[2],subj))
+    if(!nd.subjects[subj]){importIssue(nd,'error',assignmentSheetName,excelRow,`配課科目「${subj}」不在科目節數表`);continue}
+    if(!Object.prototype.hasOwnProperty.call(nd.roster,t)){importIssue(nd,'error',assignmentSheetName,excelRow,`配課教師「${t}」不在教師名冊`);continue}
+    const targets=expand(r[2],subj,excelRow);
+    if(!targets.length){importIssue(nd,'warning',assignmentSheetName,excelRow,`配課「${t}／${subj}」目前沒有符合的任教班級，已略過`);continue}
+    for(const code of targets){
+      const key=`${code}|${subj}`,previous=explicitAssignments.get(key);
+      if(previous&&previous.teacher!==t){importIssue(nd,'error',assignmentSheetName,excelRow,`${code} ${subj}已在第 ${previous.row} 列配給${previous.teacher}`);continue}
+      explicitAssignments.set(key,{teacher:t,row:excelRow});
       ((nd.assign[code]=nd.assign[code]||{})[subj]=t);
+    }
   }
   for(const [code,row] of Object.entries(nd.assign))for(const [subj,teacher] of Object.entries(row)){
     if(!teacher)continue;
@@ -3656,11 +3771,22 @@ function parseV5(wb,S,opt){
   }
   nd.override={};nd.limits=[];
   const limitSheet=opt('不排課時間').length?opt('不排課時間'):opt('教師時段限制');
-  for(const r of limitSheet.slice(1))
-    if(r&&r[0]&&r[1]&&r[2])nd.limits.push([String(r[0]),String(r[1]),String(r[2]),String(r[3]||'不可排'),String(r[4]||'')]);
+  for(let index=1;index<limitSheet.length;index++){
+    const r=limitSheet[index];if(!importRowHasData(r))continue;
+    const target=String(r?.[0]||'').trim(),day=String(r?.[1]||'').trim(),period=String(r?.[2]||'').trim();
+    if(!target||!day||!period){importIssue(nd,'error','不排課時間',index+1,'必須完整填寫對象、星期與節次');continue}
+    if(day!=='每日'&&!DAYS.includes(day)){importIssue(nd,'error','不排課時間',index+1,`星期「${day}」不正確`);continue}
+    if(period!=='全部'&&(!/^\d+$/.test(period)||+period<1||+period>7)){importIssue(nd,'error','不排課時間',index+1,`節次「${period}」不正確`);continue}
+    nd.limits.push([target,day,period,String(r[3]||'不可排'),String(r[4]||'')]);
+  }
   const rgMap={};
-  for(const r of opt('資源班overlay').slice(1)){
-    if(!r||!r[1]||!r[2]||!r[3])continue;
+  const resourceRows=opt('資源班overlay');
+  for(let index=1;index<resourceRows.length;index++){
+    const r=resourceRows[index];if(!importRowHasData(r))continue;
+    if(!r?.[1]||!r?.[2]||!r?.[3]){importIssue(nd,'error','資源班overlay',index+1,'必須完整填寫來源班級、科目與教師');continue}
+    if(!gOf[String(r[1]).trim()]){importIssue(nd,'error','資源班overlay',index+1,`來源班級「${r[1]}」不存在`);continue}
+    if(!nd.subjects[String(r[2]).trim()]){importIssue(nd,'error','資源班overlay',index+1,`科目「${r[2]}」不存在`);continue}
+    if(!Object.prototype.hasOwnProperty.call(nd.roster,String(r[3]).trim())){importIssue(nd,'error','資源班overlay',index+1,`教師「${r[3]}」不在教師名冊`);continue}
     const key=[String(r[0]||'A組'),String(r[1]),String(r[2]),String(r[3])].join('|');
     rgMap[key]=(rgMap[key]||0)+1;
   }
@@ -3669,7 +3795,7 @@ function parseV5(wb,S,opt){
   });
   for(const group of nd.resGroups){const classroom=nd.classes.find(c=>c.code===group.code);if(classroom)classroom.res=true}
   nd.rules=JSON.parse(JSON.stringify(DEMO0.rules));
-  return nd;
+  return finalizeImportedWorkbook(nd);
 }
 
 ScheduleSetup.init({
