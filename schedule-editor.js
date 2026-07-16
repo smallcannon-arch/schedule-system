@@ -10,11 +10,12 @@
   }
 
   function isResourceBound(data, code, subject) {
-    const classroom = (data.classes || []).find((item) => item.code === code);
-    const classWide = Boolean(classroom && classroom.res &&
-      (subject === "國語文" || subject === "數學"));
-    return classWide || (data.resGroups || []).some((group) =>
-      group.code === code && group.subj === subject);
+    return (data.resGroups || []).some((group) => {
+      const sources = Array.isArray(group.sources) ? group.sources : [group.code];
+      const pullSubjects = Array.isArray(group.pullSubjects) && group.pullSubjects.length ?
+        group.pullSubjects : [group.subj];
+      return sources.includes(code) && pullSubjects.includes(subject);
+    });
   }
 
   function lockedReason(data, schedule, overlays, code, day, period) {

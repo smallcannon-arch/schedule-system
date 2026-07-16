@@ -102,6 +102,25 @@ process.stdout.write(JSON.stringify({
     assert output["parsed"] == {"王老師": "A123456789"}
 
 
+def test_combined_resource_group_counts_one_teacher_period_and_lists_both_classes():
+    output = run_node(r"""
+const exp=require(process.argv[1]);
+const data={classes:[{g:1,i:1,code:'1甲'},{g:1,i:2,code:'1乙'}],
+  subjects:{'國語文':{}},nativeLockEnabled:false,roster:{'資源教師':'資源班教師'}};
+const entries=exp.buildEntries(data,[],[
+  {id:'group-a-1',grp:'一年級A組',code:'1甲',subj:'國語文',pullSubj:'綜合活動',t:'資源教師',d:'一',p:1},
+  {id:'group-a-1',grp:'一年級A組',code:'1乙',subj:'國語文',pullSubj:'綜合活動',t:'資源教師',d:'一',p:1}
+]);
+const sheet=exp.teacherSheets(data,entries)[0];
+process.stdout.write(JSON.stringify({subtitle:sheet.rows[1][0],cell:sheet.rows[3][1],entries}));
+""")
+
+    assert "每週授課：1 節" in output["subtitle"]
+    assert "一年甲班" in output["cell"]
+    assert "一年乙班" in output["cell"]
+    assert len(output["entries"]) == 2
+
+
 def test_excel_timetable_styles_are_written_to_cells():
     output = run_node(r"""
 const exp=require(process.argv[1]);
@@ -133,7 +152,7 @@ def test_frontend_wires_four_exports_and_keeps_ids_out_of_case_data():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
 
     assert re.search(r'<script src="setup-builder\.js\?v=\d{8}-\d+"></script>', html)
-    assert '<script src="schedule-exports.js?v=20260713-1"></script>' in html
+    assert '<script src="schedule-exports.js?v=20260716-1"></script>' in html
     assert '<button data-v="export"><span class="ic">⇩</span>課表匯出</button>' in html
     assert '<section class="view" id="v-export">' in html
     assert html.index('data-v="tt"') < html.index('data-v="export"')

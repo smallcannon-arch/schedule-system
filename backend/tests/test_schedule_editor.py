@@ -23,7 +23,7 @@ const editor=require(process.argv[1]);
 const data={
   classes:[{code:'3甲',res:true}],
   subjects:{'國語文':{block:''},'自然科學':{block:'2+1'},'社會':{block:''}},
-  resGroups:[],
+  resGroups:[{sources:['3甲'],subj:'國語文',pullSubjects:['國語文']}],
   locks:[{c:'3甲',d:'二',p:3,s:'社會'}]
 };
 const schedule={
