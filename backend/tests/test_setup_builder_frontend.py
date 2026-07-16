@@ -283,6 +283,10 @@ function parse(workbook){
   return context.__nd;
 }
 const baseline=parse(XLSX.read(bytes,{type:'buffer'}));
+const custom=XLSX.read(bytes,{type:'buffer'});
+XLSX.utils.sheet_add_aoa(custom.Sheets['科目節數'],[['閱讀',1,0,0,0,0,0,'原班教室','否','']],{origin:'A20'});
+XLSX.utils.sheet_add_aoa(custom.Sheets['教師與配課'],[[custom.Sheets['教師與配課']['A3'].v,'閱讀','1甲']],{origin:'I20'});
+const customResult=parse(custom);
 const bad=XLSX.read(bytes,{type:'buffer'});
 function addRow(name,headers,row,origin){
   if(!bad.Sheets[name]){bad.Sheets[name]=XLSX.utils.aoa_to_sheet([headers]);bad.SheetNames.push(name)}
@@ -291,13 +295,18 @@ function addRow(name,headers,row,origin){
 XLSX.utils.sheet_add_aoa(bad.Sheets['班級'],[['7甲','七年級','王導師']],{origin:'A11'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,'組長',20,0]],{origin:'A11'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,null,'1甲']],{origin:'I12'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,'英語文','1甲']],{origin:'I13'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['場地'],[[null,2]],{origin:'A20'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['場地'],[['自然教室',2]],{origin:'A21'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['場地'],[['創客教室',1.5]],{origin:'A22'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['科目節數'],[['閱讀','兩節',0,0,0,0,0,'原班教室','否','']],{origin:'A20'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['年段時段'],[['七年級',1,1]],{origin:'A9'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['本土語分組'],[[1,'一',1,'客語','名冊外教師','原班教室','','測試組','1甲',1,'實體']],{origin:'A20'});
 addRow('不排課時間',['對象','星期','節次','類型','備註'],['王導師','六',1,'不可排',''],'A20');
 addRow('資源班overlay',['組別','原班','科目','資源班教師','星期','節次'],['測試組','1甲','國語文','名冊外教師','',''],'A20');
 let error='';try{parse(bad)}catch(reason){error=String(reason.message||reason)}
-process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:baseline._warn,error}));
+process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:baseline._warn,
+  customSubject:customResult.subjects['閱讀'],customAssignment:customResult.assign['1甲']['閱讀'],error}));
 """
     result = subprocess.run(
         ["node", "-e", script, str(FORMAL / "index.html"),
@@ -308,9 +317,15 @@ process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:ba
 
     assert output["classes"] == 3
     assert any("目前沒有符合的任教班級" in warning for warning in output["warnings"])
+    assert output["customSubject"]["hours"][0] == 1
+    assert output["customAssignment"]
     assert "班級 第 11 列" in output["error"]
     assert "教師與配課 第 11 列" in output["error"]
     assert "教師與配課 第 12 列" in output["error"]
+    assert "教師與配課 第 13 列" in output["error"]
+    assert "場地 第 20 列" in output["error"]
+    assert "場地 第 21 列" in output["error"]
+    assert "場地 第 22 列" in output["error"]
     assert "科目節數 第 20 列" in output["error"]
     assert "年段時段 第 9 列" in output["error"]
     assert "本土語分組 第 20 列" in output["error"]
