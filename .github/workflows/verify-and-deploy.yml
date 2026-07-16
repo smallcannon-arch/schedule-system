@@ -64,6 +64,8 @@ jobs:
           mkdir _site
           cp index.html app-config.js auth-config.js data.js schedule-auth.js schedule-editor.js schedule-exports.js schedule-policy.js setup-builder.js teacher-workflow.js feedback.js readiness-center.js template.xlsx _headers _site/
           cp -R vendor _site/vendor
+          sed -i "s/__APP_RELEASE__/${GITHUB_SHA}/g" _site/app-config.js
+          printf '{"release":"%s"}\n' "${GITHUB_SHA}" > _site/release.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
