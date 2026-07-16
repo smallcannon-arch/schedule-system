@@ -31,32 +31,116 @@ def test_loads_v6_merged_teacher_and_assignment_sheet():
     assert data["assign"][("1甲", "國語文")] == "王導師"
 
 
+def test_v6_duplicate_teacher_rows_merge_only_when_metadata_matches(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook["教師與配課"]
+    source = [sheet.cell(3, column).value for column in range(1, 8)]
+    row = sheet.max_row + 1
+    for column, value in enumerate(source, start=1):
+        sheet.cell(row, column, value)
+    target = tmp_path / "duplicate-teacher-same.xlsx"
+    workbook.save(target)
+
+    data = engine.load_data(target)
+
+    assert any("重複，已合併為同一位教師" in note for note in data["derived_notes"])
+
+
+def test_v6_conflicting_duplicate_teacher_row_is_rejected(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook["教師與配課"]
+    row = sheet.max_row + 1
+    sheet.cell(row, 1, sheet["A3"].value)
+    sheet.cell(row, 2, "組長")
+    sheet.cell(row, 3, 20)
+    sheet.cell(row, 4, 0)
+    target = tmp_path / "duplicate-teacher-conflict.xlsx"
+    workbook.save(target)
+
+    with pytest.raises(ValueError, match="重複.*不一致"):
+        engine.load_data(target)
+
+
+@pytest.mark.parametrize(("sheet_name", "values", "message"), [
+    ("班級", ["7甲", "七年級", "王導師"], "年級必須是 1 到 6"),
+    ("班級", [None, 1, "王導師"], "缺少班級代碼"),
+    ("科目節數", [None, 1, 0, 0, 0, 0, 0], "缺少科目名稱"),
+    ("科目節數", ["閱讀", 1.5, 0, 0, 0, 0, 0], "節數必須是整數"),
+    ("年段時段", ["七年級", 1, 1], "年級必須是 1 到 6"),
+    ("本土語分組", [1, "六", 1, "客語", "客語教師"], "時段無效"),
+])
+def test_v6_invalid_nonblank_rows_are_rejected(tmp_path, sheet_name, values, message):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook[sheet_name]
+    row = sheet.max_row + 1
+    for column, value in enumerate(values, start=1):
+        sheet.cell(row, column, value)
+    target = tmp_path / f"invalid-{sheet_name}.xlsx"
+    workbook.save(target)
+
+    with pytest.raises(ValueError, match=message):
+        engine.load_data(target)
+
+
+@pytest.mark.parametrize(("sheet_name", "values", "message"), [
+    ("不排課時間", ["王導師", "六", 1, "不可排"], "星期不正確"),
+    ("資源班overlay", ["測試組", "1甲", "國語文", "名冊外教師"], "教師不在名冊"),
+])
+def test_v6_invalid_optional_rows_are_rejected(tmp_path, sheet_name, values, message):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook[sheet_name] if sheet_name in workbook.sheetnames else workbook.create_sheet(sheet_name)
+    if sheet.max_row == 1 and sheet["A1"].value is None:
+        headers = (["對象", "星期", "節次", "類型", "備註"] if sheet_name == "不排課時間"
+                   else ["組別", "原班", "科目", "資源班教師", "星期", "節次"])
+        for column, value in enumerate(headers, start=1):
+            sheet.cell(1, column, value)
+    sheet.append(values)
+    target = tmp_path / f"invalid-{sheet_name}.xlsx"
+    workbook.save(target)
+
+    with pytest.raises(ValueError, match=message):
+        engine.load_data(target)
+
+
+def test_v6_partial_assignment_row_is_rejected(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook["教師與配課"]
+    row = sheet.max_row + 1
+    sheet.cell(row, 9, sheet["A3"].value)
+    sheet.cell(row, 11, workbook["班級"]["A2"].value)
+    target = tmp_path / "partial-assignment.xlsx"
+    workbook.save(target)
+
+    with pytest.raises(ValueError, match="完整填寫教師、科目與任教班級"):
+        engine.load_data(target)
+
+
 def test_v6_direct_parser_reads_alias_limits_and_resource_overlay(tmp_path):
     workbook = load_workbook(V6_TEMPLATE)
     teacher_sheet = workbook["教師與配課"]
     teacher = teacher_sheet["A3"].value
+    alias_teacher = teacher_sheet["I6"].value
     code = workbook["班級"]["A2"].value
-    row = teacher_sheet.max_row + 1
-    teacher_sheet.cell(row, 9, teacher)
-    teacher_sheet.cell(row, 10, "閩南語")
-    teacher_sheet.cell(row, 11, code)
+    teacher_sheet["J6"] = "閩南語"
 
     limit_sheet = (workbook["不排課時間"] if "不排課時間" in workbook.sheetnames
                    else workbook.create_sheet("不排課時間"))
     if limit_sheet.max_row == 1 and limit_sheet["A1"].value is None:
-        limit_sheet.append(["對象", "星期", "節次", "類型", "備註"])
+        for column, value in enumerate(["對象", "星期", "節次", "類型", "備註"], start=1):
+            limit_sheet.cell(1, column, value)
     limit_sheet.append([teacher, "五", 7, "不可排", "測試限制"])
     overlay_sheet = (workbook["資源班overlay"] if "資源班overlay" in workbook.sheetnames
                      else workbook.create_sheet("資源班overlay"))
     if overlay_sheet.max_row == 1 and overlay_sheet["A1"].value is None:
-        overlay_sheet.append(["組別", "原班", "科目", "資源班教師", "星期", "節次"])
+        for column, value in enumerate(["組別", "原班", "科目", "資源班教師", "星期", "節次"], start=1):
+            overlay_sheet.cell(1, column, value)
     overlay_sheet.append(["測試資源組", code, "國語文", teacher, "一", 1])
     target = tmp_path / "v6-options.xlsx"
     workbook.save(target)
 
     data = engine.load_data(target)
 
-    assert data["assign"][(code, "本土語文")] == teacher
+    assert data["assign"][(code, "本土語文")] == alias_teacher
     assert (teacher, "五", 7) in data["teacher_limit"]
     assert data["overlay"] == [{
         "grp": "測試資源組", "class": code, "subj": "國語文", "t": teacher,
