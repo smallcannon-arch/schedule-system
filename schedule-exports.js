@@ -7,6 +7,7 @@
 
   const DAYS = ["一", "二", "三", "四", "五"];
   const PERIODS = [1, 2, 3, 4, 5, 6, 7];
+  const TIMETABLE_PERIODS = [0, ...PERIODS];
   const NUMBER_TEXT = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
   const UPLOAD_HEADERS = [
     "星期幾", "第幾節", "年級", "班級", "教師姓名", "教師身分證號",
@@ -109,7 +110,7 @@
       displaySubject: text(item.subj || item.s), t: text(item.t), room: text(item.room) || "R00",
       group: text(item.grp), groupId: text(item.id), pullSubject: text(item.pullSubj), source: "overlay",
     });
-    return output.filter((item) => item.code && DAYS.includes(item.d) && PERIODS.includes(item.p) && item.s)
+    return output.filter((item) => item.code && DAYS.includes(item.d) && TIMETABLE_PERIODS.includes(item.p) && item.s)
       .sort((a, b) => DAYS.indexOf(a.d) - DAYS.indexOf(b.d) || a.p - b.p || a.code.localeCompare(b.code, "zh-Hant") || a.t.localeCompare(b.t, "zh-Hant"));
   }
 
@@ -128,8 +129,9 @@
       if (value && !cells.get(key).includes(value)) cells.get(key).push(value);
     }
     const rows = [[title], [subtitle], ["節次", ...DAYS.map((day) => `星期${day}`)]];
-    for (const period of PERIODS) rows.push([
-      `第${NUMBER_TEXT[period]}節`,
+    const periods = items.some((item) => Number(item.p) === 0) ? TIMETABLE_PERIODS : PERIODS;
+    for (const period of periods) rows.push([
+      period === 0 ? "早自修" : `第${NUMBER_TEXT[period]}節`,
       ...DAYS.map((day) => (cells.get(`${day}|${period}`) || []).join("\n")),
     ]);
     return rows;
@@ -194,7 +196,7 @@
   function uploadDataRows(data, entries, teacherIds) {
     const mappings = ensureMappings(data);
     const classes = classMap(data);
-    return entries.filter((item) => item.t && !item.assistant).map((item) => {
+    return entries.filter((item) => item.t && !item.assistant && PERIODS.includes(item.p)).map((item) => {
       const classroom = classes.get(item.code);
       const mapping = Object.assign(defaultMapping(item.s), mappings[item.s] || {});
       return [
@@ -216,7 +218,7 @@
     const issues = [];
     const mappings = ensureMappings(data);
     const classes = classMap(data);
-    const uploadEntries = entries.filter((item) => item.t && !item.assistant);
+    const uploadEntries = entries.filter((item) => item.t && !item.assistant && PERIODS.includes(item.p));
     if (!uploadEntries.length) issues.push("尚無可匯出的正式課表資料");
     for (const item of uploadEntries) {
       const classroom = classes.get(item.code);
@@ -286,7 +288,7 @@
   function styleTimetableWorksheet(xlsx, worksheet, rows) {
     worksheet["!merges"] = [{s: {r: 0, c: 0}, e: {r: 0, c: 5}}, {s: {r: 1, c: 0}, e: {r: 1, c: 5}}];
     worksheet["!cols"] = [{wch: 12}, ...DAYS.map(() => ({wch: 23}))];
-    worksheet["!rows"] = [{hpt: 34}, {hpt: 22}, {hpt: 25}, ...PERIODS.map(() => ({hpt: 50}))];
+    worksheet["!rows"] = [{hpt: 34}, {hpt: 22}, {hpt: 25}, ...rows.slice(3).map(() => ({hpt: 50}))];
     const border = thinBorder();
     const range = xlsx.utils.decode_range(worksheet["!ref"]);
     for (let row = range.s.r; row <= range.e.r; row += 1) {
@@ -319,7 +321,7 @@
           fill: {patternType: "solid", fgColor: {rgb: subjectFill(cell.v)}},
           alignment: {horizontal: "center", vertical: "center", wrapText: true}, border,
         };
-        if (row === 7 && cell.s && cell.s.border) {
+        if ((rows[row] || [])[0] === "第五節" && cell.s && cell.s.border) {
           cell.s.border.top = {style: "medium", color: {rgb: "7D948D"}};
         }
       }
@@ -367,8 +369,8 @@
     const pages = (sheets || []).map((sheet, index) => {
       const rows = sheet.rows || [];
       const headers = rows[2] || [];
-      const body = rows.slice(3).map((row, rowIndex) =>
-        `<tr class="${rowIndex === 4 ? "afternoon" : ""}"><th>${html(row[0])}</th>${DAYS.map((_, column) => {
+      const body = rows.slice(3).map((row) =>
+        `<tr class="${row[0] === "第五節" ? "afternoon" : ""}"><th>${html(row[0])}</th>${DAYS.map((_, column) => {
           const value = row[column + 1] || "";
           return `<td class="${subjectClass(value)}">${printCell(value)}</td>`;
         }).join("")}</tr>`).join("");
@@ -395,7 +397,7 @@
   }
 
   return {
-    DAYS, PERIODS, UPLOAD_HEADERS,
+    DAYS, PERIODS, TIMETABLE_PERIODS, UPLOAD_HEADERS,
     defaultMapping, ensureMappings, buildEntries, classSheets, teacherSheets,
     uploadRows, validateUpload, parseTeacherIdRows, classLabel, printDocument, makeWorksheet,
   };

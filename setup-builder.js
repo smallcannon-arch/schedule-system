@@ -382,7 +382,7 @@
         <td><input class="numin" type="number" min="1" max="20" aria-label="${esc(item.code || `第 ${index + 1} 班`)}班序" value="${Number(item.i) || 1}" onchange="ScheduleSetup.setClass(${index},'i',this.value)"></td>
         <td><input value="${esc(item.code)}" maxlength="20" aria-label="第 ${index + 1} 筆班級代碼" onchange="ScheduleSetup.renameClass(${index},this.value)"></td>
         <td><input class="setup-wide-select" list="setupTutorNames" value="${esc(item.tutor)}" placeholder="輸入導師姓名" maxlength="40" aria-label="${esc(item.code || `第 ${index + 1} 班`)}導師" onchange="ScheduleSetup.setClass(${index},'tutor',this.value)"></td>
-        <td><input type="checkbox" aria-label="${esc(item.code || `第 ${index + 1} 班`)}有資源班學生" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
+        <td><input type="checkbox" aria-label="${esc(item.code || `第 ${index + 1} 班`)}有資源班學生" title="勾選後可在資源班頁建立抽離分組" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
         <td><button class="icon-btn" type="button" title="刪除班級" aria-label="刪除 ${esc(item.code || `第 ${index + 1} 班`)}" onclick="ScheduleSetup.removeClass(${index})">×</button></td>
       </tr>`).join("")}</tbody>`;
     const tutorNames = document.getElementById("setupTutorNames");
@@ -605,7 +605,13 @@
     const item = d.classes[index];
     if (!item) return;
     if (key === "g" || key === "i") item[key] = Math.max(1, Number(value) || 1);
-    else if (key === "res") item.res = !!value;
+    else if (key === "res") {
+      if (!value && d.resGroups.some((group) => resourceSources(group).includes(item.code))) {
+        alert(`${item.code}仍在資源班抽離分組中，請先到「資源班」頁移除該班。`);
+        return renderClasses();
+      }
+      item.res = !!value;
+    }
     else if (key === "tutor") {
       const previous = item.tutor;
       const tutor = String(value || "").trim();

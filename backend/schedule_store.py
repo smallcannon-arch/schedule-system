@@ -262,9 +262,10 @@ class MemoryScheduleStore:
 
     def list_published_versions(self, limit=20):
         with self._lock:
-            states = sorted(
-                self._history.values(),
-                key=lambda item: str(item.get("published_at") or ""), reverse=True)
+            states = [item for _, item in sorted(
+                enumerate(self._history.values()),
+                key=lambda row: (str(row[1].get("published_at") or ""), row[0]),
+                reverse=True)]
             return [self._version_metadata(item) for item in states[:max(1, int(limit))]]
 
     @staticmethod
@@ -339,18 +340,20 @@ class MemoryScheduleStore:
         }
         with self._lock:
             self._backups[backup["backup_id"]] = backup
-            ordered = sorted(
-                self._backups.values(),
-                key=lambda item: str(item.get("created_at") or ""), reverse=True)
+            ordered = [item for _, item in sorted(
+                enumerate(self._backups.values()),
+                key=lambda row: (str(row[1].get("created_at") or ""), row[0]),
+                reverse=True)]
             for item in ordered[10:]:
                 self._backups.pop(item["backup_id"], None)
         return deepcopy(backup)
 
     def list_backups(self, limit=10):
         with self._lock:
-            ordered = sorted(
-                self._backups.values(),
-                key=lambda item: str(item.get("created_at") or ""), reverse=True)
+            ordered = [item for _, item in sorted(
+                enumerate(self._backups.values()),
+                key=lambda row: (str(row[1].get("created_at") or ""), row[0]),
+                reverse=True)]
             return [_backup_metadata(item) for item in ordered[:max(1, min(int(limit), 10))]]
 
     def get_backup(self, backup_id):

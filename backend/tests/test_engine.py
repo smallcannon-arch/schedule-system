@@ -319,6 +319,87 @@ def test_resource_fixed_slots_must_match_weekly_periods():
         engine.load_frontend_data(payload)
 
 
+def test_resource_pull_subject_keeps_existing_minnan_subject_name():
+    payload = _resource_frontend_payload()
+    payload["subjects"]["閩南語"] = payload["subjects"].pop("綜合活動")
+    for row in payload["assign"].values():
+        row["閩南語"] = row.pop("綜合活動")
+    payload["resGroups"][0]["pullSubjects"] = ["閩南語"]
+
+    data = engine.load_frontend_data(payload)
+
+    assert data["overlay"][0]["pull_subjects"] == ["閩南語"]
+
+
+def test_frontend_lock_prefers_exact_minnan_subject_name():
+    payload = _resource_frontend_payload()
+    payload["subjects"]["閩南語"] = deepcopy(payload["subjects"]["綜合活動"])
+    payload["subjects"]["本土語文"] = deepcopy(payload["subjects"]["國語文"])
+    payload["assign"]["1甲"]["閩南語"] = "王導師"
+    payload["assign"]["1甲"]["本土語文"] = "王導師"
+    payload["locks"] = [{"c": "1甲", "d": "二", "p": 1, "s": "閩南語"}]
+
+    data = engine.load_frontend_data(payload)
+
+    assert data["locks"][0]["subj"] == "閩南語"
+
+
+def test_resource_fixed_slot_rejects_period_outside_source_grade_schedule():
+    payload = _resource_frontend_payload()
+    payload["resGroups"][0]["slots"][0] = {"d": "一", "p": 5}
+
+    with pytest.raises(ValueError, match="一年級A組固定時段週一第5節不在1年級可排時段"):
+        engine.load_frontend_data(payload)
+
+
+def test_resource_early_study_is_a_fixed_resource_only_session():
+    payload = _resource_frontend_payload()
+    payload["resGroups"][0]["slots"] = [
+        {"d": "一", "p": 0}, {"d": "三", "p": 1}, {"d": "五", "p": 1},
+    ]
+
+    data = engine.load_frontend_data(payload)
+    schedule, tasks, _, _, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=False)
+
+    early = [row for row in overlay if row[7] == 0]
+    assert len(early) == 2
+    assert {row[2] for row in early} == {"1甲", "1乙"}
+    assert {row[4] for row in early} == {"早自修"}
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_resource_early_study_rejects_teacher_double_booking():
+    payload = _resource_frontend_payload()
+    first = payload["resGroups"][0]
+    first["n"] = 1
+    first["slots"] = [{"d": "一", "p": 0}]
+    second = deepcopy(first)
+    second.update({"id": "grade-1-b", "grp": "一年級B組"})
+    payload["resGroups"].append(second)
+
+    data = engine.load_frontend_data(payload)
+
+    with pytest.raises(ValueError, match="資源教師在週一早自修被兩個資源班分組重複固定"):
+        engine.solve(data, time_limit=5, auto_schedule_tutor=False)
+
+
+def test_resource_early_study_rejects_source_class_double_booking():
+    payload = _resource_frontend_payload()
+    first = payload["resGroups"][0]
+    first["n"] = 1
+    first["slots"] = [{"d": "一", "p": 0}]
+    second = deepcopy(first)
+    second.update({"id": "grade-1-b", "grp": "一年級B組", "t": "另一位資源教師"})
+    payload["roster"]["另一位資源教師"] = "資源班教師"
+    payload["resGroups"].append(second)
+
+    data = engine.load_frontend_data(payload)
+
+    with pytest.raises(ValueError, match="1甲在週一早自修被兩個資源班分組重複抽離"):
+        engine.solve(data, time_limit=5, auto_schedule_tutor=False)
+
+
 def test_per_class_arrangement_mode_controls_cp_sat_ownership():
     slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
     payload = {
