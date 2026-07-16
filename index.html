@@ -428,7 +428,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <main>
 <div class="version-notice" id="appVersionNotice" role="alert" hidden>
   <span id="appVersionMessage"></span>
-  <button class="btn soft sm" type="button" onclick="location.reload()">重新載入</button>
+  <button class="btn soft sm" type="button" onclick="ScheduleAuth.reloadLatest()">載入最新版</button>
 </div>
 
 <div class="beta-feedback-notice formal-only" role="note">
@@ -3695,7 +3695,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260714-5"></script>
+<script src="schedule-auth.js?v=20260716-2"></script>
 <script>
 ScheduleAuth.initialize();
 ScheduleReadiness.initialize({

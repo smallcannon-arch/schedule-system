@@ -10,7 +10,8 @@
     savingSchool: false, loadingUsage: false, savingPlacements: false,
     loadingVersions: false, restoringVersion: false, versions: [],
     loadingBackups: false, creatingBackup: false, restoringBackup: false, backups: [],
-    schools: [], usage: null, usageSchoolId: "", usageTrigger: null};
+    schools: [], usage: null, usageSchoolId: "", usageTrigger: null,
+    latestRelease: "", versionCheckTimer: null};
 
   function apiBaseUrl() {
     const configured = String((root.SCHEDULE_AUTH_CONFIG || {}).apiBaseUrl || "").trim();
@@ -46,6 +47,71 @@
       activeRevision: state.activeRevision,
       backupCount: state.backups.length,
     };
+  }
+
+  function releaseToken(value) {
+    const token = String(value || "").trim();
+    return token && !token.startsWith("__") ? token : "";
+  }
+
+  function showVersionNotice(messages, latestRelease) {
+    const notice = document.getElementById("appVersionNotice");
+    const message = document.getElementById("appVersionMessage");
+    if (!notice || !message) return;
+    if (!messages.length) {
+      notice.hidden = true;
+      return;
+    }
+    if (latestRelease) state.latestRelease = latestRelease;
+    message.textContent = `${messages.join("；")}。請先儲存目前進度，再載入最新版。`;
+    notice.hidden = false;
+  }
+
+  async function checkForUpdates() {
+    const appConfig = root.SCHEDULE_APP_CONFIG || {};
+    const currentVersion = String(appConfig.version || "").trim();
+    const currentRelease = releaseToken(appConfig.release);
+    const messages = [];
+    let latestRelease = "";
+    try {
+      const health = await request(`/health?ts=${Date.now()}`);
+      if (currentVersion && health.version && health.version !== currentVersion) {
+        messages.push(`系統服務已更新（網頁 ${currentVersion}／服務 ${health.version}）`);
+        latestRelease = String(health.version);
+      }
+    } catch (_) {
+      // OAuth 初始化會在下一個請求顯示正式的連線錯誤。
+    }
+    if (currentRelease) {
+      try {
+        const releaseUrl = new URL("release.json", root.location.href);
+        releaseUrl.searchParams.set("ts", String(Date.now()));
+        const response = await fetch(releaseUrl.toString(), {cache: "no-store"});
+        if (response.ok) {
+          const payload = await response.json();
+          const publishedRelease = releaseToken(payload && payload.release);
+          if (publishedRelease && publishedRelease !== currentRelease) {
+            messages.push("網站介面已有新版本");
+            latestRelease = publishedRelease;
+          }
+        }
+      } catch (_) {
+        // 靜態版本檔暫時無法讀取時，不影響登入與排課。
+      }
+    }
+    showVersionNotice(messages, latestRelease);
+  }
+
+  function startVersionChecks() {
+    if (state.versionCheckTimer) root.clearInterval(state.versionCheckTimer);
+    state.versionCheckTimer = root.setInterval(checkForUpdates, 5 * 60 * 1000);
+  }
+
+  function reloadLatest() {
+    if (root.confirm && !root.confirm("載入最新版會重新整理頁面。請確認目前變更已儲存至學校雲端，再繼續。")) return;
+    const url = new URL(root.location.href);
+    url.searchParams.set("release", String(state.latestRelease || Date.now()).slice(0, 16));
+    root.location.assign(url.toString());
   }
 
   async function request(path, options) {
@@ -196,18 +262,8 @@
       return;
     }
     try {
-      const expectedVersion = String((root.SCHEDULE_APP_CONFIG || {}).version || "");
-      try {
-        const health = await request("/health");
-        const notice = document.getElementById("appVersionNotice");
-        const message = document.getElementById("appVersionMessage");
-        if (notice && message && expectedVersion && health.version !== expectedVersion) {
-          message.textContent = `系統已更新（網頁 ${expectedVersion}／服務 ${health.version || "未知"}），請重新載入後再繼續編修。`;
-          notice.hidden = false;
-        }
-      } catch (_) {
-        // OAuth 初始化會在下一個請求顯示正式的連線錯誤。
-      }
+      await checkForUpdates();
+      startVersionChecks();
       const config = await request("/auth/config");
       if (!config.enabled || !config.client_id) {
         status("後端尚未設定 Google OAuth Client ID。", "disabled");
@@ -1331,7 +1387,7 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons, getReadinessState,
+  root.ScheduleAuth = {initialize, reloadLatest, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons, getReadinessState,
     publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     openBackups, closeBackups, loadBackups, createBackup, restoreBackup,

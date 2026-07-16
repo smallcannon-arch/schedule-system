@@ -1,4 +1,5 @@
 import subprocess
+import json
 import pytest
 
 from support_paths import FORMAL, ONLINE, SEPARATE_DEMO
@@ -34,6 +35,41 @@ def test_schedule_auth_javascript_has_valid_syntax():
         text=True,
         encoding="utf-8",
     )
+
+
+def test_formal_release_check_bypasses_cached_homepage():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    script_text = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
+    app_config = (FORMAL / "app-config.js").read_text(encoding="utf-8")
+    workflow = (FORMAL / ".github" / "workflows" / "verify-and-deploy.yml").read_text(
+        encoding="utf-8")
+
+    assert 'release: "__APP_RELEASE__"' in app_config
+    assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
+    assert 'schedule-auth.js?v=20260716-2' in html
+    assert 'new URL("release.json", root.location.href)' in script_text
+    assert '{cache: "no-store"}' in script_text
+    assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text
+    assert 'url.searchParams.set("release"' in script_text
+    assert 'sed -i "s/__APP_RELEASE__/${GITHUB_SHA}/g"' in workflow
+    assert '_site/release.json' in workflow
+
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const assigned=[];
+const context={URL,location:{href:'https://smallcannon-arch.github.io/schedule-system/',assign:value=>assigned.push(value)},
+  confirm:()=>true,setInterval,clearInterval};
+vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),context);
+context.ScheduleAuth.reloadLatest();
+process.stdout.write(JSON.stringify(assigned));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "schedule-auth.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    assigned = json.loads(result.stdout)
+    assert len(assigned) == 1
+    assert assigned[0].startswith(
+        "https://smallcannon-arch.github.io/schedule-system/?release=")
 
 
 @pytest.mark.skipif(not SEPARATE_DEMO, reason="monorepo contains the formal frontend only")
@@ -118,7 +154,7 @@ def test_formal_solver_uses_only_configured_api_and_does_not_export_bearer_token
     assert 'id="formalApiKey"' not in html
     assert "ScheduleAuth.solveData(payload)" in html
     assert "function authorizationHeaders" not in script
-    assert "root.ScheduleAuth = {initialize, solveData" in script
+    assert "root.ScheduleAuth = {initialize, reloadLatest, solveData" in script
 
 
 def test_formal_shared_cloud_draft_has_clear_save_and_conflict_protection():
