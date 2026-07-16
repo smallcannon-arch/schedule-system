@@ -261,6 +261,10 @@ def test_teacher_quick_limits_and_combined_resource_groups_are_wired():
     assert 'id="resourceGroupHint"' in html
     assert "pullSubjects" in html
     assert "scheduleMode" in html
+    limit_start = html.index('<section class="view" id="v-lim">')
+    limit_end = html.index("</section>", limit_start)
+    teacher_grid = html.index('id="teacherLimitGrid"')
+    assert limit_start < html.index('id="gGrid"') < teacher_grid < html.index('id="limTbl"') < limit_end
 
 
 def test_teacher_quick_limits_compact_rows_and_preserve_manual_rules():
