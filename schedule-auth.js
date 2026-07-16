@@ -256,6 +256,12 @@
 
   async function initialize() {
     if ((root.SCHEDULE_APP_CONFIG || {}).mode !== "formal") return;
+    if (root.location && root.location.protocol === "file:") {
+      status("目前開啟的是電腦內的本機檔案，無法使用 Google 登入與雲端服務。請改用正式系統網址。", "error");
+      const hostedLink = document.getElementById("formalHostedLink");
+      if (hostedLink) hostedLink.hidden = false;
+      return;
+    }
     state.apiBaseUrl = apiBaseUrl();
     if (!state.apiBaseUrl) {
       status("正式教師入口尚未啟用；公開 DEMO 仍可正常試用。", "disabled");

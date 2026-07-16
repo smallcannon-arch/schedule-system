@@ -32,6 +32,7 @@ body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:var(-
 .formal-gate-signin>b{display:block;color:var(--ink);font-size:17px}.formal-gate-signin>small{display:block;margin-top:3px;color:var(--muted);font-size:13.5px}
 #formalGoogleSignInButton{width:min(360px,100%);min-height:32px;margin:16px auto 0;display:block}
 .formal-gate .auth-status{margin:13px auto 0;width:min(360px,100%);padding:10px 12px;border-left:3px solid #147a65;border-radius:4px;background:#eef7f4;color:#526861;font-size:13.5px;line-height:1.5}
+.formal-hosted-link{display:block;width:min(360px,100%);margin:12px auto 0;padding:11px 16px;border-radius:6px;background:#147a65;color:#fff;text-align:center;text-decoration:none;font-size:14px;font-weight:900}.formal-hosted-link:hover{background:#0f6655}.formal-hosted-link[hidden]{display:none}
 .formal-gate-request{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px 24px;padding:24px 0 20px}
 .formal-gate-request h2{font-size:17px;margin-bottom:4px}.formal-gate-request p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
 .formal-request-email{display:inline-block;margin-top:7px;color:#147a65;font-size:15px;font-weight:900;text-decoration:none}.formal-request-email:hover{text-decoration:underline}
@@ -342,6 +343,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <small>學校系統管理員、導師及科任教師皆由同一入口登入。</small>
       <div id="formalGoogleSignInButton"></div>
       <div class="auth-status" id="formalAuthStatus">正在檢查登入設定…</div>
+      <a class="formal-hosted-link" id="formalHostedLink" href="https://smallcannon-arch.github.io/schedule-system/" hidden>開啟正式系統</a>
     </div>
     <div class="formal-gate-request">
       <div>
@@ -3821,7 +3823,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260716-2"></script>
+<script src="schedule-auth.js?v=20260716-3"></script>
 <script>
 ScheduleAuth.initialize();
 ScheduleReadiness.initialize({
