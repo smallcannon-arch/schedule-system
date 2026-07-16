@@ -630,21 +630,6 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </ol></div>
   </details>
   <div class="panel">
-    <h2>教師快速設定</h2>
-    <div class="sub" style="margin-bottom:10px">適合鐘點、兼課與跨校教師。先選教師，再直接點選每週時段；「看可排時段」搭配「先全部設為不可排」，可以快速留下實際到校的時段。</div>
-    <div class="teacher-limit-toolbar">
-      <label>教師<select id="tpick" class="edit" onchange="renderTeacherLimitGrid()"></select></label>
-      <div class="teacher-limit-modes" role="group" aria-label="教師時段顯示方式">
-        <button class="on" id="teacherLimitBlockedMode" type="button" onclick="setTeacherLimitMode('blocked')">看不可排時段</button>
-        <button id="teacherLimitAllowedMode" type="button" onclick="setTeacherLimitMode('allowed')">看可排時段</button>
-      </div>
-      <button class="btn soft sm" type="button" onclick="blockAllTeacherSlots()">先全部設為不可排</button>
-      <button class="btn soft sm" type="button" onclick="clearTeacherSlots()">清除快速設定</button>
-    </div>
-    <table class="tt teacher-limit-grid" id="teacherLimitGrid"></table>
-    <div class="teacher-limit-summary" id="teacherLimitSummary"></div>
-  </div>
-  <div class="panel">
     <div class="tt-tools">
       <button class="btn soft sm" type="button" onclick="window.print()">列印</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.logout()">登出</button>
@@ -758,7 +743,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>年級共用：</b>學年共同時間可直接選年級後點選時段，快速套用到全年級。</li>
-      <li><b>個別限制：</b>教師、單一班級或特殊原因，使用限制清單逐列新增。</li>
+      <li><b>教師時段：</b>鐘點、兼課或跨校教師可使用教師快速設定，直接點選整週可排與不可排時段。</li>
+      <li><b>個別限制：</b>單一班級、特殊原因或例外規則，使用限制清單逐列新增。</li>
       <li><b>重新求解：</b>任何限制異動後都要重新執行排課，舊結果不會自動重算。</li>
     </ol><div class="step-help-note">限制過多可能造成無解；若求解失敗，先檢查同一教師或班級是否被封鎖過多時段。</div></div>
   </details>
@@ -772,6 +758,21 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       </select>
       <table class="tt" id="gGrid" style="max-width:520px"></table>
     </div>
+  </div>
+  <div class="panel">
+    <h2>👤 教師快速設定</h2>
+    <div class="sub" style="margin-bottom:10px">適合鐘點、兼課與跨校教師。先選教師，再直接點選每週時段；「看可排時段」搭配「先全部設為不可排」，可以快速留下實際到校的時段。</div>
+    <div class="teacher-limit-toolbar">
+      <label>教師<select id="tpick" class="edit" onchange="renderTeacherLimitGrid()"></select></label>
+      <div class="teacher-limit-modes" role="group" aria-label="教師時段顯示方式">
+        <button class="on" id="teacherLimitBlockedMode" type="button" onclick="setTeacherLimitMode('blocked')">看不可排時段</button>
+        <button id="teacherLimitAllowedMode" type="button" onclick="setTeacherLimitMode('allowed')">看可排時段</button>
+      </div>
+      <button class="btn soft sm" type="button" onclick="blockAllTeacherSlots()">先全部設為不可排</button>
+      <button class="btn soft sm" type="button" onclick="clearTeacherSlots()">清除快速設定</button>
+    </div>
+    <table class="tt teacher-limit-grid" id="teacherLimitGrid"></table>
+    <div class="teacher-limit-summary" id="teacherLimitSummary"></div>
   </div>
   <div class="panel">
     <h2>📋 限制清單（教師／年級／班級）</h2>
