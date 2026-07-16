@@ -46,7 +46,7 @@ def test_formal_release_check_bypasses_cached_homepage():
 
     assert 'release: "__APP_RELEASE__"' in app_config
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
-    assert 'schedule-auth.js?v=20260716-2' in html
+    assert 'schedule-auth.js?v=20260716-3' in html
     assert 'new URL("release.json", root.location.href)' in script_text
     assert '{cache: "no-store"}' in script_text
     assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text
@@ -70,6 +70,36 @@ process.stdout.write(JSON.stringify(assigned));
     assert len(assigned) == 1
     assert assigned[0].startswith(
         "https://smallcannon-arch.github.io/schedule-system/?release=")
+
+
+def test_local_file_login_points_to_hosted_formal_site():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
+
+    assert 'id="formalHostedLink"' in html
+    assert 'href="https://smallcannon-arch.github.io/schedule-system/"' in html
+    assert 'root.location.protocol === "file:"' in script
+    assert "本機檔案" in script
+    assert 'hostedLink.hidden = false' in script
+
+    node_script = r"""
+const fs=require('fs'),vm=require('vm');
+const elements={formalAuthStatus:{textContent:'',dataset:{}},formalHostedLink:{hidden:true}};
+const context={SCHEDULE_APP_CONFIG:{mode:'formal'},location:{protocol:'file:'},
+  document:{getElementById:id=>elements[id]||null},console};
+vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),context);
+context.ScheduleAuth.initialize().then(()=>process.stdout.write(JSON.stringify({
+  status:elements.formalAuthStatus.textContent,kind:elements.formalAuthStatus.dataset.kind,
+  linkHidden:elements.formalHostedLink.hidden
+})));
+"""
+    result = subprocess.run(
+        ["node", "-e", node_script, str(FORMAL / "schedule-auth.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+    assert "本機檔案" in output["status"]
+    assert output["kind"] == "error"
+    assert output["linkHidden"] is False
 
 
 @pytest.mark.skipif(not SEPARATE_DEMO, reason="monorepo contains the formal frontend only")
