@@ -269,7 +269,7 @@ def load_frontend_data(payload, limits=(), rules=()):
     for row in payload.get("classes") or []:
         code = _text(row.get("code"))
         try:
-            grade = int(row.get("g", row.get("grade")))
+            grade = _whole_number(row.get("g", row.get("grade")))
         except (TypeError, ValueError):
             raise ValueError(f"班級「{code or '未命名'}」的年級必須是 1 到 6")
         if not code or code in class_codes:
@@ -290,8 +290,18 @@ def load_frontend_data(payload, limits=(), rules=()):
     if not roster:
         raise ValueError("系統案件尚未建立教師")
 
-    rooms = {str(key): max(1, int(value or 1))
-             for key, value in (payload.get("rooms") or {"R00": 99}).items()}
+    rooms = {}
+    for key, value in (payload.get("rooms") or {"R00": 99}).items():
+        room = _text(key)
+        if not room:
+            raise ValueError("場地名稱不可空白")
+        try:
+            capacity = 1 if value in (None, "") else _whole_number(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"場地「{room}」容量必須是正整數")
+        if capacity < 1:
+            raise ValueError(f"場地「{room}」容量必須大於 0")
+        rooms[room] = capacity
     rooms.setdefault("R00", 99)
     room_names = {key: ("原班教室" if key == "R00" else key) for key in rooms}
 
@@ -304,7 +314,8 @@ def load_frontend_data(payload, limits=(), rules=()):
         hours = {}
         for grade in range(1, 7):
             try:
-                hours[grade] = int(values[grade - 1] or 0) if grade <= len(values) else 0
+                raw_hours = values[grade - 1] if grade <= len(values) else None
+                hours[grade] = 0 if raw_hours in (None, "") else _whole_number(raw_hours)
             except (TypeError, ValueError):
                 raise ValueError(f"科目「{subject}」{grade}年級節數必須是整數")
             if hours[grade] < 0:
@@ -764,20 +775,34 @@ def _load_data_v5(wb):
         name = _text(value)
         return "R00" if not name or "原班" in name else name
 
-    for row in wb["場地"].iter_rows(min_row=2, values_only=True):
+    seen_rooms = set()
+    for row_number, row in enumerate(
+            wb["場地"].iter_rows(min_row=2, values_only=True), start=2):
         name = _text(row[0] if row else None)
         if not name:
+            if row and any(_text(value) for value in row):
+                raise ValueError(f"場地工作表第 {row_number} 列缺少場地名稱")
             continue
         rid = room_key(name)
+        if rid in seen_rooms:
+            raise ValueError(f"場地工作表第 {row_number} 列的場地名稱重複：{name}")
         try:
-            capacity = int(row[1] or 1)
+            raw_capacity = row[1] if len(row) > 1 else None
+            capacity = 1 if raw_capacity in (None, "") else _whole_number(raw_capacity)
         except (TypeError, ValueError):
-            raise ValueError(f"場地「{name}」容量必須是正整數")
+            raise ValueError(f"場地工作表第 {row_number} 列：{name}容量必須是正整數")
         if capacity < 1:
-            raise ValueError(f"場地「{name}」容量必須大於 0")
+            raise ValueError(f"場地工作表第 {row_number} 列：{name}容量必須大於 0")
+        seen_rooms.add(rid)
         rooms[rid], room_names[rid] = capacity, name
         if len(row) > 2 and row[2] not in (None, "") and rid != "R00":
-            room_prio[rid] = int(row[2])
+            try:
+                priority = _whole_number(row[2])
+            except (TypeError, ValueError):
+                raise ValueError(f"場地工作表第 {row_number} 列：{name}徵用順位必須是整數")
+            if priority < 0:
+                raise ValueError(f"場地工作表第 {row_number} 列：{name}徵用順位不可為負數")
+            room_prio[rid] = priority
     d["rooms"], d["room_names"], d["room_prio"] = rooms, room_names, room_prio
 
     # 科目節數
@@ -959,7 +984,11 @@ def _load_data_v5(wb):
             match = re.fullmatch(r"([1-6一二三四五六])年級(?:全部)?", token)
             if match:
                 grade = cn_grade.get(match.group(1), int(match.group(1)) if match.group(1).isdigit() else 0)
-                result.extend(c["code"] for c in classes if c["grade"] == grade and subjects[subject]["hours"][grade] > 0)
+                grade_classes = [c["code"] for c in classes if c["grade"] == grade]
+                if grade_classes and subjects[subject]["hours"][grade] <= 0:
+                    raise ValueError(
+                        f"配課工作表第 {row_number} 列：{subject}在{grade}年級的節數為 0")
+                result.extend(grade_classes)
             elif token in class_map:
                 result.append(token)
             else:
@@ -997,15 +1026,18 @@ def _load_data_v5(wb):
                 f"配課工作表第 {row_number} 列：{teacher}／{subject}目前沒有符合的任教班級，已略過")
             continue
         for code in targets:
-            if subjects[subject]["hours"][class_map[code]["grade"]] > 0:
-                key = (code, subject)
-                previous = explicit_assignments.get(key)
-                if previous and previous["teacher"] != teacher:
-                    raise ValueError(
-                        f"配課工作表第 {row_number} 列：{code} {subject}已在第 {previous['row']} 列"
-                        f"配給{previous['teacher']}")
-                explicit_assignments[key] = {"teacher": teacher, "row": row_number}
-                assign[(code, subject)] = teacher
+            grade = class_map[code]["grade"]
+            if subjects[subject]["hours"][grade] <= 0:
+                raise ValueError(
+                    f"配課工作表第 {row_number} 列：{code}的{subject}節數為 0，請刪除此配課或調整科目節數")
+            key = (code, subject)
+            previous = explicit_assignments.get(key)
+            if previous and previous["teacher"] != teacher:
+                raise ValueError(
+                    f"配課工作表第 {row_number} 列：{code} {subject}已在第 {previous['row']} 列"
+                    f"配給{previous['teacher']}")
+            explicit_assignments[key] = {"teacher": teacher, "row": row_number}
+            assign[(code, subject)] = teacher
     d["assign"] = assign
     d["room_override"], d["prefs"] = {}, []
 

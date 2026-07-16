@@ -3638,13 +3638,19 @@ function parseV5(wb,S,opt){
     nd.teacherNativeLangs[nm]=meta.native;
   }
   // 場地（以名稱為識別；「原班」→不佔場地）
-  nd.rooms={R00:99};const rprio={};
+  nd.rooms={R00:99};const rprio={},roomRows=S('場地'),seenRooms=new Set();
   const roomKey=n=>{n=String(n||'').trim();return !n||/原班/.test(n)?'R00':n};
-  for(const r of S('場地').slice(1)){
-    if(!r||!r[0])continue;
-    const k=roomKey(r[0]);
-    if(k!=='R00')nd.rooms[k]=+(r[1]||1);
-    if(r[2]&&k!=='R00')rprio[k]=+r[2];
+  for(let index=1;index<roomRows.length;index++){
+    const r=roomRows[index];if(!importRowHasData(r))continue;
+    const name=String(r?.[0]||'').trim();
+    if(!name){importIssue(nd,'error','場地',index+1,'缺少場地名稱');continue}
+    const k=roomKey(name);
+    if(seenRooms.has(k)){importIssue(nd,'error','場地',index+1,`場地名稱重複：${name}`);continue}
+    const capacity=importNonNegativeInteger(nd,'場地',index+1,`${name}容量`,r[1],1);
+    if(capacity<1){importIssue(nd,'error','場地',index+1,`${name}容量必須大於 0`);continue}
+    seenRooms.add(k);nd.rooms[k]=capacity;
+    if(r[2]!==null&&r[2]!==undefined&&String(r[2]).trim()!==''&&k!=='R00')
+      rprio[k]=importNonNegativeInteger(nd,'場地',index+1,`${name}徵用順位`,r[2]);
   }
   // 科目
   nd.subjects={};const subjectRows=S('科目節數');
@@ -3742,7 +3748,11 @@ function parseV5(wb,S,opt){
         out.push(...nd.classes.filter(c=>nd.subjects[subj]&&nd.subjects[subj].hours[c.g-1]>0).map(c=>c.code));
       }else if(/年級全部$/.test(tk)||/^[1-6一二三四五六]年級$/.test(tk)){
         const g=CN5[tk[0]]||+tk[0];
-        out.push(...nd.classes.filter(c=>c.g===g).map(c=>c.code));
+        const gradeClasses=nd.classes.filter(c=>c.g===g).map(c=>c.code);
+        if(gradeClasses.length&&nd.subjects[subj].hours[g-1]<=0){
+          importIssue(nd,'error',assignmentSheetName,excelRow,`${subj}在 ${g} 年級的節數為 0`);continue;
+        }
+        out.push(...gradeClasses);
       }else if(gOf[tk])out.push(tk);
       else importIssue(nd,'error',assignmentSheetName,excelRow,`配課「${subj}」的班級「${tk}」找不到`);
     }
@@ -3757,9 +3767,12 @@ function parseV5(wb,S,opt){
     const subj=/^(閩南語|臺語|台語|本土語文[（(]閩南語[）)])$/.test(rawSubj)?'本土語文':rawSubj;
     if(!nd.subjects[subj]){importIssue(nd,'error',assignmentSheetName,excelRow,`配課科目「${subj}」不在科目節數表`);continue}
     if(!Object.prototype.hasOwnProperty.call(nd.roster,t)){importIssue(nd,'error',assignmentSheetName,excelRow,`配課教師「${t}」不在教師名冊`);continue}
-    const targets=expand(r[2],subj,excelRow);
+    const errorCount=nd._errors.length,targets=expand(r[2],subj,excelRow);
+    if(nd._errors.length>errorCount&&!targets.length)continue;
     if(!targets.length){importIssue(nd,'warning',assignmentSheetName,excelRow,`配課「${t}／${subj}」目前沒有符合的任教班級，已略過`);continue}
     for(const code of targets){
+      const grade=gOf[code].g;
+      if(nd.subjects[subj].hours[grade-1]<=0){importIssue(nd,'error',assignmentSheetName,excelRow,`${code}的${subj}節數為 0，請刪除此配課或調整科目節數`);continue}
       const key=`${code}|${subj}`,previous=explicitAssignments.get(key);
       if(previous&&previous.teacher!==t){importIssue(nd,'error',assignmentSheetName,excelRow,`${code} ${subj}已在第 ${previous.row} 列配給${previous.teacher}`);continue}
       explicitAssignments.set(key,{teacher:t,row:excelRow});

@@ -64,6 +64,10 @@ def test_v6_conflicting_duplicate_teacher_row_is_rejected(tmp_path):
 @pytest.mark.parametrize(("sheet_name", "values", "message"), [
     ("班級", ["7甲", "七年級", "王導師"], "年級必須是 1 到 6"),
     ("班級", [None, 1, "王導師"], "缺少班級代碼"),
+    ("班級", ["1甲", 1, "王導師"], "班級代碼重複"),
+    ("場地", [None, 2], "缺少場地名稱"),
+    ("場地", ["自然教室", 2], "場地名稱重複"),
+    ("場地", ["創客教室", 1.5], "容量必須是正整數"),
     ("科目節數", [None, 1, 0, 0, 0, 0, 0], "缺少科目名稱"),
     ("科目節數", ["閱讀", 1.5, 0, 0, 0, 0, 0], "節數必須是整數"),
     ("年段時段", ["七年級", 1, 1], "年級必須是 1 到 6"),
@@ -113,6 +117,45 @@ def test_v6_partial_assignment_row_is_rejected(tmp_path):
 
     with pytest.raises(ValueError, match="完整填寫教師、科目與任教班級"):
         engine.load_data(target)
+
+
+def test_v6_zero_hour_assignment_is_rejected(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook["教師與配課"]
+    row = sheet.max_row + 1
+    sheet.cell(row, 9, sheet["A3"].value)
+    sheet.cell(row, 10, "英語文")
+    sheet.cell(row, 11, "1甲")
+    target = tmp_path / "zero-hour-assignment.xlsx"
+    workbook.save(target)
+
+    with pytest.raises(ValueError, match="1甲的英語文節數為 0"):
+        engine.load_data(target)
+
+
+def test_v6_custom_subject_is_loaded_without_alias_mapping(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    subjects = workbook["科目節數"]
+    school_subject_row = next(
+        row for row in range(2, subjects.max_row + 1)
+        if subjects.cell(row, 1).value == "校訂A")
+    subjects.cell(school_subject_row, 2, 0)
+    row = subjects.max_row + 1
+    for column, value in enumerate(
+            ["閱讀", 1, 0, 0, 0, 0, 0, "原班教室", "否", ""], start=1):
+        subjects.cell(row, column, value)
+    assignments = workbook["教師與配課"]
+    row = assignments.max_row + 1
+    assignments.cell(row, 9, assignments["A3"].value)
+    assignments.cell(row, 10, "閱讀")
+    assignments.cell(row, 11, "1甲")
+    target = tmp_path / "custom-subject.xlsx"
+    workbook.save(target)
+
+    data = engine.load_data(target)
+
+    assert data["subjects"]["閱讀"]["hours"][1] == 1
+    assert data["assign"][("1甲", "閱讀")] == assignments["A3"].value
 
 
 def test_v6_direct_parser_reads_alias_limits_and_resource_overlay(tmp_path):
@@ -229,6 +272,24 @@ def _resource_frontend_payload():
             "slots": [{"d": "一", "p": 1}, {"d": "三", "p": 1}, {"d": "五", "p": 1}],
         }],
     }
+
+
+@pytest.mark.parametrize(("field", "message"), [
+    ("class_grade", "年級必須是 1 到 6"),
+    ("room_capacity", "容量必須是正整數"),
+    ("subject_hours", "節數必須是整數"),
+])
+def test_frontend_numeric_fields_reject_fractional_values(field, message):
+    payload = _resource_frontend_payload()
+    if field == "class_grade":
+        payload["classes"][0]["g"] = 1.5
+    elif field == "room_capacity":
+        payload["rooms"]["資源教室"] = 1.5
+    else:
+        payload["subjects"]["國語文"]["hours"][0] = 1.5
+
+    with pytest.raises(ValueError, match=message):
+        engine.load_frontend_data(payload)
 
 
 def test_resource_group_combines_classes_and_counts_teacher_sessions_once():
