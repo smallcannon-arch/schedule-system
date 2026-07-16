@@ -23,7 +23,7 @@ const workflow=require(process.argv[1]);
 const data={
   classes:[{code:'3甲',res:true}],
   subjects:{'國語文':{},'數學':{},'綜合活動':{}},
-  resGroups:[{code:'3甲',subj:'綜合活動'}]
+  resGroups:[{sources:['3甲'],subj:'國語文',pullSubjects:['國語文','綜合活動']}]
 };
 const schedule={
   '3甲|一|1':{s:'國語文'},
@@ -43,7 +43,7 @@ process.stdout.write(JSON.stringify({
 
     assert output == {
         "language": True,
-        "math": True,
+        "math": False,
         "group": True,
         "lock1": True,
         "lock2": True,
@@ -70,8 +70,8 @@ process.stdout.write(JSON.stringify({stable:one===stable,changed:one!==changed})
 def test_frontend_loads_teacher_workflow_before_main_logic():
     html = (ONLINE / "index.html").read_text(encoding="utf-8")
 
-    assert '<script src="teacher-workflow.js"></script>' in html
-    assert html.index('src="teacher-workflow.js"') < html.index("const DAYS=")
+    assert '<script src="teacher-workflow.js?v=20260716-1"></script>' in html
+    assert html.index('src="teacher-workflow.js?') < html.index("const DAYS=")
     assert "if(isResourceBound(code,s))" in html
     assert "currentTeacherSignature(code)!==issued.baseSignature" in html
 

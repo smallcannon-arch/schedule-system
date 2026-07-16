@@ -15,6 +15,17 @@ def _classes(data):
     return {str(item.get("code")): item for item in data.get("classes") or []}
 
 
+def _resource_sources(group):
+    values = group.get("sources") if isinstance(group.get("sources"), list) else [group.get("code")]
+    return {str(value).strip() for value in values if str(value or "").strip()}
+
+
+def _resource_pull_subjects(group):
+    values = (group.get("pullSubjects") if isinstance(group.get("pullSubjects"), list)
+              and group.get("pullSubjects") else [group.get("subj")])
+    return {str(value).strip() for value in values if str(value or "").strip()}
+
+
 def _native_lock_enabled(data):
     flag = data.get("nativeLockEnabled")
     if isinstance(flag, bool):
@@ -83,10 +94,7 @@ def _room_of(data, code, subject):
 
 
 def _is_resource_bound(data, code, subject):
-    classroom = _classes(data).get(code) or {}
-    if classroom.get("res") and subject in {"國語文", "數學"}:
-        return True
-    return any(str(group.get("code")) == code and group.get("subj") == subject
+    return any(code in _resource_sources(group) and subject in _resource_pull_subjects(group)
                for group in data.get("resGroups") or [])
 
 
@@ -141,7 +149,7 @@ def _class_package(snapshot, class_code, teacher_name, revision, pending=None):
         "rooms": deepcopy(data.get("rooms") or {}),
         "roster": {name: (data.get("roster") or {}).get(name, "") for name in relevant_names if name},
         "resGroups": [deepcopy(item) for item in data.get("resGroups") or []
-                      if str(item.get("code")) == class_code],
+                      if class_code in _resource_sources(item)],
         "nativeGroups": [deepcopy(item) for item in data.get("nativeGroups") or []
                          if int(item.get("g") or 0) == int(classroom.get("g") or 0)],
         "nativeBands": [deepcopy(item) for item in data.get("nativeBands") or []

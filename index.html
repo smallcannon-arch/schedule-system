@@ -8,7 +8,7 @@
 <title>國民小學課務排程輔助系統｜正式版</title>
 <meta name="application-name" content="國民小學課務排程輔助系統">
 <meta name="description" content="國民小學教師配課、課務排程與課表協作平台。">
-<script src="app-config.js?v=20260714-5"></script>
+<script src="app-config.js?v=20260716-1"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -238,6 +238,8 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .platform-school-form input[readonly]{background:#f2f2f2;color:#666;cursor:not-allowed}
 .platform-school-form .btn{white-space:nowrap;padding:9px 13px}
 .platform-school-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.teacher-limit-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:12px}.teacher-limit-toolbar label{display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:900}.teacher-limit-toolbar select{min-width:180px}.teacher-limit-modes{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}.teacher-limit-modes button{border:0;border-right:1px solid var(--line);border-radius:0;background:#fff;padding:9px 12px;color:var(--muted);font:inherit;font-size:13px;font-weight:900;cursor:pointer}.teacher-limit-modes button:last-child{border-right:0}.teacher-limit-modes button.on{background:var(--mint);color:var(--mint-d)}.teacher-limit-grid{width:min(100%,620px);table-layout:fixed}.teacher-limit-slot{width:100%;height:38px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.teacher-limit-slot.blocked{background:var(--pink);color:var(--pink-d)}.teacher-limit-slot.allowed-view{background:var(--mint);color:var(--mint-d)}.teacher-limit-summary{margin-top:9px;color:var(--muted);font-size:13px;font-weight:800}
+.resource-source-picker summary,.resource-settings summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.resource-checks{display:flex;flex-wrap:wrap;gap:7px 12px;padding:9px 0}.resource-checks label{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px}.resource-settings-row td{background:#fbfaf9;padding:7px 10px 12px!important}.resource-settings-body{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(420px,1.3fr);gap:14px;margin-top:8px}.resource-slot-grid{width:100%;max-width:620px;table-layout:fixed}.resource-slot-button{width:100%;height:34px;border:0;background:#fff;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.resource-slot-button.on{background:var(--mint);color:var(--mint-d)}.resource-slot-summary{margin-top:6px;color:var(--muted);font-size:12px;font-weight:800}.resource-class-summary{display:flex;gap:7px;flex-wrap:wrap}.resource-class-summary .pchip{cursor:default}
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
@@ -313,7 +315,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
   .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
-  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-usage-summary div:last-child:nth-child(odd){grid-column:1/-1}.platform-school-actions{overflow-x:auto}.platform-usage-head{align-items:flex-start;flex-direction:column}.platform-usage-actions{justify-content:flex-start}.usage-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-detail-summary div:nth-child(2){border-right:0}.usage-detail-summary div:nth-child(-n+2){border-bottom:1px solid var(--line)}.usage-timeline-row{grid-template-columns:1fr auto}.usage-timeline-row time{grid-column:1/-1}
+  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-usage-summary div:last-child:nth-child(odd){grid-column:1/-1}.platform-school-actions{overflow-x:auto}.platform-usage-head{align-items:flex-start;flex-direction:column}.platform-usage-actions{justify-content:flex-start}.usage-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-detail-summary div:nth-child(2){border-right:0}.usage-detail-summary div:nth-child(-n+2){border-bottom:1px solid var(--line)}.usage-timeline-row{grid-template-columns:1fr auto}.usage-timeline-row time{grid-column:1/-1}.resource-settings-body{grid-template-columns:1fr}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{grid-template-columns:1fr;align-items:stretch}.formal-request-link{text-align:center}.formal-request-details{grid-column:1}.formal-request-details ul{grid-template-columns:1fr}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
 @media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.step-help,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
@@ -357,7 +359,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.24</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.25</b></span></div>
   </div>
 </section>
 
@@ -628,6 +630,21 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </ol></div>
   </details>
   <div class="panel">
+    <h2>教師快速設定</h2>
+    <div class="sub" style="margin-bottom:10px">適合鐘點、兼課與跨校教師。先選教師，再直接點選每週時段；「看可排時段」搭配「先全部設為不可排」，可以快速留下實際到校的時段。</div>
+    <div class="teacher-limit-toolbar">
+      <label>教師<select id="tpick" class="edit" onchange="renderTeacherLimitGrid()"></select></label>
+      <div class="teacher-limit-modes" role="group" aria-label="教師時段顯示方式">
+        <button class="on" id="teacherLimitBlockedMode" type="button" onclick="setTeacherLimitMode('blocked')">看不可排時段</button>
+        <button id="teacherLimitAllowedMode" type="button" onclick="setTeacherLimitMode('allowed')">看可排時段</button>
+      </div>
+      <button class="btn soft sm" type="button" onclick="blockAllTeacherSlots()">先全部設為不可排</button>
+      <button class="btn soft sm" type="button" onclick="clearTeacherSlots()">清除快速設定</button>
+    </div>
+    <table class="tt teacher-limit-grid" id="teacherLimitGrid"></table>
+    <div class="teacher-limit-summary" id="teacherLimitSummary"></div>
+  </div>
+  <div class="panel">
     <div class="tt-tools">
       <button class="btn soft sm" type="button" onclick="window.print()">列印</button>
       <button class="btn soft sm" type="button" onclick="ScheduleAuth.logout()">登出</button>
@@ -711,24 +728,25 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <!-- ═══ 資源班 ═══ -->
 <section class="view" id="v-res">
   <h1>🧩 資源班</h1>
-  <div class="sub">勾選有資源班學生的班級後，該班<b>國語文、數學改由排課系統排課</b>（不開放導師自填），並與下方抽離設定連動；排課後可在「課表檢視」看資源班教師課表。</div>
+  <div class="sub">一個抽離分組可同時包含同年級多個原班，資源班教師節數只計一次。資源班授課科目與原班可抽離科目分開設定，也可由教師先鎖定實際上課時段。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
-      <li><b>勾選班級：</b>先標示有資源班學生的原班，讓國語文與數學交由系統排定。</li>
-      <li><b>建立抽離組：</b>每一組學生、每一科建立一列，指定節數與資源班教師。</li>
-      <li><b>檢查同步：</b>排課後核對原班與資源班教師課表是否在相同節次。</li>
+      <li><b>建立分組：</b>同一組可勾選同年級多個來源班級，例如一年甲、乙班合併為 A 組。</li>
+      <li><b>分開選科：</b>「資源班授課科目」是教師實際教授內容；「原班可抽離科目」可複選國語、數學、彈性或綜合等課程。</li>
+      <li><b>安排時段：</b>可交由系統安排，也可切換固定時段後直接點選每週節次。</li>
     </ol><div class="step-help-note">資源班綁課屬於鎖定課程，導師與一般課表編修都不能移動。</div></div>
   </details>
   <div class="panel">
-    <h2>✅ 有資源班學生的班級</h2>
-    <div class="poolbar" id="resClsBar"></div>
+    <h2>已納入抽離的原班</h2>
+    <div class="resource-class-summary" id="resClsBar"></div>
   </div>
   <div class="panel">
-    <h2>📋 抽離設定（一列＝一組學生的一科）</h2>
-    <div class="tbl"><table id="resTbl" style="min-width:640px"></table></div>
+    <h2>抽離分組</h2>
+    <div class="tbl"><table id="resTbl" style="min-width:1050px"></table></div>
+    <div class="auth-status" id="resourceGroupHint" hidden></div>
     <div style="margin-top:11px"><button class="btn mint sm" onclick="addResG()">＋ 新增抽離組</button></div>
-    <div class="sub" style="margin-top:10px;margin-bottom:0">抽離節次由系統自動對齊原班該科目時段；資源班教師自動避免衝堂。</div>
+    <div class="sub" style="margin-top:10px;margin-bottom:0">系統會讓所有來源班級在同一節抽離，並自動避開資源班教師衝堂；同一分組不會因來源班級數量重複計算教師節數。</div>
   </div>
 </section>
 
@@ -1119,7 +1137,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.24</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.25</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1127,11 +1145,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 </main>
 
 <script src="data.js"></script>
-<script src="teacher-workflow.js"></script>
-<script src="schedule-editor.js"></script>
+<script src="teacher-workflow.js?v=20260716-1"></script>
+<script src="schedule-editor.js?v=20260716-1"></script>
 <script src="schedule-policy.js?v=20260713-2"></script>
 <script src="setup-builder.js?v=20260714-1"></script>
-<script src="schedule-exports.js?v=20260713-1"></script>
+<script src="schedule-exports.js?v=20260716-1"></script>
 <script src="feedback.js?v=20260714-1"></script>
 <script src="readiness-center.js?v=20260714-2"></script>
 <script>
@@ -1226,7 +1244,7 @@ function renderLim(){
       <td><select class="edit" onchange="setLimitValue(${i},2,this.value)">${['1','2','3','4','5','6','7','全部'].map(x=>`<option ${x===r[2]?'selected':''}>${x}</option>`).join('')}</select></td>
       <td><select class="edit" onchange="setLimitValue(${i},3,this.value)"><option ${r[3]==='不可排'?'selected':''}>不可排</option><option ${r[3]==='避免'?'selected':''}>避免</option></select></td>
       <td><input list="rlist" value="${esc(r[4])}" style="text-align:left" onchange="setLimitValue(${i},4,this.value)"></td>
-      <td><button class="btn soft sm" type="button" title="刪除此限制" onclick="removeLimit(${i})">✕</button></td></tr>`;
+      <td><div style="display:flex;gap:5px"><button class="btn soft sm" type="button" title="複製此限制" onclick="duplicateLimit(${i})">複製</button><button class="btn soft sm" type="button" title="刪除此限制" onclick="removeLimit(${i})">✕</button></div></td></tr>`;
   });
   t.innerHTML=h;
   const db=document.getElementById('derivedBox');
@@ -1238,15 +1256,96 @@ function renderLim(){
   }
 }
 function saveLimitChange(label){
-  invalidateSchedule();rebuildLim();renderLim();renderGGrid();saveLS(label||'不排課時間已更新');
+  invalidateSchedule();rebuildLim();renderLim();renderGGrid();renderTeacherLimitGrid();saveLS(label||'不排課時間已更新');
 }
 function setLimitValue(index,key,value){if(!LIMITS[index])return;LIMITS[index][key]=value;saveLimitChange()}
 function addLim(){LIMITS.push(['','一','1','不可排','']);renderLim();saveLS('已新增不排課時間')}
+function duplicateLimit(index){
+  const row=LIMITS[index];if(!row)return;
+  LIMITS.splice(index+1,0,[...row]);saveLimitChange('已複製不排課限制，請調整星期或節次');
+}
 function removeLimit(index){
   const row=LIMITS[index];if(!row)return;
   const label=[row[0],row[1]&&`週${row[1]}`,row[2]&&`第${row[2]}節`].filter(Boolean).join(' ');
   if(!confirm(`確定刪除${label?`「${label}」`: '這筆'}不排課限制？刪除後必須重新執行排課。`))return;
   LIMITS.splice(index,1);saveLimitChange('已刪除不排課時間');
+}
+/* 教師快速設定格 */
+let TEACHER_LIMIT_MODE='blocked';
+function selectedLimitTeacher(){return String(document.getElementById('tpick')?.value||'').trim()}
+function teacherSlotsFromLimits(teacher,predicate){
+  const blocked=new Set();
+  for(const row of LIMITS){
+    if(row[0]!==teacher||row[3]!=='不可排'||!predicate(row))continue;
+    const days=row[1]==='每日'?DAYS:[row[1]],periods=row[2]==='全部'?PS:[+row[2]];
+    for(const day of days)for(const period of periods)if(DAYS.includes(day)&&PS.includes(+period))blocked.add(`${day}|${+period}`);
+  }
+  return blocked;
+}
+function teacherBlockedSlots(teacher){return teacherSlotsFromLimits(teacher,()=>true)}
+function teacherManualBlockedSlots(teacher){return teacherSlotsFromLimits(teacher,row=>row[4]!=='教師快速設定')}
+function compactTeacherLimits(teacher,blocked){
+  const rows=[],fullDays=new Set(DAYS.filter(day=>PS.every(period=>blocked.has(`${day}|${period}`)))),
+    fullPeriods=new Set(PS.filter(period=>DAYS.every(day=>blocked.has(`${day}|${period}`))));
+  for(const day of fullDays)rows.push([teacher,day,'全部','不可排','教師快速設定']);
+  for(const period of fullPeriods)rows.push([teacher,'每日',String(period),'不可排','教師快速設定']);
+  for(const day of DAYS)for(const period of PS){
+    if(!blocked.has(`${day}|${period}`)||fullDays.has(day)||fullPeriods.has(period))continue;
+    rows.push([teacher,day,String(period),'不可排','教師快速設定']);
+  }
+  return rows;
+}
+function replaceTeacherBlockedSlots(teacher,blocked,label){
+  const manual=teacherManualBlockedSlots(teacher),generated=new Set([...blocked].filter(key=>!manual.has(key)));
+  LIMITS=LIMITS.filter(row=>!(row[0]===teacher&&row[3]==='不可排'&&row[4]==='教師快速設定'));
+  LIMITS.push(...compactTeacherLimits(teacher,generated));saveLimitChange(label);
+}
+function setTeacherLimitMode(mode){
+  TEACHER_LIMIT_MODE=mode==='allowed'?'allowed':'blocked';renderTeacherLimitGrid();
+}
+function renderTeacherLimitGrid(){
+  const select=document.getElementById('tpick'),table=document.getElementById('teacherLimitGrid');if(!select||!table)return;
+  const previous=select.value,teachers=Object.keys(DATA.roster||{}).filter(name=>name&&name!=='待聘(鐘點)').sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  select.innerHTML=teachers.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('')||'<option value="">尚無教師</option>';
+  if(teachers.includes(previous))select.value=previous;
+  const teacher=selectedLimitTeacher(),blocked=teacherBlockedSlots(teacher);
+  document.getElementById('teacherLimitBlockedMode')?.classList.toggle('on',TEACHER_LIMIT_MODE==='blocked');
+  document.getElementById('teacherLimitAllowedMode')?.classList.toggle('on',TEACHER_LIMIT_MODE==='allowed');
+  let html='<tr><th class="pd">節次</th>'+DAYS.map(day=>`<th>星期${day}</th>`).join('')+'</tr>';
+  for(const period of PS){
+    if(period===5)html+='<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
+    html+=`<tr><th class="pd">${period}</th>`;
+    for(const day of DAYS){
+      const isBlocked=blocked.has(`${day}|${period}`),highlight=TEACHER_LIMIT_MODE==='allowed'?!isBlocked:isBlocked;
+      const css=isBlocked?'blocked':(TEACHER_LIMIT_MODE==='allowed'?'allowed-view':'');
+      const label=TEACHER_LIMIT_MODE==='allowed'?(isBlocked?'不可排':'可排'):(isBlocked?'不排':'');
+      html+=`<td><button class="teacher-limit-slot ${css}" type="button" aria-pressed="${highlight}" aria-label="${esc(teacher)}週${day}第${period}節${isBlocked?'不可排':'可排'}" onclick="toggleTeacherSlot(${jsArg(day)},${period})">${label}</button></td>`;
+    }
+    html+='</tr>';
+  }
+  table.innerHTML=html;
+  const allowed=DAYS.length*PS.length-blocked.size;
+  const manual=teacherManualBlockedSlots(teacher).size;
+  document.getElementById('teacherLimitSummary').textContent=teacher?`${teacher}：可排 ${allowed} 節｜不可排 ${blocked.size} 節${manual?`｜其中 ${manual} 節由下方限制清單控制`:''}`:'請先建立教師名單。';
+}
+function toggleTeacherSlot(day,period){
+  const teacher=selectedLimitTeacher();if(!teacher)return;
+  const blocked=teacherBlockedSlots(teacher),key=`${day}|${period}`;
+  if(teacherManualBlockedSlots(teacher).has(key))return alert('此時段由下方限制清單控制，請在限制清單調整或刪除原規則。');
+  if(blocked.has(key))blocked.delete(key);else blocked.add(key);
+  replaceTeacherBlockedSlots(teacher,blocked,`${teacher}的可排時段已更新`);
+}
+function blockAllTeacherSlots(){
+  const teacher=selectedLimitTeacher();if(!teacher)return;
+  if(!confirm(`確定先將「${teacher}」全部時段設為不可排？接著請切換「看可排時段」，點選實際可到校的節次。`))return;
+  replaceTeacherBlockedSlots(teacher,new Set(DAYS.flatMap(day=>PS.map(period=>`${day}|${period}`))),`${teacher}已設為全時段不可排`);
+  TEACHER_LIMIT_MODE='allowed';renderTeacherLimitGrid();
+}
+function clearTeacherSlots(){
+  const teacher=selectedLimitTeacher();if(!teacher)return;
+  const generated=LIMITS.some(row=>row[0]===teacher&&row[3]==='不可排'&&row[4]==='教師快速設定');if(!generated)return;
+  if(!confirm(`確定清除「${teacher}」由快速設定建立的時段？下方限制清單中手動新增的規則會保留。`))return;
+  replaceTeacherBlockedSlots(teacher,teacherManualBlockedSlots(teacher),`${teacher}的快速時段限制已清除`);
 }
 /* 年級快速設定格 */
 function gLimIdx(g,d,p){return LIMITS.findIndex(r=>r[0]===`${g}年級`&&r[1]===d&&r[2]===String(p)&&r[3]==='不可排')}
@@ -1573,61 +1672,166 @@ function removeRule(index){
 
 /* ═══ 資源班（勾選班級＋抽離設定＋overlay 排入）═══ */
 let OVL=[];  // 已排抽離 [{grp,code,subj,t,d,p}]
+let RESOURCE_SOURCE_OPEN='',RESOURCE_SETTINGS_OPEN='';
+function resourceId(){return `resource-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`}
+function resourceSources(group){
+  const values=Array.isArray(group?.sources)?group.sources:[group?.code];
+  return [...new Set(values.map(code=>String(code||'').trim()).filter(code=>CODE2C[code]))];
+}
+function resourcePullSubjects(group){
+  const values=Array.isArray(group?.pullSubjects)&&group.pullSubjects.length?group.pullSubjects:[group?.subj];
+  return [...new Set(values.map(subject=>String(subject||'').trim()).filter(subject=>DATA.subjects?.[subject]))];
+}
+function resourceSlots(group){
+  return (Array.isArray(group?.slots)?group.slots:[]).map(slot=>({d:String(slot.d||slot.day||''),p:+(slot.p||slot.period||0)}))
+    .filter(slot=>DAYS.includes(slot.d)&&PS.includes(slot.p));
+}
+function normalizeResourceGroups(){
+  const source=Array.isArray(DATA.resGroups)?DATA.resGroups:[],normalized=[];
+  for(const item of source){
+    const oldStyle=!Array.isArray(item.sources),sources=resourceSources(item),subject=String(item.subj||'國語文');
+    if(oldStyle){
+      const row={...item,id:resourceId(),sources:[...sources],subj:subject,pullSubjects:[subject],scheduleMode:'auto',slots:[]};
+      normalized.push(row);continue;
+    }
+    normalized.push({...item,id:item.id||resourceId(),sources,pullSubjects:resourcePullSubjects(item),
+      scheduleMode:item.scheduleMode==='fixed'?'fixed':'auto',slots:resourceSlots(item),n:Math.max(1,Math.min(10,+item.n||1))});
+  }
+  for(const group of normalized)group.sources=[...new Set(group.sources)];
+  DATA.resGroups=normalized;
+  const active=new Set(normalized.flatMap(resourceSources));
+  for(const classroom of DATA.classes||[])classroom.res=active.has(classroom.code);
+}
+function resourceSourcePicker(group,index){
+  const selected=new Set(resourceSources(group)),grade=CODE2C[[...selected][0]]?.g;
+  return `<details class="resource-source-picker" ${RESOURCE_SOURCE_OPEN===group.id?'open':''}><summary>${selected.size?`${[...selected].map(code=>esc(clsName(CODE2C[code]))).join('、')}（${selected.size}班）`:'選擇來源班級'}</summary><div class="resource-checks">${DATA.classes.map(c=>`<label><input type="checkbox" ${selected.has(c.code)?'checked':''} ${grade&&+c.g!==+grade&&!selected.has(c.code)?'disabled':''} onchange="rgToggleSource(${index},${jsArg(c.code)},this.checked)">${esc(clsName(c))}</label>`).join('')}</div></details>`;
+}
+function resourcePullPicker(group,index){
+  const selected=new Set(resourcePullSubjects(group));
+  return `<div><b>原班可抽離科目</b><div class="sub" style="margin:3px 0 6px">來源班級在同一節排到任一勾選科目即可抽離。</div><div class="resource-checks">${Object.keys(DATA.subjects||{}).map(subject=>`<label><input type="checkbox" ${selected.has(subject)?'checked':''} onchange="rgTogglePullSubject(${index},${jsArg(subject)},this.checked)">${esc(subject)}</label>`).join('')}</div></div>`;
+}
+function resourceSlotGrid(group,index){
+  if(group.scheduleMode!=='fixed')return '<div><b>時段安排</b><div class="sub" style="margin-top:5px">目前由 CP-SAT 依原班可抽離科目與教師限制自動安排。</div></div>';
+  const selected=new Set(resourceSlots(group).map(slot=>`${slot.d}|${slot.p}`));let html='<div><b>固定上課時段</b><table class="tt resource-slot-grid"><tr><th class="pd">節次</th>'+DAYS.map(day=>`<th>週${day}</th>`).join('')+'</tr>';
+  for(const period of PS){
+    if(period===5)html+='<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
+    html+=`<tr><th class="pd">${period}</th>`+DAYS.map(day=>{const on=selected.has(`${day}|${period}`);return `<td><button type="button" class="resource-slot-button ${on?'on':''}" aria-pressed="${on}" onclick="rgToggleSlot(${index},${jsArg(day)},${period})">${on?'固定':''}</button></td>`}).join('')+'</tr>';
+  }
+  const expected=Math.max(1,+group.n||1),actual=selected.size;
+  return html+`</table><div class="resource-slot-summary" style="color:${actual===expected?'var(--mint-d)':'var(--pink-d)'}">已選 ${actual} 節／每週需要 ${expected} 節${actual===expected?'':'，兩者必須相同'}</div></div>`;
+}
 function renderRes(){
-  document.getElementById('resClsBar').innerHTML=DATA.classes.map(c=>
-    `<button type="button" class="pchip ${c.res?'on':''}" onclick="toggleRes(${jsArg(c.code)})">${esc(clsName(c))}${c.res?' ✓':''}</button>`).join('');
+  normalizeResourceGroups();
+  const active=new Set((DATA.resGroups||[]).flatMap(resourceSources));
+  document.getElementById('resClsBar').innerHTML=DATA.classes.filter(c=>active.has(c.code)).map(c=>
+    `<span class="pchip on">${esc(clsName(c))} ✓</span>`).join('')||'<span class="sub">尚未建立抽離分組</span>';
   const t=document.getElementById('resTbl');
   const rg=DATA.resGroups||[];
-  let h='<tr><th>組別</th><th>原班</th><th>科目</th><th>資源班教師</th><th>每週節數</th><th></th></tr>';
+  const subjects=Object.keys(DATA.subjects||{});
+  let h='<tr><th>組別</th><th>來源班級</th><th>資源班授課科目</th><th>資源班教師</th><th>每週節數</th><th>安排方式</th><th></th></tr>';
   rg.forEach((g,i)=>{
     h+=`<tr><td><input value="${esc(g.grp)}" style="max-width:90px" onchange="rgSet(${i},'grp',this.value)"></td>
-      <td><select class="edit" onchange="rgSet(${i},'code',this.value)">${DATA.classes.map(c=>`<option value="${esc(c.code)}" ${c.code===g.code?'selected':''}>${esc(clsName(c))}</option>`).join('')}</select></td>
-      <td><select class="edit" onchange="rgSet(${i},'subj',this.value)"><option ${g.subj==='國語文'?'selected':''}>國語文</option><option ${g.subj==='數學'?'selected':''}>數學</option></select></td>
+      <td>${resourceSourcePicker(g,i)}</td>
+      <td><select class="edit" onchange="rgSet(${i},'subj',this.value)">${subjects.map(subject=>`<option value="${esc(subject)}" ${subject===g.subj?'selected':''}>${esc(subject)}</option>`).join('')}</select></td>
       <td><input list="tlist" value="${esc(g.t)}" style="max-width:110px" onchange="rgSet(${i},'t',this.value)"></td>
-      <td><input class="numin" type="number" min="1" max="6" value="${g.n}" onchange="rgSet(${i},'n',+this.value)"></td>
-      <td><button class="btn soft sm" type="button" title="刪除此抽離組" onclick="removeResGroup(${i})">✕</button></td></tr>`;
+      <td><input class="numin" type="number" min="1" max="10" value="${g.n}" onchange="rgSet(${i},'n',+this.value)"></td>
+      <td><select class="edit" onchange="rgSet(${i},'scheduleMode',this.value)"><option value="auto" ${g.scheduleMode!=='fixed'?'selected':''}>系統安排</option><option value="fixed" ${g.scheduleMode==='fixed'?'selected':''}>固定時段</option></select></td>
+      <td><button class="btn soft sm" type="button" title="刪除此抽離組" onclick="removeResGroup(${i})">✕</button></td></tr>
+      <tr class="resource-settings-row"><td colspan="7"><details class="resource-settings" ${g.scheduleMode==='fixed'||RESOURCE_SETTINGS_OPEN===g.id?'open':''}><summary>更多設定：原班抽離科目${g.scheduleMode==='fixed'?'、固定時段':''}</summary><div class="resource-settings-body">${resourcePullPicker(g,i)}${resourceSlotGrid(g,i)}</div></details></td></tr>`;
   });
-  t.innerHTML=h;
+  t.innerHTML=h+(rg.length?'':'<tr><td colspan="7" style="padding:18px;color:var(--muted)">尚未建立資源班抽離分組</td></tr>');
+  const duplicateKeys=new Map(),hint=document.getElementById('resourceGroupHint');
+  for(const group of rg){const source=resourceSources(group)[0],grade=CODE2C[source]?.g||0,key=[grade,group.grp,group.subj,group.t,group.n].join('|');duplicateKeys.set(key,(duplicateKeys.get(key)||0)+1)}
+  const possible=[...duplicateKeys.values()].some(count=>count>1);
+  if(hint){hint.hidden=!possible;hint.textContent=possible?'偵測到同年級、同組名、同教師與同節數的多列設定。若它們是合班上課，請在其中一列勾選所有來源班級，再刪除其餘重複列，教師節數才會只計一次。':''}
 }
-function toggleRes(code){
-  const c=CODE2C[code];c.res=!c.res;
-  invalidateSchedule();renderRes();fillTutor();saveLS();
+function rgSet(i,k,v){
+  const group=DATA.resGroups[i];if(!group)return;
+  if(k==='subj'){
+    const old=group.subj,pull=resourcePullSubjects(group);group.subj=v;
+    if(pull.length===1&&pull[0]===old)group.pullSubjects=[v];
+  }else if(k==='n')group.n=Math.max(1,Math.min(10,+v||1));
+  else if(k==='scheduleMode'){group.scheduleMode=v==='fixed'?'fixed':'auto';if(group.scheduleMode==='auto')group.slots=[]}
+  else group[k]=v;
+  invalidateSchedule();renderRes();fillTutor();renderTLoad();saveLS('資源班分組已更新');
 }
-function rgSet(i,k,v){DATA.resGroups[i][k]=v;invalidateSchedule();renderRes();saveLS()}
+function rgToggleSource(index,code,checked){
+  const group=DATA.resGroups[index];if(!group)return;
+  RESOURCE_SOURCE_OPEN=group.id;
+  const sources=new Set(resourceSources(group)),currentGrade=CODE2C[[...sources][0]]?.g,nextGrade=CODE2C[code]?.g;
+  if(checked&&currentGrade&&+nextGrade!==+currentGrade)return alert('同一資源班分組的來源班級必須屬於同一年級。');
+  if(checked)sources.add(code);else sources.delete(code);
+  if(!sources.size){alert('每個資源班分組至少需要一個來源班級。');return renderRes()}
+  group.sources=[...sources];invalidateSchedule();renderRes();fillTutor();saveLS('資源班來源班級已更新');
+}
+function rgTogglePullSubject(index,subject,checked){
+  const group=DATA.resGroups[index];if(!group)return;
+  RESOURCE_SETTINGS_OPEN=group.id;
+  const subjects=new Set(resourcePullSubjects(group));if(checked)subjects.add(subject);else subjects.delete(subject);
+  if(!subjects.size){alert('每個資源班分組至少需要一個原班可抽離科目。');return renderRes()}
+  group.pullSubjects=[...subjects];invalidateSchedule();renderRes();saveLS('原班可抽離科目已更新');
+}
+function rgToggleSlot(index,day,period){
+  const group=DATA.resGroups[index];if(!group)return;
+  const slots=resourceSlots(group),found=slots.findIndex(slot=>slot.d===day&&slot.p===+period);
+  if(found>=0)slots.splice(found,1);else slots.push({d:day,p:+period});
+  group.slots=slots;invalidateSchedule();renderRes();saveLS('資源班固定時段已更新');
+}
 function addResG(){
   DATA.resGroups=DATA.resGroups||[];
-  const first=DATA.classes.find(c=>c.res)||DATA.classes[0];
+  const first=DATA.classes[0];
   if(!first)return alert('請先在「資料建置」建立班級，再新增資源班抽離組。');
-  DATA.resGroups.push({grp:'A組',code:first.code,subj:'國語文',t:'',n:2});
-  if(!first.res){first.res=true}
-  invalidateSchedule();renderRes();saveLS();
+  const subject=DATA.subjects?.['國語文']?'國語文':Object.keys(DATA.subjects||{})[0];
+  if(!subject)return alert('請先建立科目節數，再新增資源班抽離組。');
+  DATA.resGroups.push({id:resourceId(),grp:`${first.g}年級A組`,sources:[first.code],subj:subject,pullSubjects:[subject],t:'',n:2,scheduleMode:'auto',slots:[]});
+  invalidateSchedule();renderRes();fillTutor();saveLS('已新增資源班抽離組');
 }
 function removeResGroup(index){
   const group=(DATA.resGroups||[])[index];if(!group)return;
   if(!confirm(`確定刪除「${group.grp||'此抽離組'}」的${group.subj||''}設定？刪除後必須重新排課。`))return;
   DATA.resGroups.splice(index,1);invalidateSchedule();renderRes();fillTutor();saveLS('已刪除資源班抽離組');
 }
+function resourceValidationIssues(){
+  const issues=[],fixedTeacherSlots=new Map();
+  for(const group of DATA.resGroups||[]){
+    const label=group.grp||'未命名資源班分組',sources=resourceSources(group),pullSubjects=resourcePullSubjects(group),slots=resourceSlots(group);
+    if(!sources.length)issues.push(`${label}尚未選擇來源班級`);
+    if(new Set(sources.map(code=>CODE2C[code]?.g)).size>1)issues.push(`${label}的來源班級不是同一年級`);
+    if(!pullSubjects.length)issues.push(`${label}尚未選擇原班可抽離科目`);
+    if(!String(group.t||'').trim())issues.push(`${label}尚未指定資源班教師`);
+    if(group.scheduleMode==='fixed'&&slots.length!==Math.max(1,+group.n||1))issues.push(`${label}固定時段 ${slots.length} 節，與每週節數 ${Math.max(1,+group.n||1)} 不一致`);
+    if(group.scheduleMode==='fixed'&&group.t)for(const slot of slots){
+      const key=`${group.t}|${slot.d}|${slot.p}`;
+      if(fixedTeacherSlots.has(key))issues.push(`${group.t}在週${slot.d}第${slot.p}節被兩個資源班分組重複固定`);
+      else fixedTeacherSlots.set(key,label);
+    }
+  }
+  return [...new Set(issues)];
+}
 function placeOverlay(cls){
   const out=[],warn=[],busy={};
   for(const g of (DATA.resGroups||[])){
-    if(!g.t){warn.push(`抽離組 ${g.grp}（${clsName(CODE2C[g.code]||{g:'?',i:'?'})} ${g.subj}）未填資源班教師，未排`);continue}
-    let need=g.n;
-    for(const k in cls){
-      if(need===0)break;
-      const[c,d,p]=k.split('|');
-      if(c!==g.code||cls[k].s!==g.subj)continue;
-      if(busy[`${g.t}|${d}|${p}`]||TLIM.has(`${g.t}|${d}|${p}`))continue;
-      busy[`${g.t}|${d}|${p}`]=1;
-      out.push({grp:g.grp,code:g.code,subj:g.subj,t:g.t,d,p:+p});need--;
+    const sources=resourceSources(g),pullSubjects=new Set(resourcePullSubjects(g)),fixed=resourceSlots(g),needed=Math.max(1,+g.n||1);
+    if(!g.t){warn.push(`抽離組 ${g.grp} 未填資源班教師，未排`);continue}
+    if(g.scheduleMode==='fixed'&&fixed.length!==needed){warn.push(`抽離組 ${g.grp} 固定時段 ${fixed.length} 節，與每週 ${needed} 節不一致`);continue}
+    const candidates=(g.scheduleMode==='fixed'?fixed:DAYS.flatMap(d=>PS.map(p=>({d,p})))).filter(slot=>{
+      if(busy[`${g.t}|${slot.d}|${slot.p}`]||TLIM.has(`${g.t}|${slot.d}|${slot.p}`))return false;
+      return sources.every(code=>{const lesson=cls[`${code}|${slot.d}|${slot.p}`];return lesson&&pullSubjects.has(lesson.s)});
+    });
+    let placed=0;
+    for(const slot of candidates){
+      if(placed>=needed)break;busy[`${g.t}|${slot.d}|${slot.p}`]=1;
+      for(const code of sources){const pullSubj=cls[`${code}|${slot.d}|${slot.p}`].s;out.push({id:g.id,grp:g.grp,code,subj:g.subj,pullSubj,t:g.t,d:slot.d,p:+slot.p})}
+      placed++;
     }
-    if(need>0)warn.push(`抽離組 ${g.grp}（${clsName(CODE2C[g.code])} ${g.subj}）缺 ${need} 節：原班該科節數不足或資源班教師衝堂`);
+    if(placed<needed)warn.push(`抽離組 ${g.grp} 缺 ${needed-placed} 節：來源班級沒有共同可抽離時段，或資源班教師衝堂`);
   }
   return {out,warn};
 }
 function hoursOf(s,g){return DATA.subjects[s].hours[g-1]}
 function roomOf(code,s){return (DATA.override[code]&&DATA.override[code][s])||DATA.subjects[s].room}
 // 引擎科目 vs 導師池
-function hasResG(code,s){return (DATA.resGroups||[]).some(g=>g.code===code&&g.subj===s)}
+function hasResG(code,s){return (DATA.resGroups||[]).some(group=>resourceSources(group).includes(code)&&resourcePullSubjects(group).includes(s))}
 function isResourceBound(code,s){return TeacherWorkflow.isResourceBound(DATA,code,s)}
 function isResourceLockedSlot(code,d,p){return TeacherWorkflow.isResourceLockedSlot(DATA,SOL,OVL,code,d,p)}
 function isEngine(code,s){
@@ -1829,6 +2033,14 @@ function trySolve(tasks){
   return {cls,unplaced,lockErrors};
 }
 
+function uniqueResourceSessions(rows=OVL){
+  const unique=new Map();
+  for(const row of rows||[]){
+    const key=[row.id||row.grp||'',row.t||'',row.d||'',+row.p||0,row.subj||''].join('|');
+    if(!unique.has(key))unique.set(key,row);
+  }
+  return [...unique.values()];
+}
 function scheduleEntries(includeOverlay=false){
   const out=[];
   if(SOL)for(const k in SOL){
@@ -1842,7 +2054,7 @@ function scheduleEntries(includeOverlay=false){
       out.push({code,d,p:+p,s,t:c.tutor||'',room:roomOf(code,s)||'R00',source:'tutor'});
     }
   }
-  if(includeOverlay)for(const o of OVL)out.push({code:o.code,d:o.d,p:+o.p,s:o.subj,t:o.t||'',room:'R00',source:'overlay'});
+  if(includeOverlay)for(const o of uniqueResourceSessions())out.push({code:o.code,d:o.d,p:+o.p,s:o.subj,t:o.t||'',room:'R00',source:'overlay'});
   return out;
 }
 function validateSchedule(){
@@ -1855,7 +2067,7 @@ function validateSchedule(){
       code:nativeSourceCodes(group.sources)[0]||`${group.g}年級`,d:band.d,p:+band.p,
       s:'本土語文',t:teacher,source:'native',assistant:index===1}));
   }):[];
-  const teacherEntries=[...entries,...OVL.map(o=>({code:o.code,d:o.d,p:+o.p,s:o.subj,t:o.t||'',source:'overlay'})),...nativeEntries];
+  const teacherEntries=[...scheduleEntries(true),...nativeEntries];
   for(const e of entries){
     const c=CODE2C[e.code],info=DATA.subjects[e.s];
     if(!c||!info){add('資料',`${e.code} ${e.s} 找不到班級或科目設定`);continue}
@@ -1887,7 +2099,8 @@ function validateSchedule(){
     if(!entries.some(e=>e.code===lk.c&&e.d===lk.d&&e.p===+lk.p&&e.s===lk.s))add('H10',`${lk.c} ${lk.s} 未在週${lk.d}第${lk.p}節鎖定位置`);
   }
   if(ruleOn('H13'))for(const o of OVL){
-    if(!entries.some(e=>e.code===o.code&&e.d===o.d&&e.p===+o.p&&e.s===o.subj))add('H13',`${o.grp} 未與 ${o.code} ${o.subj} 同時段`);
+    const pullSubject=o.pullSubj||o.subj;
+    if(!entries.some(e=>e.code===o.code&&e.d===o.d&&e.p===+o.p&&e.s===pullSubject))add('H13',`${o.grp} 未與 ${o.code} ${pullSubject} 同時段`);
   }
   for(const c of DATA.classes)for(const s in DATA.subjects){
     const need=hoursOf(s,c.g)||0;if(!need)continue;
@@ -2197,6 +2410,8 @@ async function runFormal(){
   clearFormalDiagnosis();
   const setup=ScheduleSetup.validate();
   if(setup.hard.length)return formalMessage('bad','排課資料尚未完整',setup.hard.slice(0,4).join('；'));
+  const resourceIssues=resourceValidationIssues();
+  if(resourceIssues.length)return formalMessage('bad','資源班設定尚未完整',resourceIssues.slice(0,4).join('；'));
   const localData=TeacherWorkflow.clone(DATA);
   const completeMode=formalRunIsComplete();
   const payload={
@@ -2239,7 +2454,7 @@ async function runFormal(){
     FORMAL_AUTO_TUTOR=completeMode;
     SOL={};
     for(const row of result.schedule)SOL[`${row.code}|${row.day}|${row.period}`]={s:row.subject,t:row.teacher||'',room:row.room||'R00'};
-    OVL=(result.overlay||[]).map(row=>({grp:row.group,code:row.code,subj:row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
+    OVL=(result.overlay||[]).map(row=>({id:row.group_id||'',grp:row.group,code:row.code,subj:row.subject,pullSubj:row.pull_subject||row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
     tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};SCHEDULE_READY=true;renderAll();saveLS();
     clearFormalDiagnosis();
     formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
@@ -2299,8 +2514,8 @@ function renderTT(){
           else if(c&&DATA.gslot[c.g][DAYS.indexOf(d)][p-1])cell='<div class="slot-na" style="color:#c9b183">□</div>';
         }else if(val.endsWith('（資源班）')){
           const rt=val.replace('（資源班）','');
-          const ov=OVL.find(o=>o.t===rt&&o.d===d&&o.p===p);
-          if(ov)cell=cellHTML({s:ov.subj+'※',t:clsName(CODE2C[ov.code])+'·'+ov.grp},'k-ovl');
+          const rows=OVL.filter(o=>o.t===rt&&o.d===d&&o.p===p),ov=rows[0];
+          if(ov)cell=cellHTML({s:ov.subj+'※',t:[...new Set(rows.map(item=>clsName(CODE2C[item.code])))].join('、')+'·'+ov.grp},'k-ovl');
         }else{
           const items=[];
           for(const k in SOL){
@@ -2313,7 +2528,10 @@ function renderTT(){
               if(tp)items.push({s:tp,label:clsName(CODE2C[code])});
             }
           }
-          for(const o of OVL)if(o.t===val&&o.d===d&&+o.p===p)items.push({s:o.subj+'※',label:clsName(CODE2C[o.code])+'·'+o.grp});
+          for(const o of uniqueResourceSessions())if(o.t===val&&o.d===d&&+o.p===p){
+            const sources=OVL.filter(item=>(item.id||item.grp)===(o.id||o.grp)&&item.t===o.t&&item.d===o.d&&+item.p===+o.p);
+            items.push({s:o.subj+'※',label:[...new Set(sources.map(item=>clsName(CODE2C[item.code])))].join('、')+'·'+o.grp});
+          }
           if(items.length===1)cell=cellHTML({s:items[0].s,t:items[0].label});
           else if(items.length>1)cell=conflictHTML(items);
         }
@@ -2527,7 +2745,7 @@ function buildTeacherData(code,busySlots){
     locks:(DATA.locks||[]).filter(item=>item.c===code).map(item=>TeacherWorkflow.clone(item)),
     limits,derived:[],rules:TeacherWorkflow.clone(RULES),blocked:TeacherWorkflow.clone(DATA.blocked||[]),
     gslot:TeacherWorkflow.clone(DATA.gslot),rooms:TeacherWorkflow.clone(DATA.rooms),roster,
-    resGroups:(DATA.resGroups||[]).filter(item=>item.code===code).map(item=>TeacherWorkflow.clone(item)),tcap,
+    resGroups:(DATA.resGroups||[]).filter(item=>resourceSources(item).includes(code)).map(item=>TeacherWorkflow.clone(item)),tcap,
     nativeLockEnabled:!!DATA.nativeLockEnabled,
     nativeBands:(DATA.nativeBands||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
     nativeGroups:(DATA.nativeGroups||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
@@ -2870,7 +3088,7 @@ const rl=document.createElement('datalist');rl.id='rlist';
 rl.innerHTML=['學年共同時間','行政會議','導護勤務','本土語直播協同','週三下午進修','他校兼課','社團指導','兼任行政職務'].map(x=>`<option>${x}</option>`).join('');
 document.body.appendChild(rl);
 
-function renderAll(){renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderNative();renderRes();renderEditor();ScheduleSetup.render();if(window.ScheduleReadiness)ScheduleReadiness.render()}
+function renderAll(){normalizeResourceGroups();renderStat();renderAlloc();fillTT();fillTutor();renderLim();renderRules();renderGGrid();renderTeacherLimitGrid();renderNative();renderRes();renderEditor();ScheduleSetup.render();if(window.ScheduleReadiness)ScheduleReadiness.render()}
 
 /* ═══ 資料來源切換（示範 / 匯入真實資料 / 瀏覽器存檔）═══ */
 const DEMO_LSKEY='schedule_demo_progress_v2';
@@ -2905,7 +3123,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.24');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.25');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3482,7 +3700,7 @@ ScheduleAuth.initialize();
 ScheduleReadiness.initialize({
   mode:APP_MODE,
   getData:()=>DATA,
-  getSetupValidation:()=>ScheduleSetup.validate(),
+  getSetupValidation:()=>{const result=ScheduleSetup.validate(),resourceIssues=resourceValidationIssues();return {...result,hard:[...(result.hard||[]),...resourceIssues]}},
   isScheduleReady:()=>SCHEDULE_READY,
   getScheduleValidation:()=>SCHEDULE_READY?validateSchedule():{hard:[],pending:[]},
   getExportIssues:()=>SCHEDULE_READY?ScheduleExports.validateUpload(DATA,exportEntries(),EXPORT_TEACHER_IDS):[],

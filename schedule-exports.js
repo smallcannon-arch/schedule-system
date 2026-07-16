@@ -107,7 +107,7 @@
     for (const item of overlays || []) output.push({
       code: text(item.code), d: text(item.d), p: Number(item.p), s: text(item.subj || item.s),
       displaySubject: text(item.subj || item.s), t: text(item.t), room: text(item.room) || "R00",
-      group: text(item.grp), source: "overlay",
+      group: text(item.grp), groupId: text(item.id), pullSubject: text(item.pullSubj), source: "overlay",
     });
     return output.filter((item) => item.code && DAYS.includes(item.d) && PERIODS.includes(item.p) && item.s)
       .sort((a, b) => DAYS.indexOf(a.d) - DAYS.indexOf(b.d) || a.p - b.p || a.code.localeCompare(b.code, "zh-Hant") || a.t.localeCompare(b.t, "zh-Hant"));

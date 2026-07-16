@@ -202,6 +202,14 @@ def _list_values(value):
     return list(dict.fromkeys(_text(item) for item in source if _text(item)))
 
 
+def _resource_sources(item):
+    return _list_values(item.get("sources")) or [_text(item.get("class"))]
+
+
+def _resource_pull_subjects(item):
+    return _list_values(item.get("pull_subjects")) or [_text(item.get("subj"))]
+
+
 def _normalize_subject_name(value):
     subject = _text(value)
     compact = re.sub(r"[\s（）()]", "", subject)
@@ -399,15 +407,51 @@ def load_frontend_data(payload, limits=(), rules=()):
                           "teacher": _text(row.get("teacher")) or None})
 
     overlay = []
-    for row in payload.get("resGroups") or []:
-        code, subject, teacher = _text(row.get("code")), _text(row.get("subj")), _text(row.get("t"))
-        if code not in class_codes or subject not in subjects or not teacher:
-            continue
-        count = min(20, max(0, int(row.get("n") or 0)))
+    class_grade = {item["code"]: item["grade"] for item in classes}
+    for row_index, row in enumerate(payload.get("resGroups") or []):
+        subject, teacher = _text(row.get("subj")), _text(row.get("t"))
+        sources = _list_values(row.get("sources")) or [_text(row.get("code"))]
+        sources = list(dict.fromkeys(code for code in sources if code))
+        pull_subjects = _list_values(row.get("pullSubjects")) or [subject]
+        pull_subjects = list(dict.fromkeys(
+            _normalize_subject_name(value) for value in pull_subjects
+            if _normalize_subject_name(value)))
+        group_name = _text(row.get("grp")) or "資源班分組"
+        if not sources or any(code not in class_codes for code in sources):
+            raise ValueError(f"{group_name}引用不存在的來源班級")
+        if len({class_grade[code] for code in sources}) != 1:
+            raise ValueError(f"{group_name}的來源班級必須屬於同一年級")
+        if subject not in subjects:
+            raise ValueError(f"{group_name}的授課科目不存在：{subject}")
+        if not pull_subjects or any(value not in subjects for value in pull_subjects):
+            raise ValueError(f"{group_name}包含不存在的原班抽離科目")
+        if not teacher:
+            raise ValueError(f"{group_name}尚未指定資源班教師")
+        count = min(10, max(1, int(row.get("n") or 1)))
+        mode = "fixed" if _text(row.get("scheduleMode")) == "fixed" else "auto"
+        slots = []
+        for slot in row.get("slots") or []:
+            day = _text(slot.get("d", slot.get("day")))
+            try:
+                period = int(slot.get("p", slot.get("period")))
+            except (TypeError, ValueError):
+                continue
+            if day in DAYS and period in PERIODS:
+                slots.append((day, period))
+        slots = list(dict.fromkeys(slots))
+        if mode == "fixed" and len(slots) != count:
+            raise ValueError(
+                f"{group_name}固定時段 {len(slots)} 節，與每週節數 {count} 不一致")
         roster.setdefault(teacher, "資源班教師")
-        for _ in range(count):
-            overlay.append({"grp": _text(row.get("grp")) or "資源班", "class": code,
-                            "subj": subject, "t": teacher, "day": None, "p": None})
+        group_id = _text(row.get("id")) or f"resource-{row_index + 1}"
+        for session_index in range(count):
+            day, period = slots[session_index] if mode == "fixed" else (None, None)
+            overlay.append({
+                "id": f"{group_id}-{session_index + 1}", "grp": group_name,
+                "class": sources[0], "sources": sources,
+                "subj": subject, "pull_subjects": pull_subjects, "t": teacher,
+                "day": day, "p": period,
+            })
 
     blocked = set()
     for row in payload.get("blocked") or []:
@@ -1218,7 +1262,12 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
     native_enabled = d.get("native_lock_enabled")
     if native_enabled is None:
         native_enabled = any(lock["subj"] == "本土語文" for lock in d["locks"])
-    overlay_set = {(ov["class"], ov["subj"]) for ov in d["overlay"]}
+    overlay_set = {
+        (code, subject)
+        for ov in d["overlay"]
+        for code in _resource_sources(ov)
+        for subject in _resource_pull_subjects(ov)
+    }
     minnan_group_sources = _minnan_group_sources(d.get("native_groups"))
     tasks = {}
     pool = defaultdict(list)  # 導師自排科目池：class -> [(subj, hours, teacher)]
@@ -1237,16 +1286,15 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             mode = d.get("assignment_modes", {}).get((code, s))
             self_arrange = mode == "tutor" if mode else info["self_arrange"]
             if self_arrange and (code, s) not in locked_set:
-                # 引擎排課例外：資源班班級之國數、有 overlay 之科目、授課者非導師本人
-                bind = ((c["res"] and s in ("國語文", "數學")) or (code, s) in overlay_set
-                        or (t and t != c["tutor"]))
+                # 引擎排課例外：資源班抽離科目、授課者非導師本人。
+                bind = ((code, s) in overlay_set or (t and t != c["tutor"]))
                 if auto_schedule_tutor:
                     t = t or c.get("tutor") or ""
                 elif not bind:
                     pool[code].append((s, h, t or ""))
                     continue
                 if bind:
-                    reason = ("資源班綁課" if (c["res"] and s in ("國語文", "數學")) or (code, s) in overlay_set
+                    reason = ("資源班綁課" if (code, s) in overlay_set
                               else f"授課者{t}非導師")
                     warn.append(f"引擎接手導師科目：{code} {s}（{reason}）")
             if not t and (code, s) not in locked_set:
@@ -1342,37 +1390,42 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
     ov_z = {}
     ov_by_teacher = defaultdict(list)
     for i, ov in enumerate(d["overlay"]):
-        key = (ov["class"], ov["subj"])
-        if key not in tasks:
-            warn.append(f"overlay無法對應課程(該科未排)：{ov['grp']} {ov['class']} {ov['subj']}")
-            continue
+        sources = _resource_sources(ov)
+        pull_subjects = _resource_pull_subjects(ov)
         cand = []
-        for day, p, v in active(*key):
-            if ov["day"] and day != ov["day"]:
-                continue
-            if ov["p"] and p != ov["p"]:
-                continue
-            if (ov["t"], day, p) in d["teacher_limit"]:
-                continue
-            z = m.NewBoolVar(f"ov{i}_{day}{p}")
-            m.Add(z <= v)
-            cand.append((day, p, z))
+        for day in DAYS:
+            for p in PERIODS:
+                source_vars = {}
+                for code in sources:
+                    values = [var(code, subject, day, p) for subject in pull_subjects]
+                    source_vars[code] = [value for value in values if value is not None]
+                if any(not values for values in source_vars.values()):
+                    continue
+                if ov["day"] and day != ov["day"]:
+                    continue
+                if ov["p"] and p != ov["p"]:
+                    continue
+                if (ov["t"], day, p) in d["teacher_limit"]:
+                    continue
+                z = m.NewBoolVar(f"ov{i}_{day}{p}")
+                for values in source_vars.values():
+                    m.Add(z <= sum(values))
+                cand.append((day, p, z))
         if not cand:
-            warn.append(f"overlay無可用時段：{ov['grp']} {ov['class']} {ov['subj']}")
-            continue
+            source_label = "、".join(sources)
+            raise InfeasibleScheduleError(
+                f"資源班分組沒有共同可抽離時段：{ov['grp']}（{source_label}）",
+                [{"rule": "H13", "message": "請檢查原班可抽離科目、固定時段及資源班教師限制"}])
         m.Add(sum(z for _, _, z in cand) == 1)
         for day, p, z in cand:
             ov_z[(i, day, p)] = z
             ov_by_teacher[(ov["t"], day, p)].append(z)
-        if ov["day"] and ov["p"]:  # 星期節次皆指定=同時鎖定原班該科目
-            vv = var(ov["class"], ov["subj"], ov["day"], ov["p"])
-            if vv is not None:
-                m.Add(vv == 1)
     for (t, day, p), zs in ov_by_teacher.items():
         m.Add(sum(zs) + sum(teacher_slot.get((t, day, p), [])) <= 1)
     grp_rows = defaultdict(list)
     for i, ov in enumerate(d["overlay"]):
-        grp_rows[(ov["grp"], ov["class"])].append(i)
+        group_id = str(ov.get("id") or "").rsplit("-", 1)[0] or ov["grp"]
+        grp_rows[group_id].append(i)
     for ids in grp_rows.values():
         if len(ids) > 1:
             slotmap = defaultdict(list)
@@ -1593,7 +1646,12 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
     for (i, day, p), z in ov_z.items():
         if solver.Value(z):
             ov = d["overlay"][i]
-            ov_sched.append((ov["grp"], ov["class"], ov["subj"], ov["t"], day, p))
+            for code in _resource_sources(ov):
+                pull_subject = next((subject for subject in _resource_pull_subjects(ov)
+                                     if var(code, subject, day, p) is not None
+                                     and solver.Value(var(code, subject, day, p))), "")
+                ov_sched.append((ov.get("id") or f"resource-{i + 1}", ov["grp"], code,
+                                 ov["subj"], pull_subject, ov["t"], day, p))
     pool_total = sum(hours for rows in pool.values() for _, hours, _ in rows)
     missing_total = sum(item["hours"] for item in missing_courses)
     remaining_total = max(0, required_total - len(sched))
@@ -1622,14 +1680,14 @@ def validate(d, sched, tasks, ov_sched=()):
     errs = []
     grade_of = {c["code"]: c["grade"] for c in d["classes"]}
     ovt = defaultdict(list)
-    for grp, code, s, t, day, p in ov_sched:
+    for group_id, grp, code, s, pull_subject, t, day, p in ov_sched:
         got = sched.get((code, day, p))
-        if not got or got[0] != s:
-            errs.append(f"H13違反(時段不符原班)：{grp} {code} {s} 週{day}{p}")
-        ovt[(t, day, p)].append(grp)
+        if not got or got[0] != pull_subject:
+            errs.append(f"H13違反(時段不符原班)：{grp} {code} {pull_subject} 週{day}{p}")
+        ovt[(t, day, p)].append(group_id)
     for (t, day, p), grps in ovt.items():
-        n = len(grps) + sum(1 for (cc, dd, pp), (ss, tt, _) in sched.items()
-                            if tt == t and dd == day and pp == p)
+        n = len(set(grps)) + sum(1 for (cc, dd, pp), (ss, tt, _) in sched.items()
+                                 if tt == t and dd == day and pp == p)
         if n > 1:
             errs.append(f"H13違反(資源班教師衝堂)：{t} 週{day}{p} {grps}")
     tslot, cslot, rslot, tday = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
@@ -1656,9 +1714,12 @@ def validate(d, sched, tasks, ov_sched=()):
     for k, v in tslot.items():
         if len(v) > 1:
             errs.append(f"H01違反：{k} {v}")
-    for grp, code, s, t, day, p in ov_sched:
-        if t:
-            tday[(t, day)].append(f"{code}{s}({grp})")
+    resource_daily_seen = set()
+    for group_id, grp, code, s, pull_subject, t, day, p in ov_sched:
+        marker = (group_id, t, day, p)
+        if t and marker not in resource_daily_seen:
+            resource_daily_seen.add(marker)
+            tday[(t, day)].append(f"{s}({grp})")
     for group in d.get("native_groups", []):
         for teacher in (group.get("t"), group.get("assistant")):
             if teacher:
@@ -1720,8 +1781,10 @@ def write_output(path, d, sched, tasks, warn, meta, errs, ov_sched=()):
     ws = wb.active
     ws.title = "摘要"
     completion_label = "完整" if meta.get("completion") == "complete" else "部分完成"
+    resource_session_count = len({(group_id, teacher, day, period)
+                                  for group_id, _, _, _, _, teacher, day, period in ov_sched})
     lines = [f"求解狀態：{meta['status']}　完整度：{completion_label}　penalty={meta['penalty']}　耗時{meta['wall']}秒",
-             f"需求：{meta.get('required_total', len(sched))}節　已排：{len(sched)}節　待完成：{meta.get('remaining_total', 0)}節　overlay：{len(ov_sched)}節",
+             f"需求：{meta.get('required_total', len(sched))}節　已排：{len(sched)}節　待完成：{meta.get('remaining_total', 0)}節　資源班：{resource_session_count}節",
              f"未配教師：{meta.get('missing_total', 0)}節　導師自排池：{meta.get('pool_total', 0)}節　週上限問題：{len(meta.get('weekly_cap_violations', []))}項",
              f"獨立硬規則檢核：{'零違反 ✓' if not errs else f'{len(errs)} 項違反 ✗'}　最佳界：{meta.get('best_bound', 0)}　gap={meta.get('relative_gap', 0)}"]
     for i, t in enumerate(lines, 1):
@@ -1744,7 +1807,7 @@ def write_output(path, d, sched, tasks, warn, meta, errs, ov_sched=()):
             rr += 1
         return rr + 1
 
-    ov_mark = {(code, day, p) for _, code, _, _, day, p in ov_sched}
+    ov_mark = {(code, day, p) for _, _, code, _, _, _, day, p in ov_sched}
     ws = wb.create_sheet("班級課表")
     for c in range(1, 7):
         ws.column_dimensions[chr(64 + c)].width = 14
@@ -1776,11 +1839,14 @@ def write_output(path, d, sched, tasks, warn, meta, errs, ov_sched=()):
         for c in range(1, 7):
             ws.column_dimensions[chr(64 + c)].width = 16
         r = 1
-        for t in sorted({t for _, _, _, t, _, _ in ov_sched}):
+        for t in sorted({t for _, _, _, _, _, t, _, _ in ov_sched}):
             cm = {}
-            for grp, code, s, tt, day, p in ov_sched:
+            grouped = defaultdict(list)
+            for group_id, grp, code, s, pull_subject, tt, day, p in ov_sched:
                 if tt == t:
-                    cm[(day, p)] = f"{s}\n{code}·{grp}"
+                    grouped[(group_id, grp, s, day, p)].append(code)
+            for (group_id, grp, subject, day, period), codes in grouped.items():
+                cm[(day, period)] = f"{subject}\n{'、'.join(codes)}·{grp}"
             r = grid(ws, r, f"{t} 資源班課表（※=抽離，原班課表不變）", cm)
 
     pool = d.get("pool", {})

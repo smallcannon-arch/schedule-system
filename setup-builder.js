@@ -48,6 +48,16 @@
     return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
   }
 
+  function resourceSources(group) {
+    return nativeValues(Array.isArray(group && group.sources) ? group.sources : [group && group.code]);
+  }
+
+  function resourcePullSubjects(group) {
+    const values = Array.isArray(group && group.pullSubjects) && group.pullSubjects.length
+      ? group.pullSubjects : [group && group.subj];
+    return subjectValues(values);
+  }
+
   function isMinnanLanguage(value) {
     const language = String(value || "").replace(/[\s（）()]/g, "");
     return !language || ["本土語", "本土語文", "閩南語", "臺語", "台語", "臺灣台語", "台灣台語", "本土語文閩南語"].includes(language);
@@ -66,8 +76,8 @@
     const assigned = (d.assign[item.code] || {})[subject] || "";
     if (!item.tutor || assigned !== item.tutor) return false;
     if (subject === "本土語文" && d.nativeLockEnabled === true) return false;
-    if (item.res && ["國語文", "數學"].includes(subject)) return false;
-    if ((d.resGroups || []).some((group) => group.code === item.code && group.subj === subject)) return false;
+    if ((d.resGroups || []).some((group) =>
+      resourceSources(group).includes(item.code) && resourcePullSubjects(group).includes(subject))) return false;
     const configured = (d.assignmentModes[item.code] || {})[subject];
     return configured ? configured === "tutor" : !!(d.subjects[subject] || {}).self;
   }
@@ -190,10 +200,24 @@
 
     for (const group of (d.resGroups || [])) {
       const name = String(group.grp || "資源班抽離組").trim();
-      const classroom = d.classes.find((item) => item.code === group.code);
-      if (!classroom) hard.push(`${name}引用不存在的來源班級：${group.code || "未填"}`);
-      else if (!classroom.res) warnings.push(`${group.code}已有資源班抽離設定，但班級尚未勾選資源班學生`);
+      const sources = resourceSources(group);
+      const sourceGrades = new Set();
+      if (!sources.length) hard.push(`${name}尚未指定來源班級`);
+      for (const code of sources) {
+        const classroom = d.classes.find((item) => item.code === code);
+        if (!classroom) hard.push(`${name}引用不存在的來源班級：${code}`);
+        else {
+          sourceGrades.add(Number(classroom.g) || 0);
+          if (!classroom.res) warnings.push(`${code}已有資源班抽離設定，但班級尚未勾選資源班學生`);
+        }
+      }
+      if (sourceGrades.size > 1) hard.push(`${name}的來源班級必須屬於同一年級`);
       if (!d.subjects[group.subj]) hard.push(`${name}引用不存在的科目：${group.subj || "未填"}`);
+      const pullSubjects = resourcePullSubjects(group);
+      if (!pullSubjects.length) hard.push(`${name}尚未指定原班可抽離科目`);
+      for (const subject of pullSubjects) {
+        if (!d.subjects[subject]) hard.push(`${name}引用不存在的原班可抽離科目：${subject}`);
+      }
       if (!group.t) hard.push(`${name}尚未指定資源班教師`);
       else if (!teacherNames.has(group.t)) hard.push(`${name}的資源班教師不在名冊：${group.t}`);
       if (!Number.isInteger(+group.n) || +group.n < 1) hard.push(`${name}每週節數必須大於 0`);
@@ -616,7 +640,10 @@
     d.override[next] = d.override[old] || {};
     delete d.assign[old]; delete d.assignmentModes[old]; delete d.override[old];
     d.locks.forEach((lock) => { if (lock.c === old) lock.c = next; });
-    d.resGroups.forEach((group) => { if (group.code === old) group.code = next; });
+    d.resGroups.forEach((group) => {
+      if (Array.isArray(group.sources)) group.sources = resourceSources(group).map((code) => code === old ? next : code);
+      else if (group.code === old) group.code = next;
+    });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).map((code) => code === old ? next : code); });
     adapter.getLimits().forEach((row) => { if (row[0] === old) row[0] = next; });
     commit(`班級 ${old} 已更名為 ${next}。`);
@@ -629,7 +656,11 @@
     d.classes.splice(index, 1);
     delete d.assign[item.code]; delete d.assignmentModes[item.code]; delete d.override[item.code];
     d.locks = d.locks.filter((lock) => lock.c !== item.code);
-    d.resGroups = d.resGroups.filter((group) => group.code !== item.code);
+    d.resGroups = d.resGroups.filter((group) => {
+      if (!Array.isArray(group.sources)) return group.code !== item.code;
+      group.sources = resourceSources(group).filter((code) => code !== item.code);
+      return group.sources.length > 0;
+    });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => code !== item.code); });
     const limits = adapter.getLimits();
     for (let row = limits.length - 1; row >= 0; row -= 1) if (limits[row][0] === item.code) limits.splice(row, 1);
@@ -661,7 +692,11 @@
     d.classes = nextClasses; d.assign = nextAssign; d.assignmentModes = nextModes;
     d.override = Object.fromEntries(Object.entries(d.override).filter(([code]) => codes.has(code)));
     d.locks = d.locks.filter((lock) => codes.has(lock.c));
-    d.resGroups = d.resGroups.filter((group) => codes.has(group.code));
+    d.resGroups = d.resGroups.filter((group) => {
+      if (!Array.isArray(group.sources)) return codes.has(group.code);
+      group.sources = resourceSources(group).filter((code) => codes.has(code));
+      return group.sources.length > 0;
+    });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => codes.has(code)); });
     commit(`已依班級數建立 ${nextClasses.length} 個班級。`);
   }
@@ -815,7 +850,12 @@
     });
     Object.values(d.override).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
     d.locks.forEach((lock) => { if (lock.s === old) lock.s = next; });
-    d.resGroups.forEach((group) => { if (group.subj === old) group.subj = next; });
+    d.resGroups.forEach((group) => {
+      if (group.subj === old) group.subj = next;
+      if (Array.isArray(group.pullSubjects)) {
+        group.pullSubjects = resourcePullSubjects(group).map((subject) => subject === old ? next : subject);
+      }
+    });
     commit(`科目 ${old} 已更名為 ${next}。`);
   }
 
@@ -832,7 +872,14 @@
     });
     Object.values(d.override).forEach((row) => delete row[name]);
     d.locks = d.locks.filter((lock) => lock.s !== name);
-    d.resGroups = d.resGroups.filter((group) => group.subj !== name);
+    d.resGroups = d.resGroups.filter((group) => {
+      if (group.subj === name) return false;
+      if (Array.isArray(group.pullSubjects)) {
+        group.pullSubjects = resourcePullSubjects(group).filter((subject) => subject !== name);
+        return group.pullSubjects.length > 0;
+      }
+      return group.subj !== name;
+    });
     commit(`已刪除科目 ${name}。`);
   }
 

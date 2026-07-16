@@ -53,6 +53,32 @@ def test_setup_builder_javascript_has_valid_syntax():
     )
 
 
+def test_setup_builder_preserves_combined_resource_references_when_names_change():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const data={classes:[{g:3,i:1,code:'3甲',tutor:'王老師',res:true},{g:3,i:2,code:'3乙',tutor:'李老師',res:true}],
+  roster:{'王老師':'導師','李老師':'導師','資源教師':'科任'},teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{'資源課程':{self:false,hours:[0,0,1,0,0,0]},'綜合活動':{self:true,hours:[0,0,1,0,0,0]}},
+  assign:{'3甲':{'資源課程':'資源教師','綜合活動':'王老師'},'3乙':{'資源課程':'資源教師','綜合活動':'李老師'}},
+  assignmentModes:{},override:{},locks:[],resGroups:[{id:'resource-a',grp:'三年級A組',sources:['3甲','3乙'],
+    subj:'資源課程',pullSubjects:['綜合活動'],t:'資源教師',n:1}],nativeBands:[],nativeGroups:[],rooms:{R00:99}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.renameClass(1,'3丙');
+ScheduleSetup.renameSubject(0,'學習策略');
+ScheduleSetup.renameSubject(0,'彈性學習');
+process.stdout.write(JSON.stringify(data.resGroups[0]));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    group = json.loads(result.stdout)
+    assert group["sources"] == ["3甲", "3丙"]
+    assert group["subj"] == "學習策略"
+    assert group["pullSubjects"] == ["彈性學習"]
+
+
 def test_assignment_table_has_viewport_bottom_horizontal_scroller():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "setup-builder.js").read_text(encoding="utf-8")
@@ -199,8 +225,81 @@ def test_formal_destructive_buttons_warn_and_invalidate_old_schedule():
     assert "確定清除${classroom?clsName(classroom):code}由導師自行排入" in html
     assert "function saveLimitChange(label)" in html
     assert "function saveRuleChange(label)" in html
-    assert "invalidateSchedule();rebuildLim();renderLim();renderGGrid();saveLS" in html
+    assert "invalidateSchedule();rebuildLim();renderLim();renderGGrid();renderTeacherLimitGrid();saveLS" in html
     assert "if(!first)return alert('請先在「資料建置」建立班級" in html
+
+
+def test_teacher_quick_limits_and_combined_resource_groups_are_wired():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="teacherLimitGrid"' in html
+    assert "function blockAllTeacherSlots()" in html
+    assert "function duplicateLimit(index)" in html
+    assert "function compactTeacherLimits(teacher,blocked)" in html
+    assert "function normalizeResourceGroups()" in html
+    assert "function rgToggleSource(index,code,checked)" in html
+    assert "function rgTogglePullSubject(index,subject,checked)" in html
+    assert "function rgToggleSlot(index,day,period)" in html
+    assert 'id="resourceGroupHint"' in html
+    assert "pullSubjects" in html
+    assert "scheduleMode" in html
+
+
+def test_teacher_quick_limits_compact_rows_and_preserve_manual_rules():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function teacherSlotsFromLimits');
+const end=html.indexOf('/* 年級快速設定格 */',start);
+const context={DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],LIMITS:[],saveLimitChange:()=>{}};
+vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+const blocked=new Set(context.PS.map(p=>`一|${p}`));
+context.DAYS.forEach(d=>blocked.add(`${d}|2`));blocked.add('三|3');
+const compact=context.compactTeacherLimits('鐘點師',blocked);
+context.LIMITS=[['鐘點師','一','1','不可排','行政會議'],
+  ['鐘點師','二','1','不可排','教師快速設定']];
+context.replaceTeacherBlockedSlots('鐘點師',new Set(['一|1','三|2']),'');
+process.stdout.write(JSON.stringify({compact,preserved:context.LIMITS}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["compact"] == [
+        ["鐘點師", "一", "全部", "不可排", "教師快速設定"],
+        ["鐘點師", "每日", "2", "不可排", "教師快速設定"],
+        ["鐘點師", "三", "3", "不可排", "教師快速設定"],
+    ]
+    assert output["preserved"] == [
+        ["鐘點師", "一", "1", "不可排", "行政會議"],
+        ["鐘點師", "三", "2", "不可排", "教師快速設定"],
+    ]
+
+
+def test_legacy_resource_rows_migrate_without_silent_class_merging():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function resourceId');
+const end=html.indexOf('function resourceSourcePicker',start);
+const classes=[{g:1,code:'1甲',res:false},{g:1,code:'1乙',res:false}];
+const context={DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],
+  DATA:{classes,subjects:{'國語文':{}},resGroups:[
+    {grp:'A組',code:'1甲',subj:'國語文',t:'資源教師',n:3},
+    {grp:'A組',code:'1乙',subj:'國語文',t:'資源教師',n:3}
+  ]},CODE2C:{'1甲':classes[0],'1乙':classes[1]}};
+vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+context.normalizeResourceGroups();
+process.stdout.write(JSON.stringify({groups:context.DATA.resGroups.map(g=>g.sources),classes}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["groups"] == [["1甲"], ["1乙"]]
+    assert [item["res"] for item in output["classes"]] == [True, True]
 
 
 def test_publish_and_export_buttons_require_a_complete_schedule():

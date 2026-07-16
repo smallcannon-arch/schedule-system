@@ -188,11 +188,45 @@ def test_homeroom_teacher_cannot_change_another_class():
 def test_resource_bound_subject_is_rejected_server_side():
     resource_state = state(resource_class=True)
     resource_state["snapshot"]["tutor_placements"]["3甲"] = {}
+    resource_state["snapshot"]["data"]["resGroups"] = [{
+        "id": "resource-a", "grp": "三年級A組", "sources": ["3甲", "3乙"],
+        "subj": "國語文", "pullSubjects": ["國語文"], "t": "資源教師", "n": 1,
+    }]
 
     with pytest.raises(teacher_portal.TeacherChangeError, match="資源班綁課"):
         teacher_portal.validate_teacher_placements(
             resource_state, principal("王導師", "homeroom_teacher", ("3甲",)),
             "3甲", {"一|1": "國語文"})
+
+
+def test_resource_flag_alone_does_not_lock_chinese_or_math():
+    snapshot = sample_snapshot(resource_class=True)
+    classroom = snapshot["data"]["classes"][0]
+
+    assert teacher_portal._allowed_pool(snapshot["data"], classroom)["國語文"] == 1
+
+
+def test_combined_resource_group_locks_configured_pull_subject_and_reaches_each_class_package():
+    resource_state = state(resource_class=True)
+    data = resource_state["snapshot"]["data"]
+    data["subjects"]["綜合活動"] = {
+        "hours": [0, 0, 1, 0, 0, 0], "room": "R00", "banned": [], "self": True,
+    }
+    data["assign"]["3甲"]["綜合活動"] = "王導師"
+    data["assign"]["3乙"]["綜合活動"] = "李導師"
+    data["resGroups"] = [{
+        "id": "resource-a", "grp": "三年級A組", "sources": ["3甲", "3乙"],
+        "subj": "國語文", "pullSubjects": ["綜合活動"], "t": "資源教師", "n": 1,
+    }]
+
+    assert "綜合活動" not in teacher_portal._allowed_pool(data, data["classes"][0])
+    assert "國語文" in teacher_portal._allowed_pool(data, data["classes"][0])
+
+    workspace = teacher_portal.build_teacher_workspace(
+        resource_state, principal("王導師", "homeroom_teacher", ("3甲",)))
+    groups = workspace["editable_classes"][0]["data"]["resGroups"]
+    assert groups[0]["sources"] == ["3甲", "3乙"]
+    assert groups[0]["pullSubjects"] == ["綜合活動"]
 
 
 def test_google_account_is_bound_on_first_authorized_login(monkeypatch):

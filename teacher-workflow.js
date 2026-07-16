@@ -98,12 +98,12 @@
   }
 
   function isResourceBound(data, code, subject) {
-    const classroom = (data.classes || []).find((item) => item.code === code);
-    const classWide = Boolean(classroom && classroom.res &&
-      (subject === "國語文" || subject === "數學"));
-    const groupBound = (data.resGroups || []).some((group) =>
-      group.code === code && group.subj === subject);
-    return classWide || groupBound;
+    return (data.resGroups || []).some((group) => {
+      const sources = Array.isArray(group.sources) ? group.sources : [group.code];
+      const pullSubjects = Array.isArray(group.pullSubjects) && group.pullSubjects.length ?
+        group.pullSubjects : [group.subj];
+      return sources.includes(code) && pullSubjects.includes(subject);
+    });
   }
 
   function isResourceLockedSlot(data, schedule, overlays, code, day, period) {
@@ -122,7 +122,8 @@
       .sort((a, b) => a[0].localeCompare(b[0]));
     const overlay = (overlays || [])
       .filter((item) => item.code === code)
-      .map((item) => [item.grp || "", item.subj || "", item.t || "", item.d || "", Number(item.p) || 0])
+      .map((item) => [item.id || "", item.grp || "", item.subj || "", item.pullSubj || "",
+        item.t || "", item.d || "", Number(item.p) || 0])
       .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
     const relevantLimits = (data.limits || [])
       .filter((row) => row[0] === classroom.tutor || row[0] === code || row[0] === `${classroom.g}年級`)

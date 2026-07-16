@@ -43,6 +43,29 @@ def test_solve_data_returns_json_schedule_and_workbook(monkeypatch):
     assert response.headers["X-Schedule-Completeness"] == "complete"
 
 
+def test_loaded_solver_maps_resource_group_and_pull_subject(monkeypatch):
+    overlay = [("group-a-1", "一年級A組", "1甲", "國語文", "綜合活動",
+                "資源教師", "一", 1)]
+    monkeypatch.setattr(app.engine, "solve", lambda *args, **kwargs: (
+        {}, {}, [], {"status": "OPTIMAL"}, overlay))
+    monkeypatch.setattr(app.engine, "validate", lambda *args: [])
+
+    def write_output(path, *args, **kwargs):
+        with open(path, "wb") as stream:
+            stream.write(b"workbook")
+
+    monkeypatch.setattr(app.engine, "write_output", write_output)
+
+    output, _, _, _, overlay_rows = app._solve_loaded_data({}, 5)
+
+    assert output == b"workbook"
+    assert overlay_rows == [{
+        "group_id": "group-a-1", "group": "一年級A組", "code": "1甲",
+        "subject": "國語文", "pull_subject": "綜合活動", "teacher": "資源教師",
+        "day": "一", "period": 1,
+    }]
+
+
 def test_solve_data_returns_structured_cp_sat_diagnostics(monkeypatch):
     monkeypatch.setattr(app, "_check_solve_access", lambda *args: True)
     monkeypatch.setattr(app, "_claim_rate_limit", lambda: True)

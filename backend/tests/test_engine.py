@@ -117,6 +117,63 @@ def test_loads_frontend_cloud_draft_schema_without_excel():
     assert meta["completion"] == "complete"
 
 
+def _resource_frontend_payload():
+    slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
+    return {
+        "classes": [
+            {"g": 1, "i": 1, "code": "1甲", "tutor": "王導師"},
+            {"g": 1, "i": 2, "code": "1乙", "tutor": "李導師"},
+        ],
+        "roster": {"王導師": "導師", "李導師": "導師", "資源教師": "資源班教師"},
+        "rooms": {"R00": 99},
+        "subjects": {
+            "國語文": {"hours": [2, 0, 0, 0, 0, 0], "room": "R00",
+                       "banned": [], "block": "", "self": True, "pairMode": ""},
+            "綜合活動": {"hours": [3, 0, 0, 0, 0, 0], "room": "R00",
+                         "banned": [], "block": "", "self": True, "pairMode": ""},
+        },
+        "gslot": {str(grade): slots for grade in range(1, 7)},
+        "assign": {
+            "1甲": {"國語文": "王導師", "綜合活動": "王導師"},
+            "1乙": {"國語文": "李導師", "綜合活動": "李導師"},
+        },
+        "override": {}, "locks": [], "blocked": [],
+        "resGroups": [{
+            "id": "grade-1-a", "grp": "一年級A組", "sources": ["1甲", "1乙"],
+            "subj": "國語文", "pullSubjects": ["綜合活動"], "t": "資源教師", "n": 3,
+            "scheduleMode": "fixed",
+            "slots": [{"d": "一", "p": 1}, {"d": "三", "p": 1}, {"d": "五", "p": 1}],
+        }],
+    }
+
+
+def test_resource_group_combines_classes_and_counts_teacher_sessions_once():
+    data = engine.load_frontend_data(_resource_frontend_payload())
+    schedule, tasks, _, _, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=False)
+
+    assert len(data["overlay"]) == 3
+    assert data["teacher_weekly_load"]["資源教師"] == 3
+    assert len(overlay) == 6
+    assert len({(row[0], row[6], row[7]) for row in overlay}) == 3
+    assert {(row[2], row[4]) for row in overlay} == {
+        ("1甲", "綜合活動"), ("1乙", "綜合活動")}
+    assert {(code, day, period) for code, day, period in schedule
+            if code in {"1甲", "1乙"}} == {
+        ("1甲", "一", 1), ("1甲", "三", 1), ("1甲", "五", 1),
+        ("1乙", "一", 1), ("1乙", "三", 1), ("1乙", "五", 1),
+    }
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_resource_fixed_slots_must_match_weekly_periods():
+    payload = _resource_frontend_payload()
+    payload["resGroups"][0]["slots"].pop()
+
+    with pytest.raises(ValueError, match="固定時段 2 節，與每週節數 3 不一致"):
+        engine.load_frontend_data(payload)
+
+
 def test_per_class_arrangement_mode_controls_cp_sat_ownership():
     slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
     payload = {
