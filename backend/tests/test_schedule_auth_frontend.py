@@ -46,7 +46,7 @@ def test_formal_release_check_bypasses_cached_homepage():
 
     assert 'release: "__APP_RELEASE__"' in app_config
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
-    assert 'schedule-auth.js?v=20260716-3' in html
+    assert 'schedule-auth.js?v=20260717-1' in html
     assert 'new URL("release.json", root.location.href)' in script_text
     assert '{cache: "no-store"}' in script_text
     assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text

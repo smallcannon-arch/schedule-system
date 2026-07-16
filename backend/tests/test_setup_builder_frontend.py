@@ -390,6 +390,46 @@ process.stdout.write(JSON.stringify({groups:context.DATA.resGroups.map(g=>g.sour
     assert [item["res"] for item in output["classes"]] == [True, True]
 
 
+def test_resource_group_can_switch_grade_and_preserves_class_eligibility():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function resourceId');
+const end=html.indexOf('function hoursOf',start);
+const classes=[{g:1,code:'1甲',res:true},{g:2,code:'2甲',res:true},{g:2,code:'2乙',res:false}];
+const context={DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],RESOURCE_PERIODS:[0,1,2,3,4,5,6,7],
+  DATA:{classes,subjects:{'國語文':{}},roster:{'一般教師':'科任','資源教師':'資源班教師'},
+    gslot:{2:[[1,1,1,1,0,0,0],[1,1,1,1,1,0,0],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0],[1,1,1,1,0,0,0]]},resGroups:[
+    {id:'group-a',grp:'一年級A組',sources:['1甲'],subj:'國語文',pullSubjects:['國語文'],t:'資源教師',n:1}
+  ]},CODE2C:{'1甲':classes[0],'2甲':classes[1],'2乙':classes[2]},
+  alert:message=>{context.lastAlert=message},invalidateSchedule:()=>{},renderRes:()=>{},fillTutor:()=>{},
+  renderTLoad:()=>{},saveLS:()=>{},esc:String,clsName:c=>c.code,jsArg:JSON.stringify,document:{getElementById:()=>({})}};
+vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+context.renderRes=()=>{};
+context.normalizeResourceGroups();
+context.rgToggleSource(0,'2甲',true);
+context.DATA.resGroups[0].scheduleMode='fixed';
+process.stdout.write(JSON.stringify({sources:context.DATA.resGroups[0].sources,groupName:context.DATA.resGroups[0].grp,classes,lastAlert:context.lastAlert||'',
+  teacherHtml:context.resourceTeacherSelect(context.DATA.resGroups[0],0),
+  pickerHtml:context.resourceSourcePicker(context.DATA.resGroups[0],0),
+  slotHtml:context.resourceSlotGrid(context.DATA.resGroups[0],0)}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["sources"] == ["2甲"]
+    assert output["groupName"] == "2年級A組"
+    assert [item["res"] for item in output["classes"]] == [True, True, False]
+    assert output["lastAlert"] == ""
+    assert output["teacherHtml"].index("資源教師") < output["teacherHtml"].index("一般教師")
+    assert "其他兼任教師" in output["teacherHtml"]
+    assert "disabled" not in output["pickerHtml"]
+    assert "早自修" in output["slotHtml"]
+    assert "該年級此節不上課" in output["slotHtml"]
+
+
 def test_publish_and_export_buttons_require_a_complete_schedule():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")

@@ -91,6 +91,17 @@ def test_resource_teacher_personal_timetable_includes_overlay():
     assert workspace["editable_classes"] == []
 
 
+def test_resource_teacher_personal_timetable_includes_early_study():
+    resource_state = state()
+    resource_state["snapshot"]["overlay"][0]["p"] = 0
+
+    workspace = teacher_portal.build_teacher_workspace(
+        resource_state, principal("資源教師", "resource_teacher"))
+
+    assert workspace["personal_schedule"][0]["period"] == 0
+    assert workspace["personal_schedule"][0]["source"] == "overlay"
+
+
 def test_native_language_staff_see_hard_locked_session_in_personal_timetable():
     native_state = state()
     native_state["snapshot"]["data"]["nativeBands"] = [{"g": 3, "d": "二", "p": 4}]

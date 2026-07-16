@@ -176,17 +176,20 @@
     });
     const days = ["一", "二", "三", "四", "五"];
     let html = `<tr><th class="pd">節次</th>${days.map((day) => `<th>星期${day}</th>`).join("")}</tr>`;
-    for (let period = 1; period <= 7; period += 1) {
+    const periods = rows.some((row) => Number(row.period) === 0) ? [0, 1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6, 7];
+    for (const period of periods) {
       if (period === 5) html += '<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
-      html += `<tr><th class="pd">${period}</th>`;
+      html += `<tr><th class="pd">${period === 0 ? "早自修" : period}</th>`;
       days.forEach((day) => {
         const items = bySlot.get(`${day}|${period}`) || [];
         if (!items.length) html += "<td></td>";
-        else if (items.length === 1) {
+        else if (items.length === 1 || (items.every((item) => item.source === "overlay") &&
+          new Set(items.map((item) => `${item.subject}|${item.group || ""}`)).size === 1)) {
           const item = items[0];
           const suffix = item.source === "overlay" ? "・資源班" :
             item.source === "native" ? `・${item.group || "本土語"}` : "";
-          html += `<td><div class="les ${root.cat ? root.cat(item.subject) : ""}"><b>${root.esc(item.subject)}</b><small>${root.esc(item.class_label + suffix)}</small></div></td>`;
+          const classLabel = [...new Set(items.map((row) => row.class_label))].join("、");
+          html += `<td><div class="les ${root.cat ? root.cat(item.subject) : ""}"><b>${root.esc(item.subject)}</b><small>${root.esc(classLabel + suffix)}</small></div></td>`;
         } else {
           html += `<td><div class="les conflict"><b>衝堂 ${items.length} 筆</b>${items.map((item) => `<small>${root.esc(item.subject)}｜${root.esc(item.class_label)}</small>`).join("")}</div></td>`;
         }

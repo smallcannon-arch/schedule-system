@@ -121,6 +121,31 @@ process.stdout.write(JSON.stringify({subtitle:sheet.rows[1][0],cell:sheet.rows[3
     assert len(output["entries"]) == 2
 
 
+def test_resource_early_study_appears_in_timetables_but_not_upload_rows():
+    output = run_node(r"""
+const exp=require(process.argv[1]);
+const data={classes:[{g:1,i:1,code:'1甲',tutor:'王導師'}],subjects:{'國語文':{}},
+  nativeLockEnabled:false,roster:{'資源教師':'資源班教師'}};
+const entries=exp.buildEntries(data,[],[
+  {id:'group-a-1',grp:'一年級A組',code:'1甲',subj:'國語文',pullSubj:'早自修',t:'資源教師',d:'一',p:0}
+]);
+process.stdout.write(JSON.stringify({
+  entries,
+  classRows:exp.classSheets(data,entries)[0].rows,
+  teacherRows:exp.teacherSheets(data,entries)[0].rows,
+  upload:exp.uploadRows(data,entries,{'資源教師':'A123456789'}),
+  issues:exp.validateUpload(data,entries,{'資源教師':'A123456789'})
+}));
+""")
+
+    assert output["entries"][0]["p"] == 0
+    assert output["classRows"][3][0] == "早自修"
+    assert "國語文" in output["classRows"][3][1]
+    assert output["teacherRows"][3][0] == "早自修"
+    assert len(output["upload"]) == 1
+    assert output["issues"] == ["尚無可匯出的正式課表資料"]
+
+
 def test_excel_timetable_styles_are_written_to_cells():
     output = run_node(r"""
 const exp=require(process.argv[1]);
@@ -152,7 +177,7 @@ def test_frontend_wires_four_exports_and_keeps_ids_out_of_case_data():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
 
     assert re.search(r'<script src="setup-builder\.js\?v=\d{8}-\d+"></script>', html)
-    assert '<script src="schedule-exports.js?v=20260716-1"></script>' in html
+    assert '<script src="schedule-exports.js?v=20260717-1"></script>' in html
     assert '<button data-v="export"><span class="ic">⇩</span>課表匯出</button>' in html
     assert '<section class="view" id="v-export">' in html
     assert html.index('data-v="tt"') < html.index('data-v="export"')

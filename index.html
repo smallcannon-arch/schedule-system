@@ -361,7 +361,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.25</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.26</b></span></div>
   </div>
 </section>
 
@@ -716,12 +716,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <section class="view" id="v-res">
   <h1>🧩 資源班</h1>
   <div class="sub">一個抽離分組可同時包含同年級多個原班，資源班教師節數只計一次。資源班授課科目與原班可抽離科目分開設定，也可由教師先鎖定實際上課時段。</div>
+  <div class="auth-status"><b>版本 1.26 相容性提醒</b>：既有案件若曾以「閩南語」建立固定課，載入後可能恢復先前未生效的鎖定；請重新執行排課並檢查無解診斷後再發布。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>建立分組：</b>同一組可勾選同年級多個來源班級，例如一年甲、乙班合併為 A 組。</li>
       <li><b>分開選科：</b>「資源班授課科目」是教師實際教授內容；「原班可抽離科目」可複選國語、數學、彈性或綜合等課程。</li>
       <li><b>安排時段：</b>可交由系統安排，也可切換固定時段後直接點選每週節次。</li>
+      <li><b>早自修：</b>只供資源班固定時段使用，會顯示在班級與教師課表，但不會寫入人力資源網或校務系統上傳檔。</li>
     </ol><div class="step-help-note">資源班綁課屬於鎖定課程，導師與一般課表編修都不能移動。</div></div>
   </details>
   <div class="panel">
@@ -1140,7 +1142,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.25</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.26</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1151,8 +1153,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js?v=20260716-1"></script>
 <script src="schedule-editor.js?v=20260716-1"></script>
 <script src="schedule-policy.js?v=20260713-2"></script>
-<script src="setup-builder.js?v=20260714-1"></script>
-<script src="schedule-exports.js?v=20260716-1"></script>
+<script src="setup-builder.js?v=20260717-1"></script>
+<script src="schedule-exports.js?v=20260717-1"></script>
 <script src="feedback.js?v=20260714-1"></script>
 <script src="readiness-center.js?v=20260714-2"></script>
 <script>
@@ -1164,7 +1166,7 @@ function setSetupStarted(started){
   document.body.classList.toggle('setup-pending',APP_MODE==='formal'&&!SETUP_STARTED);
   if(window.ScheduleAuth&&ScheduleAuth.updateTeacherCsvImportState)ScheduleAuth.updateTeacherCsvImportState();
 }
-const DAYS=['一','二','三','四','五'], PS=[1,2,3,4,5,6,7];
+const DAYS=['一','二','三','四','五'], PS=[1,2,3,4,5,6,7], RESOURCE_PERIODS=[0,...PS];
 const PAIRS=[[1,2],[2,3],[3,4],[5,6],[6,7]];
 let TEACHER_MODE=null,ADMIN_SNAPSHOT=null,TEACHER_PACKAGES={},FORMAL_AUTO_TUTOR=false;
 let EDIT_CLASS='',EDIT_TEACHER='',EDIT_SELECTION=null,EDIT_HISTORY=[],EDIT_FUTURE=[],EDIT_LAST_CHANGE=null;
@@ -1687,7 +1689,7 @@ function resourcePullSubjects(group){
 }
 function resourceSlots(group){
   return (Array.isArray(group?.slots)?group.slots:[]).map(slot=>({d:String(slot.d||slot.day||''),p:+(slot.p||slot.period||0)}))
-    .filter(slot=>DAYS.includes(slot.d)&&PS.includes(slot.p));
+    .filter(slot=>DAYS.includes(slot.d)&&RESOURCE_PERIODS.includes(slot.p));
 }
 function normalizeResourceGroups(){
   const source=Array.isArray(DATA.resGroups)?DATA.resGroups:[],normalized=[];
@@ -1703,22 +1705,33 @@ function normalizeResourceGroups(){
   for(const group of normalized)group.sources=[...new Set(group.sources)];
   DATA.resGroups=normalized;
   const active=new Set(normalized.flatMap(resourceSources));
-  for(const classroom of DATA.classes||[])classroom.res=active.has(classroom.code);
+  for(const classroom of DATA.classes||[])if(active.has(classroom.code))classroom.res=true;
 }
 function resourceSourcePicker(group,index){
   const selected=new Set(resourceSources(group)),grade=CODE2C[[...selected][0]]?.g;
-  return `<details class="resource-source-picker" ${RESOURCE_SOURCE_OPEN===group.id?'open':''}><summary>${selected.size?`${[...selected].map(code=>esc(clsName(CODE2C[code]))).join('、')}（${selected.size}班）`:'選擇來源班級'}</summary><div class="resource-checks">${DATA.classes.map(c=>`<label><input type="checkbox" ${selected.has(c.code)?'checked':''} ${grade&&+c.g!==+grade&&!selected.has(c.code)?'disabled':''} onchange="rgToggleSource(${index},${jsArg(c.code)},this.checked)">${esc(clsName(c))}</label>`).join('')}</div></details>`;
+  return `<details class="resource-source-picker" ${RESOURCE_SOURCE_OPEN===group.id?'open':''}><summary>${selected.size?`${[...selected].map(code=>esc(clsName(CODE2C[code]))).join('、')}（${selected.size}班）`:'選擇來源班級'}</summary><div class="resource-checks">${DATA.classes.map(c=>`<label title="${grade&&+c.g!==+grade?'點選後將切換至此年級':''}"><input type="checkbox" ${selected.has(c.code)?'checked':''} onchange="rgToggleSource(${index},${jsArg(c.code)},this.checked)">${esc(clsName(c))}</label>`).join('')}</div></details>`;
 }
 function resourcePullPicker(group,index){
   const selected=new Set(resourcePullSubjects(group));
   return `<div><b>原班可抽離科目</b><div class="sub" style="margin:3px 0 6px">來源班級在同一節排到任一勾選科目即可抽離。</div><div class="resource-checks">${Object.keys(DATA.subjects||{}).map(subject=>`<label><input type="checkbox" ${selected.has(subject)?'checked':''} onchange="rgTogglePullSubject(${index},${jsArg(subject)},this.checked)">${esc(subject)}</label>`).join('')}</div></div>`;
 }
+function resourceGradeSlotOpen(group,day,period){
+  if(+period===0)return true;
+  const source=resourceSources(group)[0],grade=CODE2C[source]?.g,rows=DATA.gslot?.[grade]||DATA.gslot?.[String(grade)]||[];
+  return !!rows[DAYS.indexOf(day)]?.[+period-1];
+}
+function resourceTeacherSelect(group,index){
+  const names=Object.keys(DATA.roster||{}),preferred=names.filter(name=>String(DATA.roster[name]||'').includes('資源班'));
+  const others=names.filter(name=>!preferred.includes(name)),current=String(group.t||'');
+  const options=rows=>rows.map(name=>`<option value="${esc(name)}" ${name===current?'selected':''}>${esc(name)}｜${esc(DATA.roster[name]||'教師')}</option>`).join('');
+  return `<select class="edit" style="min-width:150px" aria-label="資源班教師" onchange="rgSet(${index},'t',this.value)"><option value="">選擇資源班教師</option>${preferred.length?`<optgroup label="資源班教師">${options(preferred)}</optgroup>`:''}${others.length?`<optgroup label="其他兼任教師">${options(others)}</optgroup>`:''}${current&&!names.includes(current)?`<option value="${esc(current)}" selected>${esc(current)}｜原設定</option>`:''}</select>`;
+}
 function resourceSlotGrid(group,index){
   if(group.scheduleMode!=='fixed')return '<div><b>時段安排</b><div class="sub" style="margin-top:5px">目前由 CP-SAT 依原班可抽離科目與教師限制自動安排。</div></div>';
   const selected=new Set(resourceSlots(group).map(slot=>`${slot.d}|${slot.p}`));let html='<div><b>固定上課時段</b><table class="tt resource-slot-grid"><tr><th class="pd">節次</th>'+DAYS.map(day=>`<th>週${day}</th>`).join('')+'</tr>';
-  for(const period of PS){
+  for(const period of RESOURCE_PERIODS){
     if(period===5)html+='<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
-    html+=`<tr><th class="pd">${period}</th>`+DAYS.map(day=>{const on=selected.has(`${day}|${period}`);return `<td><button type="button" class="resource-slot-button ${on?'on':''}" aria-pressed="${on}" onclick="rgToggleSlot(${index},${jsArg(day)},${period})">${on?'固定':''}</button></td>`}).join('')+'</tr>';
+    html+=`<tr><th class="pd">${period===0?'早自修':period}</th>`+DAYS.map(day=>{const on=selected.has(`${day}|${period}`),available=resourceGradeSlotOpen(group,day,period),disabled=!available&&!on;return `<td><button type="button" class="resource-slot-button ${on?'on':''}" aria-pressed="${on}" ${disabled?'disabled':''} title="${disabled?'該年級此節不上課':''}" onclick="rgToggleSlot(${index},${jsArg(day)},${period})">${on?'固定':''}</button></td>`}).join('')+'</tr>';
   }
   const expected=Math.max(1,+group.n||1),actual=selected.size;
   return html+`</table><div class="resource-slot-summary" style="color:${actual===expected?'var(--mint-d)':'var(--pink-d)'}">已選 ${actual} 節／每週需要 ${expected} 節${actual===expected?'':'，兩者必須相同'}</div></div>`;
@@ -1736,7 +1749,7 @@ function renderRes(){
     h+=`<tr><td><input value="${esc(g.grp)}" style="max-width:90px" onchange="rgSet(${i},'grp',this.value)"></td>
       <td>${resourceSourcePicker(g,i)}</td>
       <td><select class="edit" onchange="rgSet(${i},'subj',this.value)">${subjects.map(subject=>`<option value="${esc(subject)}" ${subject===g.subj?'selected':''}>${esc(subject)}</option>`).join('')}</select></td>
-      <td><input list="tlist" value="${esc(g.t)}" style="max-width:110px" onchange="rgSet(${i},'t',this.value)"></td>
+      <td>${resourceTeacherSelect(g,i)}</td>
       <td><input class="numin" type="number" min="1" max="10" value="${g.n}" onchange="rgSet(${i},'n',+this.value)"></td>
       <td><select class="edit" onchange="rgSet(${i},'scheduleMode',this.value)"><option value="auto" ${g.scheduleMode!=='fixed'?'selected':''}>系統安排</option><option value="fixed" ${g.scheduleMode==='fixed'?'selected':''}>固定時段</option></select></td>
       <td><button class="btn soft sm" type="button" title="刪除此抽離組" onclick="removeResGroup(${i})">✕</button></td></tr>
@@ -1762,8 +1775,12 @@ function rgToggleSource(index,code,checked){
   const group=DATA.resGroups[index];if(!group)return;
   RESOURCE_SOURCE_OPEN=group.id;
   const sources=new Set(resourceSources(group)),currentGrade=CODE2C[[...sources][0]]?.g,nextGrade=CODE2C[code]?.g;
-  if(checked&&currentGrade&&+nextGrade!==+currentGrade)return alert('同一資源班分組的來源班級必須屬於同一年級。');
-  if(checked)sources.add(code);else sources.delete(code);
+  if(checked&&currentGrade&&+nextGrade!==+currentGrade){
+    sources.clear();
+    group.slots=[];
+    if(/^[1-6一二三四五六]年級/.test(String(group.grp||'')))group.grp=String(group.grp).replace(/^[1-6一二三四五六]年級/,`${nextGrade}年級`);
+  }
+  if(checked){sources.add(code);if(CODE2C[code])CODE2C[code].res=true}else sources.delete(code);
   if(!sources.size){alert('每個資源班分組至少需要一個來源班級。');return renderRes()}
   group.sources=[...sources];invalidateSchedule();renderRes();fillTutor();saveLS('資源班來源班級已更新');
 }
@@ -1782,7 +1799,8 @@ function rgToggleSlot(index,day,period){
 }
 function addResG(){
   DATA.resGroups=DATA.resGroups||[];
-  const first=DATA.classes[0];
+  const used=new Set(DATA.resGroups.flatMap(resourceSources));
+  const first=DATA.classes.find(classroom=>classroom.res&&!used.has(classroom.code))||DATA.classes.find(classroom=>classroom.res)||DATA.classes[0];
   if(!first)return alert('請先在「資料建置」建立班級，再新增資源班抽離組。');
   const subject=DATA.subjects?.['國語文']?'國語文':Object.keys(DATA.subjects||{})[0];
   if(!subject)return alert('請先建立科目節數，再新增資源班抽離組。');
@@ -1795,7 +1813,7 @@ function removeResGroup(index){
   DATA.resGroups.splice(index,1);invalidateSchedule();renderRes();fillTutor();saveLS('已刪除資源班抽離組');
 }
 function resourceValidationIssues(){
-  const issues=[],fixedTeacherSlots=new Map();
+  const issues=[],fixedTeacherSlots=new Map(),fixedClassSlots=new Map();
   for(const group of DATA.resGroups||[]){
     const label=group.grp||'未命名資源班分組',sources=resourceSources(group),pullSubjects=resourcePullSubjects(group),slots=resourceSlots(group);
     if(!sources.length)issues.push(`${label}尚未選擇來源班級`);
@@ -1803,28 +1821,32 @@ function resourceValidationIssues(){
     if(!pullSubjects.length)issues.push(`${label}尚未選擇原班可抽離科目`);
     if(!String(group.t||'').trim())issues.push(`${label}尚未指定資源班教師`);
     if(group.scheduleMode==='fixed'&&slots.length!==Math.max(1,+group.n||1))issues.push(`${label}固定時段 ${slots.length} 節，與每週節數 ${Math.max(1,+group.n||1)} 不一致`);
-    if(group.scheduleMode==='fixed'&&group.t)for(const slot of slots){
+    if(group.scheduleMode==='fixed')for(const slot of slots){
+      const slotLabel=slot.p===0?'早自修':`第${slot.p}節`;
+      if(slot.p!==0&&!resourceGradeSlotOpen(group,slot.d,slot.p))issues.push(`${label}固定時段週${slot.d}${slotLabel}不在來源年級可排時段`);
       const key=`${group.t}|${slot.d}|${slot.p}`;
-      if(fixedTeacherSlots.has(key))issues.push(`${group.t}在週${slot.d}第${slot.p}節被兩個資源班分組重複固定`);
-      else fixedTeacherSlots.set(key,label);
+      if(group.t){if(fixedTeacherSlots.has(key))issues.push(`${group.t}在週${slot.d}${slotLabel}被兩個資源班分組重複固定`);else fixedTeacherSlots.set(key,label)}
+      for(const code of sources){const classKey=`${code}|${slot.d}|${slot.p}`;if(fixedClassSlots.has(classKey))issues.push(`${code}在週${slot.d}${slotLabel}被兩個資源班分組重複抽離`);else fixedClassSlots.set(classKey,label)}
     }
   }
   return [...new Set(issues)];
 }
 function placeOverlay(cls){
-  const out=[],warn=[],busy={};
+  const out=[],warn=[],busy={},sourceBusy={};
   for(const g of (DATA.resGroups||[])){
     const sources=resourceSources(g),pullSubjects=new Set(resourcePullSubjects(g)),fixed=resourceSlots(g),needed=Math.max(1,+g.n||1);
     if(!g.t){warn.push(`抽離組 ${g.grp} 未填資源班教師，未排`);continue}
     if(g.scheduleMode==='fixed'&&fixed.length!==needed){warn.push(`抽離組 ${g.grp} 固定時段 ${fixed.length} 節，與每週 ${needed} 節不一致`);continue}
     const candidates=(g.scheduleMode==='fixed'?fixed:DAYS.flatMap(d=>PS.map(p=>({d,p})))).filter(slot=>{
       if(busy[`${g.t}|${slot.d}|${slot.p}`]||TLIM.has(`${g.t}|${slot.d}|${slot.p}`))return false;
+      if(sources.some(code=>sourceBusy[`${code}|${slot.d}|${slot.p}`]))return false;
+      if(slot.p===0)return true;
       return sources.every(code=>{const lesson=cls[`${code}|${slot.d}|${slot.p}`];return lesson&&pullSubjects.has(lesson.s)});
     });
     let placed=0;
     for(const slot of candidates){
       if(placed>=needed)break;busy[`${g.t}|${slot.d}|${slot.p}`]=1;
-      for(const code of sources){const pullSubj=cls[`${code}|${slot.d}|${slot.p}`].s;out.push({id:g.id,grp:g.grp,code,subj:g.subj,pullSubj,t:g.t,d:slot.d,p:+slot.p})}
+      for(const code of sources){sourceBusy[`${code}|${slot.d}|${slot.p}`]=1;const pullSubj=slot.p===0?'早自修':cls[`${code}|${slot.d}|${slot.p}`].s;out.push({id:g.id,grp:g.grp,code,subj:g.subj,pullSubj,t:g.t,d:slot.d,p:+slot.p})}
       placed++;
     }
     if(placed<needed)warn.push(`抽離組 ${g.grp} 缺 ${needed-placed} 節：來源班級沒有共同可抽離時段，或資源班教師衝堂`);
@@ -2102,6 +2124,7 @@ function validateSchedule(){
     if(!entries.some(e=>e.code===lk.c&&e.d===lk.d&&e.p===+lk.p&&e.s===lk.s))add('H10',`${lk.c} ${lk.s} 未在週${lk.d}第${lk.p}節鎖定位置`);
   }
   if(ruleOn('H13'))for(const o of OVL){
+    if(+o.p===0)continue;
     const pullSubject=o.pullSubj||o.subj;
     if(!entries.some(e=>e.code===o.code&&e.d===o.d&&e.p===+o.p&&e.s===pullSubject))add('H13',`${o.grp} 未與 ${o.code} ${pullSubject} 同時段`);
   }
@@ -2502,9 +2525,10 @@ function conflictHTML(items){
 function renderTT(){
   const tb=document.getElementById('ttTable'),val=document.getElementById('ttSel').value;
   let h='<tr><th class="pd">節次</th>'+DAYS.map(d=>`<th>星期${d}</th>`).join('')+'</tr>';
-  for(const p of PS){
+  const periods=OVL.some(item=>+item.p===0)?RESOURCE_PERIODS:PS;
+  for(const p of periods){
     if(p===5)h+='<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
-    h+=`<tr><th class="pd">${p}</th>`;
+    h+=`<tr><th class="pd">${p===0?'早自修':p}</th>`;
     for(const d of DAYS){
       let cell='';
       if(SOL){
@@ -2512,7 +2536,8 @@ function renderTT(){
           const o=SOL[`${val}|${d}|${p}`], tp=tutorPlaced[val]&&tutorPlaced[val][`${d}|${p}`];
           const c=CODE2C[val];
           const ov=ovlAt(val,d,p);
-          if(o)cell=cellHTML({s:o.s+(ov?'※':''),t:o.t},ov?'k-ovl':'');
+          if(p===0&&ov)cell=cellHTML({s:ov.subj+'※',t:`${ov.t}·${ov.grp}`},'k-ovl');
+          else if(o)cell=cellHTML({s:o.s+(ov?'※':''),t:o.t},ov?'k-ovl':'');
           else if(tp)cell=cellHTML({s:tp,t:c.tutor});
           else if(c&&DATA.gslot[c.g][DAYS.indexOf(d)][p-1])cell='<div class="slot-na" style="color:#c9b183">□</div>';
         }else if(val.endsWith('（資源班）')){
@@ -3126,7 +3151,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.25');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.26');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3836,7 +3861,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260716-3"></script>
+<script src="schedule-auth.js?v=20260717-1"></script>
 <script>
 ScheduleAuth.initialize();
 ScheduleReadiness.initialize({
