@@ -1,5 +1,6 @@
 import subprocess
 import json
+import re
 from support_paths import FORMAL
 
 
@@ -51,6 +52,23 @@ def test_setup_builder_javascript_has_valid_syntax():
         text=True,
         encoding="utf-8",
     )
+
+
+def test_pages_workflow_copies_every_local_frontend_script():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    workflow = (FORMAL / ".github" / "workflows" / "verify-and-deploy.yml").read_text(
+        encoding="utf-8")
+    local_scripts = {
+        src.split("?", 1)[0]
+        for src in re.findall(r'<script\s+src="([^"]+)"', html)
+        if not src.startswith(("http://", "https://"))
+    }
+
+    for script in local_scripts:
+        if script.startswith("vendor/"):
+            assert "cp -R vendor _site/vendor" in workflow
+        else:
+            assert script in workflow, f"GitHub Pages deployment omits {script}"
 
 
 def test_setup_builder_preserves_combined_resource_references_when_names_change():
