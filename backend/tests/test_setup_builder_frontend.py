@@ -212,7 +212,7 @@ def test_formal_workflow_pages_have_collapsed_help():
     assert "use_openai:false" in html
     assert 'id="formalUseAI"' not in html
     assert "本次導師課已由 CP-SAT 排完" in html
-    assert "資源班綁課屬於鎖定課程" in html
+    assert "只有實際抽離的節次會鎖定" in html
     assert "const limitSheet=opt('不排課時間').length?opt('不排課時間'):opt('教師時段限制')" in html
     assert "for(const r of opt('資源班overlay').slice(1))" in html
     assert "nd.resGroups=Object.entries(rgMap)" in html
@@ -229,6 +229,32 @@ def test_formal_workflow_pages_have_collapsed_help():
     assert "排課管理員 2 Google 帳號（選填，須為同網域）" in html
     assert "聯絡電話或 Email" not in html
     assert "排課管理員帳號（可多人）" in html
+
+
+def test_schedule_result_counts_resource_sessions_once_and_zero_target_is_not_overtime():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert "uniqueResourceSessions(OVL).length" in html
+    assert "const hasTarget=SchedulePolicy.hasWeeklyTarget(role)&&quota>0" in html
+    assert "可供資源班抽離" in html
+    assert "資源班鎖定" not in html
+
+
+def test_pastel_action_colors_meet_normal_text_contrast_palette():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    variables = dict(re.findall(r"--([a-z-]+):(#[0-9a-fA-F]{6})", html))
+
+    def luminance(value):
+        channels = [int(value[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [channel / 12.92 if channel <= 0.03928
+                  else ((channel + 0.055) / 1.055) ** 2.4 for channel in channels]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    for name in ("pink", "mint", "lav", "peach", "lemon", "sky"):
+        light, dark = luminance(variables[name]), luminance(variables[f"{name}-d"])
+        contrast = (max(light, dark) + 0.05) / (min(light, dark) + 0.05)
+        assert contrast >= 4.5, f"{name} contrast is only {contrast:.2f}:1"
 
 
 def test_formal_destructive_buttons_warn_and_invalidate_old_schedule():

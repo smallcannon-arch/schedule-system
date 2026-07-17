@@ -107,9 +107,6 @@
   }
 
   function isResourceLockedSlot(data, schedule, overlays, code, day, period) {
-    const key = `${code}|${day}|${period}`;
-    const entry = schedule && schedule[key];
-    if (entry && isResourceBound(data, code, entry.s)) return true;
     return (overlays || []).some((item) =>
       item.code === code && item.d === day && Number(item.p) === Number(period));
   }
