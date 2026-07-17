@@ -17,7 +17,7 @@ def run_node(script):
     return json.loads(result.stdout)
 
 
-def test_resource_bound_subjects_and_slots_are_locked():
+def test_resource_subjects_are_engine_owned_but_only_overlay_slots_are_locked():
     output = run_node(r"""
 const workflow=require(process.argv[1]);
 const data={
@@ -45,7 +45,7 @@ process.stdout.write(JSON.stringify({
         "language": True,
         "math": False,
         "group": True,
-        "lock1": True,
+        "lock1": False,
         "lock2": True,
         "free": False,
     }
@@ -70,10 +70,12 @@ process.stdout.write(JSON.stringify({stable:one===stable,changed:one!==changed})
 def test_frontend_loads_teacher_workflow_before_main_logic():
     html = (ONLINE / "index.html").read_text(encoding="utf-8")
 
-    assert '<script src="teacher-workflow.js?v=20260716-1"></script>' in html
+    assert '<script src="teacher-workflow.js?v=20260717-1"></script>' in html
     assert html.index('src="teacher-workflow.js?') < html.index("const DAYS=")
     assert "if(isResourceBound(code,s))" in html
     assert "currentTeacherSignature(code)!==issued.baseSignature" in html
+    assert "ts.add(o.t+'（資源班）')" not in html
+    assert "val.endsWith('（資源班）')" not in html
 
 
 def test_teacher_package_encryption_round_trip_and_wrong_code_rejection():

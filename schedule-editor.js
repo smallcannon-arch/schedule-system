@@ -25,7 +25,6 @@
       item.code === code && item.d === day && Number(item.p) === Number(period))) {
       return "資源班抽離綁課";
     }
-    if (entry && isResourceBound(data, code, entry.s)) return "資源班綁課";
     if ((data.locks || []).some((item) =>
       item.c === code && item.d === day && Number(item.p) === Number(period))) {
       return "固定課鎖定";

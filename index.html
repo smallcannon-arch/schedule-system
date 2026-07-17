@@ -15,9 +15,9 @@
 <style>
 :root{
   --ink:#4a4458; --muted:#8d829e; --line:#efe8ea; --bg:#fdf8f4; --bad:#a5384b;
-  --pink:#f7cdd9; --pink-d:#c2557f; --mint:#c3e7d9; --mint-d:#1f8a6d;
-  --lav:#ddd3f2; --lav-d:#7c65c5; --peach:#ffd9c2; --peach-d:#d1663a;
-  --lemon:#faeec5; --lemon-d:#b08d1e; --sky:#cfe6f5; --sky-d:#3878a8;
+  --pink:#f7cdd9; --pink-d:#8a2f50; --mint:#c3e7d9; --mint-d:#11664f;
+  --lav:#ddd3f2; --lav-d:#6046a8; --peach:#ffd9c2; --peach-d:#8b3b1e;
+  --lemon:#faeec5; --lemon-d:#795d00; --sky:#cfe6f5; --sky-d:#245e89;
   --r:18px; --shadow:0 2px 4px rgba(120,90,110,.05),0 10px 28px rgba(120,90,110,.09);
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -724,7 +724,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <li><b>分開選科：</b>「資源班授課科目」是教師實際教授內容；「原班可抽離科目」可複選國語、數學、彈性或綜合等課程。</li>
       <li><b>安排時段：</b>可交由系統安排，也可切換固定時段後直接點選每週節次。</li>
       <li><b>早自修：</b>只供資源班固定時段使用，會顯示在班級與教師課表，但不會寫入人力資源網或校務系統上傳檔。</li>
-    </ol><div class="step-help-note">資源班綁課屬於鎖定課程，導師與一般課表編修都不能移動。</div></div>
+    </ol><div class="step-help-note">只有實際抽離的節次會鎖定；同科目的其他節次仍可由管理員在「課表編修」調整。</div></div>
   </details>
   <div class="panel">
     <h2>已納入抽離的原班</h2>
@@ -863,14 +863,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <!-- ═══ 三欄課表編修 ═══ -->
 <section class="view" id="v-edit">
   <h1>課表編修</h1>
-  <div class="sub">左側查看班級，右側同步查看教師；點選可移動課程後再點目標空格。語言分組、資源班綁課、固定課與連堂群組保持鎖定。</div>
+  <div class="sub">左側查看班級，右側同步查看教師；點選可移動課程後再點目標空格。語言分組、資源班實際抽離節次、固定課與連堂群組保持鎖定。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>選擇對象：</b>搜尋班級或教師，左右課表會同步顯示目前安排。</li>
       <li><b>移動課程：</b>先點可移動課程，再點目標空格；系統會即時檢查衝突。</li>
       <li><b>確認變更：</b>查看完整度、操作結果與最近變更，完成後儲存至學校雲端。</li>
-    </ol><div class="step-help-note">語言分組與資源班綁課、固定課及連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
+    </ol><div class="step-help-note">語言分組、資源班實際抽離節次、固定課及連堂群組為鎖定狀態，必須回到來源設定調整。</div></div>
   </details>
   <div class="editor-toolbar">
     <label>選擇班級<select class="edit" id="editClassSearch" onchange="editorChooseClass(this.value)"></select></label>
@@ -999,7 +999,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <li><b>安排課程：</b>先選科目，再點 □ 放入；點自己已排的科目可移除重排。</li>
       <li><b>送出存檔：</b>Google 教師模式按儲存課表調整，離線模式則匯出調整結果。</li>
       <li><b>承辦同步：</b>承辦人按讀取導師存檔，檢核後將更新合併回全校課表。</li>
-    </ol><div class="step-help-note">導師只能調整自己班級；資源班綁課與固定課保持唯讀，不能移動或清除。</div></div>
+    </ol><div class="step-help-note">導師只能調整自己班級；資源班實際抽離節次與固定課保持唯讀，不能移動或清除。</div></div>
   </details>
   <div class="tutor-mode-notice" id="tutorModeNotice"></div>
   <div class="tutor-prerequisite" id="tutorPrerequisite" hidden>
@@ -1038,7 +1038,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <button class="btn soft sm" id="tutorPrintButton" type="button" onclick="printTutorWorksheet()">🖨️ 列印工作單</button>
     </div>
     <div class="poolbar" id="poolBar"></div>
-    <div class="sub" style="margin-bottom:8px"><b>資源班綁課</b>與固定課為唯讀；「清空重排」只會清除導師自行放入的科目。</div>
+    <div class="sub" style="margin-bottom:8px"><b>資源班實際抽離節次</b>與固定課為唯讀；「清空重排」只會清除導師自行放入的科目。</div>
     <div id="tutorIssues"></div>
     <table class="tt" id="tutorTable"></table>
   </div>
@@ -1150,8 +1150,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 </main>
 
 <script src="data.js"></script>
-<script src="teacher-workflow.js?v=20260716-1"></script>
-<script src="schedule-editor.js?v=20260716-1"></script>
+<script src="teacher-workflow.js?v=20260717-1"></script>
+<script src="schedule-editor.js?v=20260717-1"></script>
 <script src="schedule-policy.js?v=20260713-2"></script>
 <script src="setup-builder.js?v=20260717-1"></script>
 <script src="schedule-exports.js?v=20260717-1"></script>
@@ -1862,7 +1862,7 @@ function isResourceLockedSlot(code,d,p){return TeacherWorkflow.isResourceLockedS
 function isEngine(code,s){
   const sub=DATA.subjects[s], t=DATA.assign[code]&&DATA.assign[code][s], c=CODE2C[code];
   if(s==='本土語文'&&DATA.nativeLockEnabled)return true;
-  if(isResourceBound(code,s))return true;            // 資源班綁課
+  if(isResourceBound(code,s))return true;            // 可供資源班抽離的科目先由引擎排定
   if(!c||!c.tutor||t!==c.tutor)return true;          // 釋出或跨班授課 → 引擎
   const mode=DATA.assignmentModes?.[code]?.[s];
   return mode?mode!=='tutor':!sub.self;
@@ -1944,7 +1944,7 @@ function renderTLoad(){
     const extra=(tc[t]&&+tc[t].extra)||0;
     const minus=(tc[t]&&+tc[t].minus)||0;
     const quota=SchedulePolicy.teacherTarget(DATA,t);
-    const hasTarget=SchedulePolicy.hasWeeklyTarget(role);
+    const hasTarget=SchedulePolicy.hasWeeklyTarget(role)&&quota>0;
     let badge;
     if(!hasTarget)badge=`<span class="chip" style="background:#f1ebe6;color:#94836f;padding:2px 10px">${n}節</span>`;
     else if(n>quota)badge=`<span class="chip bad" style="padding:2px 10px">超${n-quota}節</span>`;
@@ -2214,7 +2214,7 @@ function editorEntryAt(code,day,period){
 function editorLockReason(entry){
   if(!entry)return '';
   if(entry.source==='engine')return ScheduleEditor.lockedReason(DATA,SOL,OVL,entry.code,entry.d,entry.p);
-  return isResourceBound(entry.code,entry.s)?'資源班綁課':'';
+  return isResourceLockedSlot(entry.code,entry.d,entry.p)?'資源班抽離綁課':'';
 }
 function editorIsSelected(entry){return !!(entry&&EDIT_SELECTION&&entry.source===EDIT_SELECTION.source&&entry.code===EDIT_SELECTION.code&&entry.d===EDIT_SELECTION.d&&entry.p===EDIT_SELECTION.p)}
 function editorRenderClassTable(){
@@ -2263,7 +2263,7 @@ function editorRenderSummary(){
   for(const subject of Object.keys(DATA.subjects||{})){
     const need=hoursOf(subject,c.g)||0;if(!need)continue;required+=need;
     const got=counts[subject]||0,bound=isResourceBound(c.code,subject);
-    rows.push(`<li><b>${esc(subject)}</b>　${got}/${need}　${bound?'資源班鎖定':(got===need?'完成':`尚缺 ${need-got}`)}</li>`);
+    rows.push(`<li><b>${esc(subject)}</b>　${got}/${need}　${got===need?'完成':`尚缺 ${need-got}`}${bound?'・可供資源班抽離':''}</li>`);
   }
   const check=validateSchedule(),remaining=Math.max(0,required-entries.length);
   document.getElementById('editorMetrics').innerHTML=`<span><b>${entries.length}</b>已排節數</span><span><b>${remaining}</b>待排節數</span><span><b>${check.hard.length}</b>硬規則問題</span><span><b>${EDIT_HISTORY.length}</b>可復原步驟</span>`;
@@ -2378,7 +2378,7 @@ function doSolve(){
     document.getElementById('rTime').textContent=((performance.now()-t0)/1000).toFixed(1)+'秒';
     const check=refreshValidation(poolN);
     document.getElementById('rWarns').innerHTML=
-      (OVL.length?`<div class="sub" style="margin-bottom:8px">🧩 資源班抽離已排入 <b>${OVL.length}</b> 節（見課表檢視）</div>`:'')+
+      (OVL.length?`<div class="sub" style="margin-bottom:8px">🧩 資源班抽離已排入 <b>${uniqueResourceSessions(OVL).length}</b> 節（見課表檢視）</div>`:'')+
       (best.unplaced.length?'<ul class="warnlist">'+best.unplaced.map(tk=>tk.isMsg?`<li>⚠ ${esc(tk.s)}</li>`:`<li>⚠ ${esc(clsName(CODE2C[tk.code]))} ${esc(tk.s)} 未能排入（示範演算法限制，正式版 CP-SAT 可解）</li>`).join('')+'</ul>':'')+
       (check.hard.length?'<ul class="warnlist">'+check.hard.map(x=>`<li>✕ ${esc(x.text)}</li>`).join('')+'</ul>':'');
     btn.disabled=false;btn.textContent='⚡ 重新排課';
@@ -2507,7 +2507,7 @@ function fillTT(){
     const ts=new Set();
     if(SOL)for(const k in SOL)if(SOL[k].t)ts.add(SOL[k].t);
     for(const code in tutorPlaced)if(CODE2C[code]?.tutor&&Object.keys(tutorPlaced[code]).length)ts.add(CODE2C[code].tutor);
-    OVL.forEach(o=>{if(o.t){ts.add(o.t);ts.add(o.t+'（資源班）')}});
+    OVL.forEach(o=>{if(o.t)ts.add(o.t)});
     sel.innerHTML=[...ts].sort().map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')||'<option>（請先執行排課）</option>';
   }
   if([...sel.options].some(o=>o.value===prev))sel.value=prev;
@@ -2540,10 +2540,6 @@ function renderTT(){
           else if(o)cell=cellHTML({s:o.s+(ov?'※':''),t:o.t},ov?'k-ovl':'');
           else if(tp)cell=cellHTML({s:tp,t:c.tutor});
           else if(c&&DATA.gslot[c.g][DAYS.indexOf(d)][p-1])cell='<div class="slot-na" style="color:#c9b183">□</div>';
-        }else if(val.endsWith('（資源班）')){
-          const rt=val.replace('（資源班）','');
-          const rows=OVL.filter(o=>o.t===rt&&o.d===d&&o.p===p),ov=rows[0];
-          if(ov)cell=cellHTML({s:ov.subj+'※',t:[...new Set(rows.map(item=>clsName(CODE2C[item.code])))].join('、')+'·'+ov.grp},'k-ovl');
         }else{
           const items=[];
           for(const k in SOL){
@@ -2795,7 +2791,7 @@ function openServerTeacherPackage(pkg){
   document.getElementById('serverTeacherModeBadge').textContent=`${pkg.class_code} ${pkg.teacher||''} 教師調整模式`;
   setHandoffMessage(pkg.pending_review?
     '這份調整已送出，正在等待排課承辦人確認；確認前正式課表仍維持上一版。':
-    '登入身分已由後端確認；只能調整此班導師課，資源班綁課與固定課維持鎖定。');
+    '登入身分已由後端確認；只能調整此班導師課，資源班實際抽離節次與固定課維持鎖定。');
 }
 function getScheduleAuthSnapshot(){return currentSnapshot()}
 function applyAdminDraft(snapshot){
@@ -2887,7 +2883,7 @@ function importTeacherPackage(input){
       renderAll();
       const sel=document.getElementById('tutorSel');sel.value=pkg.class_code;sel.disabled=true;
       document.getElementById('teacherModeBadge').textContent=`${pkg.class_code} ${pkg.teacher||''} 教師調整模式`;
-      setHandoffMessage('目前只開放此班導師科目；資源班綁課、固定課與其他教師時段均為唯讀。');
+      setHandoffMessage('目前只開放此班導師科目；資源班實際抽離節次、固定課與其他教師時段均為唯讀。');
       go('tutor');
     }catch(error){if(TEACHER_MODE&&ADMIN_SNAPSHOT)restoreAdminSnapshot();alert('無法開啟教師調整檔：'+error.message)}
     finally{input.value=''}
@@ -3005,7 +3001,7 @@ function renderTutor(){
   }
   if(!c){if(clearButton)clearButton.disabled=true;return}
   const pool=remainPool(code);
-  const removable=Object.entries(tutorPlaced[code]||{}).filter(([,subject])=>!isResourceBound(code,subject)).length;
+  const removable=Object.keys(tutorPlaced[code]||{}).length;
   if(clearButton){clearButton.disabled=!removable;clearButton.title=removable?`清除 ${removable} 節導師自行排入的課程`:'目前沒有可清除的導師自排課程'}
   const notice=document.getElementById('tutorModeNotice');
   if(notice){
@@ -3033,7 +3029,6 @@ function renderTutor(){
       const tp=tutorPlaced[code]&&tutorPlaced[code][`${d}|${p}`];
       if(o&&isResourceLockedSlot(code,d,p))cell=`<div class="les resource-lock"><b>${esc(o.s)}</b><small>資源班綁課・鎖定</small></div>`;
       else if(o)cell=cellHTML(o);
-      else if(tp&&isResourceBound(code,tp))cell=`<div class="les resource-lock"><b>${esc(tp)}</b><small>資源班綁課・鎖定</small></div>`;
       else if(tp)cell=`<button type="button" class="les mine ${cat(tp)}" onclick="rmP(${jsArg(code)},${jsArg(d)},${p})" title="移除 ${esc(tp)}"><b>${esc(tp)}</b><small>${esc(c.tutor)}</small></button>`;
       else if(DATA.gslot[c.g][DAYS.indexOf(d)][p-1])cell=`<button type="button" class="slot-empty" aria-label="週${d}第${p}節排入課程" onclick="putP(${jsArg(code)},${jsArg(d)},${p})">□</button>`;
       else cell='<div class="slot-na">—</div>';
@@ -3091,21 +3086,17 @@ function putP(code,d,p){
 function rmP(code,d,p){
   if(!SCHEDULE_READY)return alert('請先完成第一階段排課。');
   if(TEACHER_MODE&&code!==TEACHER_MODE.code)return alert('教師調整檔只允許修改指定班級。');
-  const subject=tutorPlaced[code]&&tutorPlaced[code][`${d}|${p}`];
-  if(subject&&isResourceBound(code,subject))return alert(`${subject} 為資源班綁課，不可移除。`);
   if(tutorPlaced[code])delete tutorPlaced[code][`${d}|${p}`];syncTutorUI();
 }
 function clearTutor(){
   if(!SCHEDULE_READY)return alert('請先完成第一階段排課。');
   const code=document.getElementById('tutorSel').value;
   if(TEACHER_MODE&&code!==TEACHER_MODE.code)return alert('教師調整檔只允許修改指定班級。');
-  const removable=Object.entries(tutorPlaced[code]||{}).filter(([,subject])=>!isResourceBound(code,subject));
+  const removable=Object.entries(tutorPlaced[code]||{});
   if(!removable.length)return;
   const classroom=CODE2C[code];
-  if(!confirm(`確定清除${classroom?clsName(classroom):code}由導師自行排入的 ${removable.length} 節課？資源班綁課與固定課會保留。`))return;
-  const kept={};
-  for(const [slot,subject] of Object.entries(tutorPlaced[code]||{}))if(isResourceBound(code,subject))kept[slot]=subject;
-  tutorPlaced[code]=kept;syncTutorUI();
+  if(!confirm(`確定清除${classroom?clsName(classroom):code}由導師自行排入的 ${removable.length} 節課？引擎課、資源班抽離與固定課不受影響。`))return;
+  tutorPlaced[code]={};syncTutorUI();
 }
 
 // 教師姓名 datalist（不排課時間對象欄用）
