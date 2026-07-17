@@ -516,3 +516,12 @@ def test_setup_issues_are_expandable_and_generated_fields_are_named():
     assert 'aria-label="${esc(name)} ${gradeIndex + 1} 年級每週節數"' in script
     assert "details.scrollIntoView" in script
     assert "body.platform-admin-mode aside{display:none}" in html
+
+
+def test_resource_pull_subjects_use_a_wrapping_grid():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert 'class="resource-subject-checks"' in html
+    assert ".resource-subject-checks{display:grid" in html
+    assert "grid-template-columns:repeat(auto-fit,minmax(150px,1fr))" in html
+    assert ".resource-subject-checks span{min-width:0;overflow-wrap:anywhere}" in html
