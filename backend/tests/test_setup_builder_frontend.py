@@ -456,6 +456,82 @@ process.stdout.write(JSON.stringify({sources:context.DATA.resGroups[0].sources,g
     assert "該年級此節不上課" in output["slotHtml"]
 
 
+def test_resource_group_defaults_to_chinese_and_math_and_collapses_other_subjects():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function resourceId');
+const end=html.indexOf('function hoursOf',start);
+const classes=[{g:1,code:'1甲',res:true}];
+const context={DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],RESOURCE_PERIODS:[0,1,2,3,4,5,6,7],
+  DATA:{classes,subjects:{'國語文':{},'數學':{},'綜合活動':{}},roster:{},gslot:{},resGroups:[]},
+  CODE2C:{'1甲':classes[0]},alert:message=>{context.lastAlert=message},invalidateSchedule:()=>{},
+  fillTutor:()=>{},renderTLoad:()=>{},saveLS:()=>{},esc:String,clsName:c=>c.code,jsArg:JSON.stringify,
+  document:{getElementById:()=>({innerHTML:'',hidden:false,textContent:''})}};
+vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+context.renderRes=()=>{};
+context.addResG();
+const initial=[...context.DATA.resGroups[0].pullSubjects];
+const initialMode=context.DATA.resGroups[0].scheduleMode;
+const initialHtml=context.resourcePullPicker(context.DATA.resGroups[0],0);
+const initialSlotHtml=context.resourceSlotGrid(context.DATA.resGroups[0],0);
+context.rgTogglePullSubject(0,'綜合活動',true);
+const advancedHtml=context.resourcePullPicker(context.DATA.resGroups[0],0);
+context.rgUseCorePullSubjects(0);
+const reset=[...context.DATA.resGroups[0].pullSubjects];
+context.DATA.resGroups.push({id:'custom',grp:'自訂組',sources:['1甲'],subj:'國語文',pullSubjects:['綜合活動'],t:'',n:1});
+context.normalizeResourceGroups();
+process.stdout.write(JSON.stringify({initial,initialMode,initialHtml,initialSlotHtml,advancedHtml,reset,
+  custom:context.DATA.resGroups[1].pullSubjects}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["initial"] == ["國語文", "數學"]
+    assert output["initialMode"] == "fixed"
+    assert "所有來源班級同一節會綁定同一科" in output["initialHtml"]
+    assert "套用國語文＋數學" in output["initialHtml"]
+    assert "其他可抽離科目（選用）" in output["initialHtml"]
+    assert "資源班課表" in output["initialSlotHtml"]
+    assert "早自修" in output["initialSlotHtml"]
+    assert "其他可抽離科目（已選 1 科）" in output["advancedHtml"]
+    assert "resource-other-subjects\" open" in output["advancedHtml"]
+    assert output["reset"] == ["國語文", "數學"]
+    assert output["custom"] == ["綜合活動"]
+
+
+def test_resource_demo_overlay_skips_mixed_subject_slots():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function resourceId');
+const end=html.indexOf('function hoursOf',start);
+const classes=[{g:1,code:'1甲'},{g:1,code:'1乙'}];
+const context={DAYS:['一'],PS:[1,2],RESOURCE_PERIODS:[0,1,2],TLIM:new Set(),
+  DATA:{classes,subjects:{'國語文':{},'數學':{}},roster:{},gslot:{},resGroups:[{
+    id:'group-a',grp:'一年級A組',sources:['1甲','1乙'],subj:'國語文',
+    pullSubjects:['國語文','數學'],t:'資源教師',n:1,scheduleMode:'auto',slots:[]
+  }]},CODE2C:{'1甲':classes[0],'1乙':classes[1]}};
+vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+const result=context.placeOverlay({
+  '1甲|一|1':{s:'國語文'},'1乙|一|1':{s:'數學'},
+  '1甲|一|2':{s:'國語文'},'1乙|一|2':{s:'國語文'}
+});
+process.stdout.write(JSON.stringify(result));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["warn"] == []
+    assert len(output["out"]) == 2
+    assert {row["p"] for row in output["out"]} == {2}
+    assert {row["pullSubj"] for row in output["out"]} == {"國語文"}
+
+
 def test_publish_and_export_buttons_require_a_complete_schedule():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")

@@ -311,6 +311,40 @@ def test_resource_group_combines_classes_and_counts_teacher_sessions_once():
     assert engine.validate(data, schedule, tasks, overlay) == []
 
 
+def test_resource_group_uses_the_same_pull_subject_for_every_source_class():
+    payload = _resource_frontend_payload()
+    payload["resGroups"][0]["pullSubjects"] = ["國語文", "綜合活動"]
+
+    data = engine.load_frontend_data(payload)
+    schedule, tasks, _, _, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=False)
+
+    for day in ("一", "三", "五"):
+        subjects = {schedule[(code, day, 1)][0] for code in ("1甲", "1乙")}
+        assert len(subjects) == 1
+        pull_subjects = {row[4] for row in overlay if row[6:] == (day, 1)}
+        assert pull_subjects == subjects
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_resource_group_rejects_fixed_slot_with_different_locked_pull_subjects():
+    payload = _resource_frontend_payload()
+    payload["resGroups"][0].update({
+        "pullSubjects": ["國語文", "綜合活動"],
+        "n": 1,
+        "slots": [{"d": "一", "p": 1}],
+    })
+    payload["locks"] = [
+        {"c": "1甲", "d": "一", "p": 1, "s": "國語文"},
+        {"c": "1乙", "d": "一", "p": 1, "s": "綜合活動"},
+    ]
+
+    data = engine.load_frontend_data(payload)
+
+    with pytest.raises(engine.InfeasibleScheduleError):
+        engine.solve(data, time_limit=5, auto_schedule_tutor=False)
+
+
 def test_resource_fixed_slots_must_match_weekly_periods():
     payload = _resource_frontend_payload()
     payload["resGroups"][0]["slots"].pop()

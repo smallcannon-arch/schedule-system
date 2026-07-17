@@ -1548,27 +1548,33 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         cand = []
         for day in DAYS:
             for p in PERIODS:
-                source_vars = {}
-                for code in sources:
-                    values = [var(code, subject, day, p) for subject in pull_subjects]
-                    source_vars[code] = [value for value in values if value is not None]
-                if any(not values for values in source_vars.values()):
-                    continue
                 if ov["day"] and day != ov["day"]:
                     continue
                 if ov["p"] and p != ov["p"]:
                     continue
                 if (ov["t"], day, p) in d["teacher_limit"]:
                     continue
+                shared_subjects = []
+                for subject in pull_subjects:
+                    values = [var(code, subject, day, p) for code in sources]
+                    if all(value is not None for value in values):
+                        shared_subjects.append((subject, values))
+                if not shared_subjects:
+                    continue
                 z = m.NewBoolVar(f"ov{i}_{day}{p}")
-                for values in source_vars.values():
-                    m.Add(z <= sum(values))
+                subject_choices = []
+                for subject, values in shared_subjects:
+                    choice = m.NewBoolVar(f"ov{i}_{day}{p}_{subject}")
+                    for value in values:
+                        m.Add(choice <= value)
+                    subject_choices.append(choice)
+                m.Add(z == sum(subject_choices))
                 cand.append((day, p, z))
         if not cand:
             source_label = "、".join(sources)
             raise InfeasibleScheduleError(
-                f"資源班分組沒有共同可抽離時段：{ov['grp']}（{source_label}）",
-                [{"rule": "H13", "message": "請檢查原班可抽離科目、固定時段及資源班教師限制"}])
+                f"資源班分組沒有共同同科可抽離時段：{ov['grp']}（{source_label}）",
+                [{"rule": "H13", "message": "請檢查各來源班級能否在同一節排入相同的可抽離科目、固定時段及資源班教師限制"}])
         m.Add(sum(z for _, _, z in cand) == 1)
         for day, p, z in cand:
             ov_z[(i, day, p)] = z
@@ -1844,12 +1850,20 @@ def validate(d, sched, tasks, ov_sched=()):
     grade_of = {c["code"]: c["grade"] for c in d["classes"]}
     ovt = defaultdict(list)
     ovc = defaultdict(list)
+    ov_subjects = defaultdict(set)
     for group_id, grp, code, s, pull_subject, t, day, p in ov_sched:
         got = sched.get((code, day, p)) if p else None
         if p and (not got or got[0] != pull_subject):
             errs.append(f"H13違反(時段不符原班)：{grp} {code} {pull_subject} 週{day}{p}")
+        if p:
+            ov_subjects[(group_id, grp, day, p)].add(pull_subject)
         ovt[(t, day, p)].append(group_id)
         ovc[(code, day, p)].append(group_id)
+    for (group_id, grp, day, p), subjects in ov_subjects.items():
+        if len(subjects) > 1:
+            errs.append(
+                f"H13違反(來源班級抽離科目不一致)：{grp} 週{day}第{p}節 "
+                f"{'、'.join(sorted(subjects))}")
     for (t, day, p), grps in ovt.items():
         n = len(set(grps)) + sum(1 for (cc, dd, pp), (ss, tt, _) in sched.items()
                                  if tt == t and dd == day and pp == p)
