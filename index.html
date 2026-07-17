@@ -8,7 +8,7 @@
 <title>國民小學課務排程輔助系統｜正式版</title>
 <meta name="application-name" content="國民小學課務排程輔助系統">
 <meta name="description" content="國民小學教師配課、課務排程與課表協作平台。">
-<script src="app-config.js?v=20260717-2"></script>
+<script src="app-config.js?v=20260717-3"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -240,7 +240,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .platform-school-form .btn{white-space:nowrap;padding:9px 13px}
 .platform-school-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .teacher-limit-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:12px}.teacher-limit-toolbar label{display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:900}.teacher-limit-toolbar select{min-width:180px}.teacher-limit-modes{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}.teacher-limit-modes button{border:0;border-right:1px solid var(--line);border-radius:0;background:#fff;padding:9px 12px;color:var(--muted);font:inherit;font-size:13px;font-weight:900;cursor:pointer}.teacher-limit-modes button:last-child{border-right:0}.teacher-limit-modes button.on{background:var(--mint);color:var(--mint-d)}.teacher-limit-grid{width:min(100%,620px);table-layout:fixed}.teacher-limit-slot{width:100%;height:38px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.teacher-limit-slot.blocked{background:var(--pink);color:var(--pink-d)}.teacher-limit-slot.allowed-view{background:var(--mint);color:var(--mint-d)}.teacher-limit-summary{margin-top:9px;color:var(--muted);font-size:13px;font-weight:800}
-.resource-source-picker summary,.resource-settings summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.resource-checks{display:flex;flex-wrap:wrap;gap:7px 12px;padding:9px 0}.resource-checks label{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px}.resource-subject-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:stretch;gap:6px;padding:9px 0}.resource-subject-checks label{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;gap:6px;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:#fff;white-space:normal;font-size:13px;line-height:1.4;cursor:pointer}.resource-subject-checks input{margin:2px 0 0}.resource-subject-checks span{min-width:0;overflow-wrap:anywhere}.resource-subject-checks label:has(input:checked){border-color:#9ccfbe;background:#eff8f4;color:var(--mint-d)}.resource-settings-row td{background:#fbfaf9;padding:7px 10px 12px!important}.resource-settings-body{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(420px,1.3fr);gap:14px;margin-top:8px}.resource-slot-grid{width:100%;max-width:620px;table-layout:fixed}.resource-slot-button{width:100%;height:34px;border:0;background:#fff;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.resource-slot-button.on{background:var(--mint);color:var(--mint-d)}.resource-slot-summary{margin-top:6px;color:var(--muted);font-size:12px;font-weight:800}.resource-class-summary{display:flex;gap:7px;flex-wrap:wrap}.resource-class-summary .pchip{cursor:default}
+.resource-source-picker summary,.resource-settings summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.resource-checks{display:flex;flex-wrap:wrap;gap:7px 12px;padding:9px 0}.resource-checks label{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px}.resource-pull-panel{min-width:0}.resource-pull-head{display:flex;align-items:stretch;flex-direction:column;gap:8px}.resource-pull-head .sub{margin-top:3px;max-width:560px;line-height:1.55}.resource-pull-head .btn{align-self:flex-start;white-space:nowrap}.resource-subject-section-title{margin-top:10px;color:var(--muted);font-size:12px;font-weight:900}.resource-subject-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:stretch;gap:6px;padding:7px 0}.resource-subject-checks label{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;gap:6px;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:#fff;white-space:normal;font-size:13px;line-height:1.4;cursor:pointer}.resource-subject-checks input{margin:2px 0 0}.resource-subject-checks span{min-width:0;overflow-wrap:anywhere}.resource-subject-checks label:has(input:checked){border-color:#9ccfbe;background:#eff8f4;color:var(--mint-d)}.resource-core-subjects{grid-template-columns:repeat(2,minmax(0,1fr))}.resource-other-subjects{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}.resource-other-subjects summary{cursor:pointer;color:var(--sky-d);font-size:12px;font-weight:900}.resource-other-subjects .resource-subject-checks{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));padding-bottom:0}.resource-settings-row td{background:#fbfaf9;padding:7px 10px 12px!important}.resource-settings-body{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(420px,1.2fr);gap:18px;margin-top:8px}.tbl .resource-slot-grid{width:100%;min-width:0;max-width:620px;table-layout:fixed}.resource-slot-button{width:100%;height:34px;border:0;background:#fff;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.resource-slot-button.on{background:var(--mint);color:var(--mint-d)}.resource-slot-summary{margin-top:6px;color:var(--muted);font-size:12px;font-weight:800}.resource-class-summary{display:flex;gap:7px;flex-wrap:wrap}.resource-class-summary .pchip{cursor:default}
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
@@ -316,7 +316,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
   .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
-  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-usage-summary div:last-child:nth-child(odd){grid-column:1/-1}.platform-school-actions{overflow-x:auto}.platform-usage-head{align-items:flex-start;flex-direction:column}.platform-usage-actions{justify-content:flex-start}.usage-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-detail-summary div:nth-child(2){border-right:0}.usage-detail-summary div:nth-child(-n+2){border-bottom:1px solid var(--line)}.usage-timeline-row{grid-template-columns:1fr auto}.usage-timeline-row time{grid-column:1/-1}.resource-settings-body{grid-template-columns:1fr}
+  .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-usage-summary div:last-child:nth-child(odd){grid-column:1/-1}.platform-school-actions{overflow-x:auto}.platform-usage-head{align-items:flex-start;flex-direction:column}.platform-usage-actions{justify-content:flex-start}.usage-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-detail-summary div:nth-child(2){border-right:0}.usage-detail-summary div:nth-child(-n+2){border-bottom:1px solid var(--line)}.usage-timeline-row{grid-template-columns:1fr auto}.usage-timeline-row time{grid-column:1/-1}.resource-settings-body{grid-template-columns:1fr}.resource-pull-head{align-items:stretch;flex-direction:column}.resource-pull-head .btn{align-self:flex-start}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{grid-template-columns:1fr;align-items:stretch}.formal-request-link{text-align:center}.formal-request-details{grid-column:1}.formal-request-details ul{grid-template-columns:1fr}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
 @media print{aside,.admin-dock,.tt-tools,.poolbar,.sub,.step-help,.teacher-handoff,.app-footer{display:none}main{margin:0;width:100%;min-height:0}}
@@ -361,7 +361,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.27</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.28</b></span></div>
   </div>
 </section>
 
@@ -715,14 +715,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <!-- ═══ 資源班 ═══ -->
 <section class="view" id="v-res">
   <h1>🧩 資源班</h1>
-  <div class="sub">一個抽離分組可同時包含同年級多個原班，資源班教師節數只計一次。資源班授課科目與原班可抽離科目分開設定，也可由教師先鎖定實際上課時段。</div>
+  <div class="sub">先建立同年級抽離分組並排定資源班課表，系統再把所有來源班級的國語或數學綁到相同節次、相同科目；資源班教師節數每組只計一次。</div>
   <div class="auth-status"><b>版本 1.26 相容性提醒</b>：既有案件若曾以「閩南語」建立固定課，載入後可能恢復先前未生效的鎖定；請重新執行排課並檢查無解診斷後再發布。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>建立分組：</b>同一組可勾選同年級多個來源班級，例如一年甲、乙班合併為 A 組。</li>
-      <li><b>分開選科：</b>「資源班授課科目」是教師實際教授內容；「原班可抽離科目」可複選國語、數學、彈性或綜合等課程。</li>
-      <li><b>安排時段：</b>可交由系統安排，也可切換固定時段後直接點選每週節次。</li>
+      <li><b>分開選科：</b>「資源班授課科目」是教師實際教授內容；一般節次預設從原班國語文或數學抽離，所有來源班級同節必須排相同科目。</li>
+      <li><b>先排資源班：</b>預設直接指定資源班每週節次；尚未排定時，也可改由系統尋找共同同科時段。</li>
       <li><b>早自修：</b>只供資源班固定時段使用，會顯示在班級與教師課表，但不會寫入人力資源網或校務系統上傳檔。</li>
     </ol><div class="step-help-note">只有實際抽離的節次會鎖定；同科目的其他節次仍可由管理員在「課表編修」調整。</div></div>
   </details>
@@ -735,7 +735,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="tbl"><table id="resTbl" style="min-width:1050px"></table></div>
     <div class="auth-status" id="resourceGroupHint" hidden></div>
     <div style="margin-top:11px"><button class="btn mint sm" onclick="addResG()">＋ 新增抽離組</button></div>
-    <div class="sub" style="margin-top:10px;margin-bottom:0">系統會讓所有來源班級在同一節抽離，並自動避開資源班教師衝堂；同一分組不會因來源班級數量重複計算教師節數。</div>
+    <div class="sub" style="margin-top:10px;margin-bottom:0">一般節次會讓所有來源班級在同一節排入同一個可抽離科目，並自動避開資源班教師衝堂；同一分組不會因來源班級數量重複計算教師節數。</div>
   </div>
 </section>
 
@@ -1142,7 +1142,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.27</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.28</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1683,8 +1683,16 @@ function resourceSources(group){
   const values=Array.isArray(group?.sources)?group.sources:[group?.code];
   return [...new Set(values.map(code=>String(code||'').trim()).filter(code=>CODE2C[code]))];
 }
+function resourceCorePullSubjects(fallback=''){
+  const names=Object.keys(DATA.subjects||{});
+  const find=candidates=>candidates.find(subject=>names.includes(subject));
+  const core=[find(['國語文','國語']),find(['數學'])].filter(Boolean);
+  if(core.length)return [...new Set(core)];
+  if(fallback&&names.includes(fallback))return [fallback];
+  return names.slice(0,1);
+}
 function resourcePullSubjects(group){
-  const values=Array.isArray(group?.pullSubjects)&&group.pullSubjects.length?group.pullSubjects:[group?.subj];
+  const values=Array.isArray(group?.pullSubjects)&&group.pullSubjects.length?group.pullSubjects:resourceCorePullSubjects(group?.subj);
   return [...new Set(values.map(subject=>String(subject||'').trim()).filter(subject=>DATA.subjects?.[subject]))];
 }
 function resourceSlots(group){
@@ -1696,7 +1704,7 @@ function normalizeResourceGroups(){
   for(const item of source){
     const oldStyle=!Array.isArray(item.sources),sources=resourceSources(item),subject=String(item.subj||'國語文');
     if(oldStyle){
-      const row={...item,id:resourceId(),sources:[...sources],subj:subject,pullSubjects:[subject],scheduleMode:'auto',slots:[]};
+      const row={...item,id:resourceId(),sources:[...sources],subj:subject,pullSubjects:resourceCorePullSubjects(subject),scheduleMode:'auto',slots:[]};
       normalized.push(row);continue;
     }
     normalized.push({...item,id:item.id||resourceId(),sources,pullSubjects:resourcePullSubjects(item),
@@ -1712,8 +1720,12 @@ function resourceSourcePicker(group,index){
   return `<details class="resource-source-picker" ${RESOURCE_SOURCE_OPEN===group.id?'open':''}><summary>${selected.size?`${[...selected].map(code=>esc(clsName(CODE2C[code]))).join('、')}（${selected.size}班）`:'選擇來源班級'}</summary><div class="resource-checks">${DATA.classes.map(c=>`<label title="${grade&&+c.g!==+grade?'點選後將切換至此年級':''}"><input type="checkbox" ${selected.has(c.code)?'checked':''} onchange="rgToggleSource(${index},${jsArg(c.code)},this.checked)">${esc(clsName(c))}</label>`).join('')}</div></details>`;
 }
 function resourcePullPicker(group,index){
-  const selected=new Set(resourcePullSubjects(group));
-  return `<div><b>原班可抽離科目</b><div class="sub" style="margin:3px 0 6px">來源班級在同一節排到任一勾選科目即可抽離。</div><div class="resource-subject-checks">${Object.keys(DATA.subjects||{}).map(subject=>`<label><input type="checkbox" ${selected.has(subject)?'checked':''} onchange="rgTogglePullSubject(${index},${jsArg(subject)},this.checked)"><span>${esc(subject)}</span></label>`).join('')}</div></div>`;
+  const selected=new Set(resourcePullSubjects(group)),core=resourceCorePullSubjects(group.subj),coreSet=new Set(core);
+  const others=Object.keys(DATA.subjects||{}).filter(subject=>!coreSet.has(subject));
+  const otherCount=others.filter(subject=>selected.has(subject)).length;
+  const choice=subject=>`<label><input type="checkbox" ${selected.has(subject)?'checked':''} onchange="rgTogglePullSubject(${index},${jsArg(subject)},this.checked)"><span>${esc(subject)}</span></label>`;
+  const resetLabel=core.join('＋');
+  return `<div class="resource-pull-panel"><div class="resource-pull-head"><div><b>一般節次可抽離科目</b><div class="sub">所有來源班級同一節會綁定同一科；指定時段與系統尋找都會檢查，早自修除外。</div></div>${core.length?`<button class="btn soft sm" type="button" onclick="rgUseCorePullSubjects(${index})">套用${esc(resetLabel)}</button>`:''}</div><div class="resource-subject-section-title">常用科目</div><div class="resource-subject-checks resource-core-subjects">${core.map(choice).join('')}</div>${others.length?`<details class="resource-other-subjects" ${otherCount?'open':''}><summary>其他可抽離科目${otherCount?`（已選 ${otherCount} 科）`:'（選用）'}</summary><div class="resource-subject-checks">${others.map(choice).join('')}</div></details>`:''}</div>`;
 }
 function resourceGradeSlotOpen(group,day,period){
   if(+period===0)return true;
@@ -1727,8 +1739,8 @@ function resourceTeacherSelect(group,index){
   return `<select class="edit" style="min-width:150px" aria-label="資源班教師" onchange="rgSet(${index},'t',this.value)"><option value="">選擇資源班教師</option>${preferred.length?`<optgroup label="資源班教師">${options(preferred)}</optgroup>`:''}${others.length?`<optgroup label="其他兼任教師">${options(others)}</optgroup>`:''}${current&&!names.includes(current)?`<option value="${esc(current)}" selected>${esc(current)}｜原設定</option>`:''}</select>`;
 }
 function resourceSlotGrid(group,index){
-  if(group.scheduleMode!=='fixed')return '<div><b>時段安排</b><div class="sub" style="margin-top:5px">目前由 CP-SAT 依原班可抽離科目與教師限制自動安排。</div></div>';
-  const selected=new Set(resourceSlots(group).map(slot=>`${slot.d}|${slot.p}`));let html='<div><b>固定上課時段</b><table class="tt resource-slot-grid"><tr><th class="pd">節次</th>'+DAYS.map(day=>`<th>週${day}</th>`).join('')+'</tr>';
+  if(group.scheduleMode!=='fixed')return '<div><b>資源班課表</b><div class="sub" style="margin-top:5px">由 CP-SAT 尋找所有來源班級可在同一節排入相同科目的時段。</div></div>';
+  const selected=new Set(resourceSlots(group).map(slot=>`${slot.d}|${slot.p}`));let html='<div><b>資源班課表</b><table class="tt resource-slot-grid"><tr><th class="pd">節次</th>'+DAYS.map(day=>`<th>週${day}</th>`).join('')+'</tr>';
   for(const period of RESOURCE_PERIODS){
     if(period===5)html+='<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
     html+=`<tr><th class="pd">${period===0?'早自修':period}</th>`+DAYS.map(day=>{const on=selected.has(`${day}|${period}`),available=resourceGradeSlotOpen(group,day,period),disabled=!available&&!on;return `<td><button type="button" class="resource-slot-button ${on?'on':''}" aria-pressed="${on}" ${disabled?'disabled':''} title="${disabled?'該年級此節不上課':''}" onclick="rgToggleSlot(${index},${jsArg(day)},${period})">${on?'固定':''}</button></td>`}).join('')+'</tr>';
@@ -1751,9 +1763,9 @@ function renderRes(){
       <td><select class="edit" onchange="rgSet(${i},'subj',this.value)">${subjects.map(subject=>`<option value="${esc(subject)}" ${subject===g.subj?'selected':''}>${esc(subject)}</option>`).join('')}</select></td>
       <td>${resourceTeacherSelect(g,i)}</td>
       <td><input class="numin" type="number" min="1" max="10" value="${g.n}" onchange="rgSet(${i},'n',+this.value)"></td>
-      <td><select class="edit" onchange="rgSet(${i},'scheduleMode',this.value)"><option value="auto" ${g.scheduleMode!=='fixed'?'selected':''}>系統安排</option><option value="fixed" ${g.scheduleMode==='fixed'?'selected':''}>固定時段</option></select></td>
+      <td><select class="edit" aria-label="資源班時段安排方式" onchange="rgSet(${i},'scheduleMode',this.value)"><option value="fixed" ${g.scheduleMode==='fixed'?'selected':''}>指定時段</option><option value="auto" ${g.scheduleMode!=='fixed'?'selected':''}>系統尋找</option></select></td>
       <td><button class="btn soft sm" type="button" title="刪除此抽離組" onclick="removeResGroup(${i})">✕</button></td></tr>
-      <tr class="resource-settings-row"><td colspan="7"><details class="resource-settings" ${g.scheduleMode==='fixed'||RESOURCE_SETTINGS_OPEN===g.id?'open':''}><summary>更多設定：原班抽離科目${g.scheduleMode==='fixed'?'、固定時段':''}</summary><div class="resource-settings-body">${resourcePullPicker(g,i)}${resourceSlotGrid(g,i)}</div></details></td></tr>`;
+      <tr class="resource-settings-row"><td colspan="7"><details class="resource-settings" ${g.scheduleMode==='fixed'||RESOURCE_SETTINGS_OPEN===g.id?'open':''}><summary>原班綁課${g.scheduleMode==='fixed'?'與資源班課表':''}</summary><div class="resource-settings-body">${resourcePullPicker(g,i)}${resourceSlotGrid(g,i)}</div></details></td></tr>`;
   });
   t.innerHTML=h+(rg.length?'':'<tr><td colspan="7" style="padding:18px;color:var(--muted)">尚未建立資源班抽離分組</td></tr>');
   const duplicateKeys=new Map(),hint=document.getElementById('resourceGroupHint');
@@ -1791,6 +1803,13 @@ function rgTogglePullSubject(index,subject,checked){
   if(!subjects.size){alert('每個資源班分組至少需要一個原班可抽離科目。');return renderRes()}
   group.pullSubjects=[...subjects];invalidateSchedule();renderRes();saveLS('原班可抽離科目已更新');
 }
+function rgUseCorePullSubjects(index){
+  const group=DATA.resGroups[index];if(!group)return;
+  const subjects=resourceCorePullSubjects(group.subj);
+  if(!subjects.length)return alert('目前科目資料中沒有國語文或數學，請手動選擇可抽離科目。');
+  RESOURCE_SETTINGS_OPEN=group.id;group.pullSubjects=subjects;
+  invalidateSchedule();renderRes();saveLS(`已套用${subjects.join('、')}抽離規則`);
+}
 function rgToggleSlot(index,day,period){
   const group=DATA.resGroups[index];if(!group)return;
   const slots=resourceSlots(group),found=slots.findIndex(slot=>slot.d===day&&slot.p===+period);
@@ -1804,7 +1823,7 @@ function addResG(){
   if(!first)return alert('請先在「資料建置」建立班級，再新增資源班抽離組。');
   const subject=DATA.subjects?.['國語文']?'國語文':Object.keys(DATA.subjects||{})[0];
   if(!subject)return alert('請先建立科目節數，再新增資源班抽離組。');
-  DATA.resGroups.push({id:resourceId(),grp:`${first.g}年級A組`,sources:[first.code],subj:subject,pullSubjects:[subject],t:'',n:2,scheduleMode:'auto',slots:[]});
+  DATA.resGroups.push({id:resourceId(),grp:`${first.g}年級A組`,sources:[first.code],subj:subject,pullSubjects:resourceCorePullSubjects(subject),t:'',n:2,scheduleMode:'fixed',slots:[]});
   invalidateSchedule();renderRes();fillTutor();saveLS('已新增資源班抽離組');
 }
 function removeResGroup(index){
@@ -1841,7 +1860,8 @@ function placeOverlay(cls){
       if(busy[`${g.t}|${slot.d}|${slot.p}`]||TLIM.has(`${g.t}|${slot.d}|${slot.p}`))return false;
       if(sources.some(code=>sourceBusy[`${code}|${slot.d}|${slot.p}`]))return false;
       if(slot.p===0)return true;
-      return sources.every(code=>{const lesson=cls[`${code}|${slot.d}|${slot.p}`];return lesson&&pullSubjects.has(lesson.s)});
+      const lessons=sources.map(code=>cls[`${code}|${slot.d}|${slot.p}`]);
+      return lessons.every(lesson=>lesson&&pullSubjects.has(lesson.s))&&lessons.every(lesson=>lesson.s===lessons[0].s);
     });
     let placed=0;
     for(const slot of candidates){
@@ -1849,7 +1869,7 @@ function placeOverlay(cls){
       for(const code of sources){sourceBusy[`${code}|${slot.d}|${slot.p}`]=1;const pullSubj=slot.p===0?'早自修':cls[`${code}|${slot.d}|${slot.p}`].s;out.push({id:g.id,grp:g.grp,code,subj:g.subj,pullSubj,t:g.t,d:slot.d,p:+slot.p})}
       placed++;
     }
-    if(placed<needed)warn.push(`抽離組 ${g.grp} 缺 ${needed-placed} 節：來源班級沒有共同可抽離時段，或資源班教師衝堂`);
+    if(placed<needed)warn.push(`抽離組 ${g.grp} 缺 ${needed-placed} 節：來源班級沒有共同同科可抽離時段，或資源班教師衝堂`);
   }
   return {out,warn};
 }
@@ -2123,10 +2143,15 @@ function validateSchedule(){
   if(ruleOn('H10'))for(const lk of DATA.locks){
     if(!entries.some(e=>e.code===lk.c&&e.d===lk.d&&e.p===+lk.p&&e.s===lk.s))add('H10',`${lk.c} ${lk.s} 未在週${lk.d}第${lk.p}節鎖定位置`);
   }
-  if(ruleOn('H13'))for(const o of OVL){
-    if(+o.p===0)continue;
-    const pullSubject=o.pullSubj||o.subj;
-    if(!entries.some(e=>e.code===o.code&&e.d===o.d&&e.p===+o.p&&e.s===pullSubject))add('H13',`${o.grp} 未與 ${o.code} ${pullSubject} 同時段`);
+  if(ruleOn('H13')){
+    const resourceSubjects={};
+    for(const o of OVL){
+      if(+o.p===0)continue;
+      const pullSubject=o.pullSubj||o.subj,key=`${o.id||o.grp}|${o.d}|${o.p}`;
+      (resourceSubjects[key]??=new Set()).add(pullSubject);
+      if(!entries.some(e=>e.code===o.code&&e.d===o.d&&e.p===+o.p&&e.s===pullSubject))add('H13',`${o.grp} 未與 ${o.code} ${pullSubject} 同時段`);
+    }
+    for(const [key,subjects] of Object.entries(resourceSubjects))if(subjects.size>1)add('H13',`${key.split('|')[0]} 同一抽離節次出現不同原班科目：${[...subjects].join('、')}`);
   }
   for(const c of DATA.classes)for(const s in DATA.subjects){
     const need=hoursOf(s,c.g)||0;if(!need)continue;
@@ -3142,7 +3167,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.27');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.28');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3232,6 +3257,7 @@ function initDerived(){
   LIMITS=DATA.limits.map(r=>[...r]);
   RULES=DATA.rules.map(r=>[...r]);
   for(const row of RULES){
+    if(row[0]==='H13')row[3]='資源班一般節次須讓所有來源班級在同一節排入同一個可抽離科目；早自修不綁原班科目';
     if(row[0]==='S08')row[3]=`教師每日以 ${Math.min(5,policyDailyCap)} 節為負荷偏好，硬上限為 ${policyDailyCap} 節`;
     if(row[0]==='S09')row[3]=`導師每日以 ${Math.min(4,policyDailyCap)} 節為負荷偏好，硬上限為 ${policyDailyCap} 節`;
   }
