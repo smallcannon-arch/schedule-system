@@ -8,7 +8,7 @@
 <title>國民小學課務排程輔助系統｜正式版</title>
 <meta name="application-name" content="國民小學課務排程輔助系統">
 <meta name="description" content="國民小學教師配課、課務排程與課表協作平台。">
-<script src="app-config.js?v=20260716-1"></script>
+<script src="app-config.js?v=20260717-2"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -240,7 +240,7 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .platform-school-form .btn{white-space:nowrap;padding:9px 13px}
 .platform-school-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .teacher-limit-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:12px}.teacher-limit-toolbar label{display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:900}.teacher-limit-toolbar select{min-width:180px}.teacher-limit-modes{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}.teacher-limit-modes button{border:0;border-right:1px solid var(--line);border-radius:0;background:#fff;padding:9px 12px;color:var(--muted);font:inherit;font-size:13px;font-weight:900;cursor:pointer}.teacher-limit-modes button:last-child{border-right:0}.teacher-limit-modes button.on{background:var(--mint);color:var(--mint-d)}.teacher-limit-grid{width:min(100%,620px);table-layout:fixed}.teacher-limit-slot{width:100%;height:38px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.teacher-limit-slot.blocked{background:var(--pink);color:var(--pink-d)}.teacher-limit-slot.allowed-view{background:var(--mint);color:var(--mint-d)}.teacher-limit-summary{margin-top:9px;color:var(--muted);font-size:13px;font-weight:800}
-.resource-source-picker summary,.resource-settings summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.resource-checks{display:flex;flex-wrap:wrap;gap:7px 12px;padding:9px 0}.resource-checks label{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px}.resource-settings-row td{background:#fbfaf9;padding:7px 10px 12px!important}.resource-settings-body{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(420px,1.3fr);gap:14px;margin-top:8px}.resource-slot-grid{width:100%;max-width:620px;table-layout:fixed}.resource-slot-button{width:100%;height:34px;border:0;background:#fff;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.resource-slot-button.on{background:var(--mint);color:var(--mint-d)}.resource-slot-summary{margin-top:6px;color:var(--muted);font-size:12px;font-weight:800}.resource-class-summary{display:flex;gap:7px;flex-wrap:wrap}.resource-class-summary .pchip{cursor:default}
+.resource-source-picker summary,.resource-settings summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.resource-checks{display:flex;flex-wrap:wrap;gap:7px 12px;padding:9px 0}.resource-checks label{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px}.resource-subject-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:stretch;gap:6px;padding:9px 0}.resource-subject-checks label{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;gap:6px;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:#fff;white-space:normal;font-size:13px;line-height:1.4;cursor:pointer}.resource-subject-checks input{margin:2px 0 0}.resource-subject-checks span{min-width:0;overflow-wrap:anywhere}.resource-subject-checks label:has(input:checked){border-color:#9ccfbe;background:#eff8f4;color:var(--mint-d)}.resource-settings-row td{background:#fbfaf9;padding:7px 10px 12px!important}.resource-settings-body{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(420px,1.3fr);gap:14px;margin-top:8px}.resource-slot-grid{width:100%;max-width:620px;table-layout:fixed}.resource-slot-button{width:100%;height:34px;border:0;background:#fff;color:var(--muted);font:inherit;font-size:12px;font-weight:900;cursor:pointer}.resource-slot-button.on{background:var(--mint);color:var(--mint-d)}.resource-slot-summary{margin-top:6px;color:var(--muted);font-size:12px;font-weight:800}.resource-class-summary{display:flex;gap:7px;flex-wrap:wrap}.resource-class-summary .pchip{cursor:default}
 .platform-school-list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
 .platform-school-list th,.platform-school-list td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .platform-school-list th{color:var(--muted);font-size:12px}
@@ -361,7 +361,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.26</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.27</b></span></div>
   </div>
 </section>
 
@@ -1142,7 +1142,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.26</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.27</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1713,7 +1713,7 @@ function resourceSourcePicker(group,index){
 }
 function resourcePullPicker(group,index){
   const selected=new Set(resourcePullSubjects(group));
-  return `<div><b>原班可抽離科目</b><div class="sub" style="margin:3px 0 6px">來源班級在同一節排到任一勾選科目即可抽離。</div><div class="resource-checks">${Object.keys(DATA.subjects||{}).map(subject=>`<label><input type="checkbox" ${selected.has(subject)?'checked':''} onchange="rgTogglePullSubject(${index},${jsArg(subject)},this.checked)">${esc(subject)}</label>`).join('')}</div></div>`;
+  return `<div><b>原班可抽離科目</b><div class="sub" style="margin:3px 0 6px">來源班級在同一節排到任一勾選科目即可抽離。</div><div class="resource-subject-checks">${Object.keys(DATA.subjects||{}).map(subject=>`<label><input type="checkbox" ${selected.has(subject)?'checked':''} onchange="rgTogglePullSubject(${index},${jsArg(subject)},this.checked)"><span>${esc(subject)}</span></label>`).join('')}</div></div>`;
 }
 function resourceGradeSlotOpen(group,day,period){
   if(+period===0)return true;
@@ -3151,7 +3151,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.26');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.27');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';

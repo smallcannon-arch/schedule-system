@@ -45,6 +45,10 @@ def test_formal_release_check_bypasses_cached_homepage():
         encoding="utf-8")
 
     assert 'release: "__APP_RELEASE__"' in app_config
+    assert 'assetVersion = "20260717-2"' in app_config
+    assert "requestedVersion !== assetVersion" in app_config
+    assert "網站頁面已有新版" in app_config
+    assert 'app-config.js?v=20260717-2' in html
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
     assert 'schedule-auth.js?v=20260717-1' in html
     assert 'new URL("release.json", root.location.href)' in script_text
@@ -290,7 +294,7 @@ def test_formal_network_errors_are_localized_and_school_save_status_persists():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
-    assert '<script src="app-config.js?v=20260716-1"></script>' in html
+    assert '<script src="app-config.js?v=20260717-2"></script>' in html
     assert "目前無法連線至雲端服務，請確認網路後重新整理再試。" in script
     assert "目前無法連線至排課引擎，請確認網路後再試。" in script
     assert "async function loadSchools(statusMessage)" in script
