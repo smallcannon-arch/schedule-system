@@ -368,6 +368,33 @@
     return String(value || "").split(/[\s,，;；]+/).map((item) => item.trim()).filter(Boolean);
   }
 
+  const TAIWAN_COUNTY_NAMES = Object.freeze([
+    "基隆市", "臺北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣",
+    "臺中市", "彰化縣", "南投縣", "雲林縣", "嘉義市", "嘉義縣", "臺南市",
+    "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣",
+  ]);
+
+  function platformSchoolCounty(school) {
+    const value = String((school && school.county) || (school && school.name) || "").trim()
+      .replace(/^台(?=北市|中市|南市|東縣)/, "臺");
+    return TAIWAN_COUNTY_NAMES.find((county) => value.startsWith(county)) || "";
+  }
+
+  function comparePlatformSchools(left, right) {
+    const leftCounty = platformSchoolCounty(left);
+    const rightCounty = platformSchoolCounty(right);
+    if (leftCounty !== rightCounty) {
+      if (!leftCounty) return 1;
+      if (!rightCounty) return -1;
+      const countyOrder = leftCounty.localeCompare(rightCounty, "zh-Hant", {sensitivity: "base"});
+      if (countyOrder) return countyOrder;
+    }
+    const leftCode = String(left.moe_code || left.school_id || "");
+    const rightCode = String(right.moe_code || right.school_id || "");
+    return leftCode.localeCompare(rightCode, "zh-Hant", {numeric: true, sensitivity: "base"}) ||
+      String(left.name || "").localeCompare(String(right.name || ""), "zh-Hant", {sensitivity: "base"});
+  }
+
   function renderSchools() {
     const target = document.getElementById("platformSchoolList");
     if (!target) return;
@@ -384,7 +411,7 @@
     const element = document.getElementById("platformSchoolStatus");
     try {
       const result = await request("/platform/schools");
-      state.schools = result.schools || [];
+      state.schools = [...(result.schools || [])].sort(comparePlatformSchools);
       renderSchools();
       if (element) element.textContent = statusMessage || `共 ${state.schools.length} 間學校。`;
     } catch (error) {
@@ -823,6 +850,7 @@
     try {
       if (element) element.textContent = "正在整理近 30 日使用概況…";
       state.usage = await request("/platform/usage?days=30");
+      state.usage.schools = [...(state.usage.schools || [])].sort(comparePlatformSchools);
       renderUsage();
       if (element) element.textContent = "本使用概況只彙整學校、日期、角色、案件階段與操作次數；不保存姓名、Email、IP 或課表內容。";
     } catch (error) {

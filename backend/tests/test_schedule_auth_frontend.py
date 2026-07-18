@@ -50,7 +50,7 @@ def test_formal_release_check_bypasses_cached_homepage():
     assert "網站頁面已有新版" in app_config
     assert 'app-config.js?v=20260717-3' in html
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
-    assert 'schedule-auth.js?v=20260718-1' in html
+    assert 'schedule-auth.js?v=20260718-2' in html
     assert 'new URL("release.json", root.location.href)' in script_text
     assert '{cache: "no-store"}' in script_text
     assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text
@@ -136,6 +136,48 @@ process.stdout.write(JSON.stringify({creating,editing}));
         "save": "建立學校", "cancel": "取消編輯", "cancelHidden": True}
     assert output["editing"] == {
         "save": "儲存變更", "cancel": "取消編輯", "cancelHidden": False}
+
+
+def test_platform_schools_sort_by_county_then_moe_code():
+    node_script = r"""
+const fs=require('fs'),vm=require('vm');
+const source=fs.readFileSync(process.argv[1],'utf8');
+const start=source.indexOf('const TAIWAN_COUNTY_NAMES');
+const end=source.indexOf('function renderSchools',start);
+const rows=[
+  {name:'未標縣市國小',moe_code:'000001',school_id:'unknown'},
+  {name:'新竹市乙國小',moe_code:'183623',school_id:'hcc-b'},
+  {name:'台北市乙國小',moe_code:'100002',school_id:'tpe-b'},
+  {name:'新竹縣甲國小',moe_code:'044001',school_id:'hch-a'},
+  {name:'臺北市甲國小',moe_code:'100001',school_id:'tpe-a'},
+  {name:'新竹市甲國小',moe_code:'183622',school_id:'hcc-a'}
+];
+const context={rows};vm.createContext(context);
+vm.runInContext(source.slice(start,end)+`\nresult=[...rows].sort(comparePlatformSchools).map(row=>({
+  county:platformSchoolCounty(row),code:row.moe_code,id:row.school_id
+}));`,context);
+process.stdout.write(JSON.stringify(context.result));
+"""
+    result = subprocess.run(
+        ["node", "-e", node_script, str(FORMAL / "schedule-auth.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    rows = json.loads(result.stdout)
+
+    assert rows[-1] == {"county": "", "code": "000001", "id": "unknown"}
+    grouped = {}
+    for row in rows[:-1]:
+        grouped.setdefault(row["county"], []).append(row["code"])
+    assert grouped["臺北市"] == ["100001", "100002"]
+    assert grouped["新竹市"] == ["183622", "183623"]
+    assert grouped["新竹縣"] == ["044001"]
+    county_sequence = [row["county"] for row in rows[:-1]]
+    for county in set(county_sequence):
+        positions = [index for index, value in enumerate(county_sequence) if value == county]
+        assert len(positions) == max(positions) - min(positions) + 1
+
+    auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
+    assert "state.schools = [...(result.schools || [])].sort(comparePlatformSchools)" in auth
+    assert "state.usage.schools = [...(state.usage.schools || [])].sort(comparePlatformSchools)" in auth
 
 
 @pytest.mark.skipif(not SEPARATE_DEMO, reason="monorepo contains the formal frontend only")
