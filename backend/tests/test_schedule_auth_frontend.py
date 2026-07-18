@@ -50,7 +50,7 @@ def test_formal_release_check_bypasses_cached_homepage():
     assert "網站頁面已有新版" in app_config
     assert 'app-config.js?v=20260717-3' in html
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
-    assert 'schedule-auth.js?v=20260717-1' in html
+    assert 'schedule-auth.js?v=20260718-1' in html
     assert 'new URL("release.json", root.location.href)' in script_text
     assert '{cache: "no-store"}' in script_text
     assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text
@@ -104,6 +104,38 @@ context.ScheduleAuth.initialize().then(()=>process.stdout.write(JSON.stringify({
     assert "本機檔案" in output["status"]
     assert output["kind"] == "error"
     assert output["linkHidden"] is False
+
+
+def test_school_form_only_shows_cancel_while_editing():
+    node_script = r"""
+const fs=require('fs'),vm=require('vm');
+const elements={
+  platformSchoolRecordId:{value:''},
+  platformSchoolSaveButton:{disabled:false,textContent:''},
+  platformSchoolNewButton:{hidden:false,disabled:false,textContent:''}
+};
+const context={document:{getElementById:id=>elements[id]||null},console};
+vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),context);
+context.ScheduleAuth.updateActionButtons();
+const creating={save:elements.platformSchoolSaveButton.textContent,
+  cancel:elements.platformSchoolNewButton.textContent,
+  cancelHidden:elements.platformSchoolNewButton.hidden};
+elements.platformSchoolRecordId.value='183622';
+context.ScheduleAuth.updateActionButtons();
+const editing={save:elements.platformSchoolSaveButton.textContent,
+  cancel:elements.platformSchoolNewButton.textContent,
+  cancelHidden:elements.platformSchoolNewButton.hidden};
+process.stdout.write(JSON.stringify({creating,editing}));
+"""
+    result = subprocess.run(
+        ["node", "-e", node_script, str(FORMAL / "schedule-auth.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["creating"] == {
+        "save": "建立學校", "cancel": "取消編輯", "cancelHidden": True}
+    assert output["editing"] == {
+        "save": "儲存變更", "cancel": "取消編輯", "cancelHidden": False}
 
 
 @pytest.mark.skipif(not SEPARATE_DEMO, reason="monorepo contains the formal frontend only")
