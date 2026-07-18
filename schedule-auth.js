@@ -445,9 +445,9 @@
     const element = document.getElementById("platformSchoolStatus");
     try {
       if (!/^\d{6}$/.test(schoolCode)) throw new Error("教育部學校代碼須為 6 位數字");
-      if (recordId && !editingSchool) throw new Error("找不到正在編輯的學校，請按「新增學校」後重新輸入");
+      if (recordId && !editingSchool) throw new Error("找不到正在編輯的學校，請取消目前編輯後重新輸入");
       if (editingSchool && schoolCode !== String(editingSchool.moe_code || "")) {
-        throw new Error("既有學校的教育部代碼不可變更；若要建立另一間學校，請先按「新增學校」");
+        throw new Error("既有學校的教育部代碼不可變更；若要建立另一間學校，請先取消目前編輯並清空表單");
       }
       if (!payload.name) throw new Error("請填寫學校名稱");
       if (!payload.domains.length) throw new Error("請填寫至少一個 Google Workspace 網域");
@@ -608,7 +608,12 @@
       saveSchoolButton.textContent = state.savingSchool ? "正在儲存…" : (editingSchool ? "儲存變更" : "建立學校");
     }
     const newSchoolButton = document.getElementById("platformSchoolNewButton");
-    if (newSchoolButton) newSchoolButton.disabled = state.savingSchool;
+    if (newSchoolButton) {
+      const editingSchool = !!document.getElementById("platformSchoolRecordId")?.value;
+      newSchoolButton.hidden = !editingSchool;
+      newSchoolButton.disabled = state.savingSchool;
+      newSchoolButton.textContent = "取消編輯";
+    }
     const usageButton = document.getElementById("platformUsageRefreshButton");
     if (usageButton) {
       usageButton.disabled = state.loadingUsage;

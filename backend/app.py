@@ -601,7 +601,7 @@ def upsert_school(school_id: str, payload: SchoolUpsert,
         if existing_moe_code and moe_code != existing_moe_code:
             raise schedule_store.StoreConflictError(
                 f"既有學校的教育部代碼不可由 {existing_moe_code} 改為 {moe_code}；"
-                "若要建立另一間學校，請先按「新增學校」")
+                "若要建立另一間學校，請先取消目前編輯並清空表單")
         duplicate = next((item for item in TENANT_DIRECTORY.list_schools()
                           if item.get("school_id") != normalized_id
                           and item.get("moe_code") == moe_code and moe_code), None)
