@@ -128,6 +128,10 @@ def test_fixed_course_has_a_discoverable_grid_editor_and_run_shortcut():
     assert "有課程必須排在指定時間？" in html
     assert "onclick=\"go('fixed')\"" in html
     assert ".fixed-course-slot.on{background:var(--mint)" in html
+    assert ".fixed-course-toolbar select{min-width:220px;min-height:44px" in html
+    assert "font-size:17px;font-weight:800;cursor:pointer" in html
+    assert ".fixed-course-slot{width:100%;min-height:48px" in html
+    assert ".fixed-course-toolbar label,.fixed-course-toolbar select,.fixed-course-summary{width:100%" in html
 
 
 def test_fixed_course_validation_reports_excess_closed_slot_and_collisions():
