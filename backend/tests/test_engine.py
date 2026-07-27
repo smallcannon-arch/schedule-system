@@ -501,6 +501,7 @@ def test_frontend_native_language_locks_classes_staff_and_room():
     assert ("電腦教室", "二", 1) in data["room_blocked"]
     assert data["native_groups"][0]["lang"] == "原民語(直播)"
     assert data["native_groups"][0]["sources"] == ["1甲", "1乙"]
+    assert data["native_bands"][0]["sources"] == ["1甲", "1乙"]
     assert data["native_groups"][0]["students"] == 5
     assert data["teacher_weekly_load"]["直播教師"] == 1
     assert data["teacher_weekly_load"]["協同教師"] == 1
@@ -511,6 +512,64 @@ def test_frontend_native_language_locks_classes_staff_and_room():
         ("1甲", "二", 1), ("1乙", "二", 1)}
     assert meta["completion"] == "complete"
     assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_frontend_native_language_supports_three_classes_split_into_two_groups():
+    payload = _native_frontend_payload()
+    payload["classes"].append({"g": 1, "i": 3, "code": "1丙", "tutor": "丙班導師"})
+    payload["roster"].update({"丙班導師": "導師", "閩南教師甲": "教支人員",
+                              "閩南教師乙": "教支人員"})
+    payload["nativeBands"][0]["sources"] = ["1甲", "1乙", "1丙"]
+    payload["nativeGroups"] = [
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "閩南語",
+            "grp": "一年級閩南語A組", "sources": ["1甲", "1乙", "1丙"],
+            "students": 28, "mode": "實體", "t": "閩南教師甲",
+            "room": "R00", "assistant": "",
+        },
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "閩南語",
+            "grp": "一年級閩南語B組", "sources": ["1甲", "1乙", "1丙"],
+            "students": 27, "mode": "實體", "t": "閩南教師乙",
+            "room": "R00", "assistant": "",
+        },
+    ]
+
+    data = engine.load_frontend_data(payload)
+    schedule, tasks, _, meta, overlay = engine.solve(data, time_limit=5)
+
+    assert {(lock["class"], lock["day"], lock["p"]) for lock in data["locks"]
+            if lock["subj"] == "本土語文"} == {
+        ("1甲", "二", 1), ("1乙", "二", 1), ("1丙", "二", 1)}
+    assert data["teacher_weekly_load"]["閩南教師甲"] == 1
+    assert data["teacher_weekly_load"]["閩南教師乙"] == 1
+    assert "舊配課教師" not in data["teacher_weekly_load"]
+    assert all(tasks[(code, "本土語文")]["t"] == "" for code in ("1甲", "1乙", "1丙"))
+    assert {(code, day, period) for code, day, period in schedule} == {
+        ("1甲", "二", 1), ("1乙", "二", 1), ("1丙", "二", 1)}
+    assert meta["completion"] == "complete"
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_frontend_native_language_locks_only_selected_band_sources():
+    payload = _native_frontend_payload()
+    payload["nativeBands"][0]["sources"] = ["1甲"]
+    payload["nativeGroups"][0]["sources"] = ["1甲"]
+
+    data = engine.load_frontend_data(payload)
+
+    assert data["native_bands"][0]["sources"] == ["1甲"]
+    assert {(lock["class"], lock["day"], lock["p"]) for lock in data["locks"]
+            if lock["subj"] == "本土語文"} == {("1甲", "二", 1)}
+
+
+def test_frontend_native_language_group_sources_must_belong_to_band():
+    payload = _native_frontend_payload()
+    payload["nativeBands"][0]["sources"] = ["1甲"]
+    payload["nativeGroups"][0]["sources"] = ["1甲", "1乙"]
+
+    with pytest.raises(ValueError, match="未納入1年級共同課程"):
+        engine.load_frontend_data(payload)
 
 
 def test_frontend_native_language_allows_band_without_extraction_group():
@@ -583,7 +642,8 @@ def test_frontend_native_language_migrates_legacy_group_fields():
 
     data = engine.load_frontend_data(payload)
 
-    assert data["native_bands"] == [{"g": 1, "d": "二", "p": 1}]
+    assert data["native_bands"] == [{
+        "g": 1, "d": "二", "p": 1, "sources": ["1甲", "1乙"]}]
     assert data["native_groups"][0]["sources"] == ["1甲", "1乙"]
     assert data["native_groups"][0]["grp"].startswith("1年級原民語")
 

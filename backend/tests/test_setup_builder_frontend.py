@@ -114,6 +114,70 @@ def test_assignment_table_has_viewport_bottom_horizontal_scroller():
     assert "scroller.scrollWidth > scroller.clientWidth + 1" in script
 
 
+def test_fixed_course_has_a_discoverable_grid_editor_and_run_shortcut():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert 'data-v="fixed"' in html
+    assert '<section class="view" id="v-fixed">' in html
+    assert 'id="fixedClassPick"' in html
+    assert 'id="fixedSubjectPick"' in html
+    assert 'id="fixedCourseGrid"' in html
+    assert 'id="fixedCourseList"' in html
+    assert "function toggleFixedCourse(day,period)" in html
+    assert "固定節數不必等於科目全部節數" in html
+    assert "有課程必須排在指定時間？" in html
+    assert "onclick=\"go('fixed')\"" in html
+    assert ".fixed-course-slot.on{background:var(--mint)" in html
+
+
+def test_fixed_course_validation_reports_excess_closed_slot_and_collisions():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const open=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+open[4][6]=0;
+const data={
+  classes:[
+    {g:1,i:1,code:'1甲',tutor:'甲導師'},
+    {g:1,i:2,code:'1乙',tutor:'乙導師'}
+  ],
+  roster:{甲導師:'導師',乙導師:'導師',數學教師:'科任',彈性教師:'科任'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{
+    數學:{self:false,hours:[2,0,0,0,0,0]},
+    彈性學習:{self:false,hours:[1,0,0,0,0,0]}
+  },
+  assign:{
+    '1甲':{數學:'數學教師',彈性學習:'彈性教師'},
+    '1乙':{數學:'數學教師',彈性學習:'彈性教師'}
+  },
+  assignmentModes:{},override:{},
+  locks:[
+    {c:'1甲',d:'一',p:1,s:'數學'},
+    {c:'1甲',d:'二',p:1,s:'數學'},
+    {c:'1甲',d:'三',p:1,s:'數學'},
+    {c:'1甲',d:'一',p:1,s:'彈性學習'},
+    {c:'1乙',d:'一',p:1,s:'數學'},
+    {c:'1乙',d:'五',p:7,s:'數學'}
+  ],
+  nativeLockEnabled:false,nativeBands:[],nativeGroups:[],
+  resGroups:[],rooms:{R00:99},gslot:{1:open}
+};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},
+  startBlank:()=>true,syncTeachers:async()=>({})});
+process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    hard = json.loads(result.stdout)["hard"]
+    assert any("1甲在週一第1節重複固定" in issue for issue in hard)
+    assert any("1甲 數學每週 2 節，但設定了 3 個固定時段" in issue for issue in hard)
+    assert any("1乙 數學固定在週五第7節，但該年級此時段不上課" in issue for issue in hard)
+    assert any("數學教師在週一第1節有兩筆固定課" in issue for issue in hard)
+
+
 def test_custom_county_policy_frontend_is_wired_and_valid():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     policy = FORMAL / "schedule-policy.js"
@@ -207,8 +271,8 @@ process.stdout.write(JSON.stringify({subjects:data.teacherSubjects['王老師'],
 def test_formal_workflow_pages_have_collapsed_help():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
 
-    assert html.count('class="step-help"') == 11
-    assert html.count("<summary>操作說明</summary>") == 11
+    assert html.count('class="step-help"') == 12
+    assert html.count("<summary>操作說明</summary>") == 12
     assert "導師課預設保留給老師登入後自行安排" in html
     assert "不需要 AI 或模型 API" in html
     assert 'name="formalRunMode" value="tutor" checked' in html
@@ -554,15 +618,19 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert 'data-v="native"' in html
     assert 'id="nativeTable"' in html
     assert 'id="nativeBandTable"' in html
-    assert "班級共同時段" in html
-    assert "語言抽離分組" in html
+    assert "本土語共同課程" in html
+    assert "平行上課群組" in html
     assert "syncNativeHardLocks" in html
     assert "nativeQualifiedTeachers" in html
     assert "teacherNativeLangs" in script
     assert "來源班級" in html
-    assert "語別／組別" in html
+    assert "<th>上課群組</th><th>語別</th>" in html
     assert "更多設定" in html
     assert "nativeGradeFromSources" in html
+    assert "nativeBandSourceToggle" in html
+    assert "nativeGroupSourceToggle" in html
+    assert "createNativeGroups" in html
+    assert "來源 3 班" not in html
     assert "<th>年級</th><th>語別</th><th>分組名稱</th>" not in html
     assert "可授本土語別" in script
     assert "教支人員" in script
@@ -570,7 +638,7 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert "符合可授語別" in html
     assert "依班級建立閩南語組" not in html
     assert "語言分組鎖定" in html
-    assert "閩南語原班教師與班級" in html
+    assert "同一批來源班級可以拆成 A、B 等多組" in html
     assert 'return subject === "本土語文" ? "閩南語（原班）"' in script
     assert "閩南語|臺語|台語" in html
     assert "group.t === name || group.assistant === name" in script
@@ -581,6 +649,51 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert "本土語文每週節數必須為 1" in script
     assert "尚未建立本土語課鎖定分組" not in script
     assert "本土語分組必須使用相同星期與節次" in script
+
+
+def test_native_parallel_groups_validate_without_duplicate_class_assignments():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const slots=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={
+  classes:[
+    {g:5,i:1,code:'5甲',tutor:'甲導師'},
+    {g:5,i:2,code:'5乙',tutor:'乙導師'},
+    {g:5,i:3,code:'5丙',tutor:'丙導師'},
+    {g:5,i:4,code:'5丁',tutor:'丁導師'}
+  ],
+  roster:{甲導師:'導師',乙導師:'導師',丙導師:'導師',丁導師:'導師',
+    原班教師:'科任',閩南教師甲:'教支人員',閩南教師乙:'教支人員'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{本土語文:{self:false,hours:[0,0,0,0,1,0]}},
+  assign:{'5甲':{},'5乙':{},'5丙':{},'5丁':{本土語文:'原班教師'}},
+  assignmentModes:{},override:{},
+  locks:[
+    {c:'5甲',d:'二',p:3,s:'本土語文'},
+    {c:'5乙',d:'二',p:3,s:'本土語文'},
+    {c:'5丙',d:'二',p:3,s:'本土語文'}
+  ],
+  nativeLockEnabled:true,
+  nativeBands:[{g:5,d:'二',p:3,sources:['5甲','5乙','5丙']}],
+  nativeGroups:[
+    {g:5,d:'二',p:3,grp:'五年級閩南語A組',lang:'閩南語',
+      sources:['5甲','5乙','5丙'],students:28,t:'閩南教師甲',room:'R00'},
+    {g:5,d:'二',p:3,grp:'五年級閩南語B組',lang:'閩南語',
+      sources:['5甲','5乙','5丙'],students:27,t:'閩南教師乙',room:'R00'}
+  ],
+  resGroups:[],rooms:{R00:99},gslot:{5:slots}
+};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},
+  startBlank:()=>true,syncTeachers:async()=>({})});
+process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    output = json.loads(result.stdout)
+    assert output["hard"] == []
 
 
 def test_untrusted_excel_files_use_patched_reader_only():
