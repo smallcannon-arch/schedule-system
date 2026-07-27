@@ -62,8 +62,7 @@ process.stdout.write(JSON.stringify({
     assert output["issues"] == []
     assert "A4 landscape" in output["printable"]
     assert "學校正式課表" in output["printable"]
-    assert "閩南語（原班）" in output["printable"]
-    assert "客語" in output["printable"]
+    assert "本土語文（分組上課）" in output["printable"]
 
 
 def test_special_language_group_does_not_replace_original_minnan_teacher():
@@ -85,6 +84,42 @@ process.stdout.write(JSON.stringify(entries));
         "native-base": ("閩南語（原班）", "閩南教師"),
         "native": ("客語", "客語教師"),
     }
+
+
+def test_parallel_minnan_groups_render_one_class_cell_and_two_teacher_periods():
+    output = run_node(r"""
+const exp=require(process.argv[1]);
+const data={
+  classes:[
+    {g:5,i:1,code:'5甲',tutor:'甲導師'},
+    {g:5,i:2,code:'5乙',tutor:'乙導師'},
+    {g:5,i:3,code:'5丙',tutor:'丙導師'}
+  ],
+  subjects:{'本土語文':{}},nativeLockEnabled:true,
+  nativeBands:[{g:5,d:'二',p:3,sources:['5甲','5乙','5丙']}],
+  nativeGroups:[
+    {g:5,grp:'五年級閩南語A組',lang:'閩南語',sources:['5甲','5乙','5丙'],t:'閩南教師甲'},
+    {g:5,grp:'五年級閩南語B組',lang:'閩南語',sources:['5甲','5乙','5丙'],t:'閩南教師乙'}
+  ]
+};
+const entries=exp.buildEntries(data,[
+  {code:'5甲',d:'二',p:3,s:'本土語文',t:''},
+  {code:'5乙',d:'二',p:3,s:'本土語文',t:''},
+  {code:'5丙',d:'二',p:3,s:'本土語文',t:''}
+],[]);
+const classSheet=exp.classSheets(data,entries)[0];
+const teacherSheets=exp.teacherSheets(data,entries);
+process.stdout.write(JSON.stringify({
+  classCell:classSheet.rows[5][2],
+  teachers:teacherSheets.map(sheet=>({name:sheet.name,subtitle:sheet.rows[1][0]})),
+  nativeEntries:entries.filter(entry=>entry.source==='native').length
+}));
+""")
+
+    assert output["classCell"] == "本土語文（分組上課）"
+    assert {item["name"] for item in output["teachers"]} == {"閩南教師甲", "閩南教師乙"}
+    assert all("每週授課：1 節" in item["subtitle"] for item in output["teachers"])
+    assert output["nativeEntries"] == 6
 
 
 def test_upload_validation_requires_private_teacher_id_mapping():
@@ -177,7 +212,7 @@ def test_frontend_wires_four_exports_and_keeps_ids_out_of_case_data():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
 
     assert re.search(r'<script src="setup-builder\.js\?v=\d{8}-\d+"></script>', html)
-    assert '<script src="schedule-exports.js?v=20260717-1"></script>' in html
+    assert '<script src="schedule-exports.js?v=20260727-1"></script>' in html
     assert '<button data-v="export"><span class="ic">⇩</span>課表匯出</button>' in html
     assert '<section class="view" id="v-export">' in html
     assert html.index('data-v="tt"') < html.index('data-v="export"')

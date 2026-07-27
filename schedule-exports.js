@@ -154,7 +154,19 @@
     return (data.classes || []).map((item) => {
       const title = [text(data._school), `${classLabel(item)} 班級課表`].filter(Boolean).join("　");
       const subtitle = `導師：${text(item.tutor) || "未填"}　｜　班級代碼：${text(item.code)}`;
-      const rows = timetableRows(title, subtitle, entries.filter((entry) => entry.code === text(item.code)), (entry) => {
+      const classEntries = entries.filter((entry) => entry.code === text(item.code));
+      const groupedNativeSlots = new Set(classEntries.filter((entry) => entry.source === "native")
+        .map((entry) => `${entry.d}|${entry.p}`));
+      const displayEntries = classEntries.filter((entry) =>
+        !groupedNativeSlots.has(`${entry.d}|${entry.p}`) || entry.s !== "本土語文");
+      for (const slot of groupedNativeSlots) {
+        const [day, period] = slot.split("|");
+        displayEntries.push({
+          code: text(item.code), d: day, p: Number(period), s: "本土語文",
+          displaySubject: "本土語文（分組上課）", t: "", source: "native-class",
+        });
+      }
+      const rows = timetableRows(title, subtitle, displayEntries, (entry) => {
         const role = entry.assistant ? "（協同）" : "";
         const group = entry.group ? `｜${entry.group}` : "";
         return `${entry.displaySubject || entry.s}${group}\n${entry.t}${role}`.trim();
