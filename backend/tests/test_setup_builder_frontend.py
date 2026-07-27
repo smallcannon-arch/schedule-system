@@ -166,6 +166,62 @@ process.stdout.write(JSON.stringify(context.result));
     assert output["grades"] == ["1|三|1"]
 
 
+def test_loading_legacy_case_removes_only_invalid_hard_limits_and_shows_notice():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('let LIMITS=[]');
+const end=html.indexOf('function rebuildLim',start);
+const elements={
+  caseCompatibilityNotice:{hidden:true},
+  caseCompatibilityMessage:{textContent:''}
+};
+const context={
+  DATA:{classes:[{code:'1壬'},{code:'1忠'}],
+    roster:{丁美玲:'科任',辛志豪:'科任'},limits:[]},
+  DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],
+  document:{getElementById:id=>elements[id]||null}
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start,end)+`
+  LIMITS=[
+    ['1壬','一','1','不可排',''],
+    ['丁美玲','二','2','不可排',''],
+    ['一年級','三','3','不可排',''],
+    ['已離職老師','四','4','不可排',''],
+    ['9丁','五','5','不可排',''],
+    ['辛志豪','六','1','不可排',''],
+    ['辛志豪','一','9','不可排',''],
+    ['辛志豪','一','1.0','不可排',''],
+    ['舊備註對象','一','1','避免','']
+  ];
+  const first=sanitizeLoadedLimits('雲端暫存');
+  const firstRows=LIMITS.map(row=>row[0]);
+  const savedRows=DATA.limits.map(row=>row[0]);
+  const firstNotice={hidden:document.getElementById('caseCompatibilityNotice').hidden,
+    message:document.getElementById('caseCompatibilityMessage').textContent};
+  LIMITS=[['1忠','一','1','不可排','']];
+  const second=sanitizeLoadedLimits('另一案件');
+  result={first,firstRows,savedRows,firstNotice,second,
+    cleared:document.getElementById('caseCompatibilityNotice').hidden};
+`,context);
+process.stdout.write(JSON.stringify(context.result));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["first"]["count"] == 5
+    assert output["firstRows"] == ["1壬", "丁美玲", "一年級", "舊備註對象"]
+    assert output["savedRows"] == output["firstRows"]
+    assert output["firstNotice"]["hidden"] is False
+    assert "已自動移除 5 筆失效的不排課設定" in output["firstNotice"]["message"]
+    assert "已離職老師" in output["firstNotice"]["message"]
+    assert output["second"]["count"] == 0
+    assert output["cleared"] is True
+
+
 def test_assignment_table_has_viewport_bottom_horizontal_scroller():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "setup-builder.js").read_text(encoding="utf-8")

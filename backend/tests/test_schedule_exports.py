@@ -212,7 +212,7 @@ def test_frontend_wires_four_exports_and_keeps_ids_out_of_case_data():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
 
     assert '<script src="setup-builder.js?v=__APP_RELEASE__"></script>' in html
-    assert '<script src="schedule-exports.js?v=20260727-1"></script>' in html
+    assert '<script src="schedule-exports.js?v=__APP_RELEASE__"></script>' in html
     assert '<button data-v="export"><span class="ic">⇩</span>課表匯出</button>' in html
     assert '<section class="view" id="v-export">' in html
     assert html.index('data-v="tt"') < html.index('data-v="export"')
