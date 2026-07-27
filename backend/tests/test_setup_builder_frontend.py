@@ -243,9 +243,67 @@ process.stdout.write(JSON.stringify(context.result));
     assert output["second"]["count"] == 0
     assert output["cleared"] is True
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
-    assert "sanitizeLoadedLimits(snapshot.label||'雲端排課暫存',true)" in html
-    assert "sanitizeLoadedLimits(o.label||'瀏覽器存檔',true)" in html
-    assert "sanitizeLoadedLimits('工作進度檔',true)" in html
+    assert "function applyData(nd,srcLabel,loadedLimits)" in html
+    assert "if(Array.isArray(loadedLimits))LIMITS=TeacherWorkflow.clone(loadedLimits)" in html
+    assert (
+        "applyData(TeacherWorkflow.clone(snapshot.data),"
+        "snapshot.label||'雲端排課暫存',snapshot.limits)"
+    ) in html
+    assert "applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label,snapshot.limits)" in html
+    assert "applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）',o.limits)" in html
+    assert "applyData(data,'已載入工作進度',o.limits)" in html
+    assert "sanitizeLoadedLimits(snapshot.label||'雲端排課暫存',true)" not in html
+    assert "sanitizeLoadedLimits(o.label||'瀏覽器存檔',true)" not in html
+    assert "sanitizeLoadedLimits('工作進度檔',true)" not in html
+
+
+def test_apply_data_sanitizes_final_loaded_limits_once():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function applyData');
+const end=html.indexOf('function commitSetupData',start);
+const elements={dataSrc:{textContent:''}};
+const context={
+  DATA:{},
+  LIMITS:[],
+  sanitizeCalls:0,
+  TeacherWorkflow:{clone:value=>JSON.parse(JSON.stringify(value))},
+  document:{getElementById:id=>elements[id]},
+};
+vm.createContext(context);
+vm.runInContext(`
+  function initDerived(){LIMITS=(DATA.limits||[]).map(row=>[...row])}
+  function sanitizeLoadedLimits(label){
+    sanitizeCalls+=1;
+    sanitizedLabel=label;
+    sanitizedRows=LIMITS.map(row=>[...row]);
+  }
+  function renderAll(){}
+`+html.slice(start,end)+`
+  applyData(
+    {limits:[['data-limit','mon','1','blocked','']]},
+    'cloud-draft',
+    [['snapshot-limit','tue','2','blocked','']]
+  );
+  result={
+    sanitizeCalls,
+    sanitizedLabel,
+    sanitizedRows,
+    sourceLabel:document.getElementById('dataSrc').textContent
+  };
+`,context);
+process.stdout.write(JSON.stringify(context.result));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["sanitizeCalls"] == 1
+    assert output["sanitizedLabel"] == "cloud-draft"
+    assert output["sanitizedRows"] == [["snapshot-limit", "tue", "2", "blocked", ""]]
+    assert output["sourceLabel"] == "cloud-draft"
 
 
 def test_assignment_table_has_viewport_bottom_horizontal_scroller():

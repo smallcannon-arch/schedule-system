@@ -3138,9 +3138,7 @@ function getScheduleAuthSnapshot(){return currentSnapshot()}
 function applyAdminDraft(snapshot){
   if(!snapshot||!snapshot.data)throw new Error('雲端暫存資料不完整');
   setSetupStarted(true);
-  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label||'雲端排課暫存');
-  LIMITS=TeacherWorkflow.clone(snapshot.limits||DATA.limits||[]);
-  sanitizeLoadedLimits(snapshot.label||'雲端排課暫存',true);
+  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label||'雲端排課暫存',snapshot.limits);
   RULES=TeacherWorkflow.clone(snapshot.rules||DATA.rules||[]);
   SOL=TeacherWorkflow.clone(snapshot.schedule||{});
   tutorPlaced=TeacherWorkflow.clone(snapshot.tutor_placements||{});
@@ -3251,9 +3249,8 @@ async function exportTeacherResult(){
 function restoreAdminSnapshot(){
   const snapshot=ADMIN_SNAPSHOT;TEACHER_MODE=null;ADMIN_SNAPSHOT=null;document.body.classList.remove('teacher-mode','server-teacher-mode');
   if(!snapshot)return;
-  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label);
-  LIMITS=TeacherWorkflow.clone(snapshot.limits);RULES=TeacherWorkflow.clone(snapshot.rules);
-  sanitizeLoadedLimits(snapshot.label||'管理員案件',true);
+  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label,snapshot.limits);
+  RULES=TeacherWorkflow.clone(snapshot.rules);
   SOL=TeacherWorkflow.clone(snapshot.sol);tutorPlaced=TeacherWorkflow.clone(snapshot.tp);OVL=TeacherWorkflow.clone(snapshot.ovl);
   TEACHER_PACKAGES=TeacherWorkflow.clone(snapshot.teacherPackages||{});FORMAL_AUTO_TUTOR=!!snapshot.formalAutoTutor;pickSubj=null;
   SCHEDULE_READY=!!snapshot.scheduleReady;
@@ -3586,10 +3583,11 @@ function initDerived(){
   dl.innerHTML=[...Object.keys(DATA.roster),'1年級','2年級','3年級','4年級','5年級','6年級'].map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   rebuildLim();
 }
-function applyData(nd,srcLabel){
+function applyData(nd,srcLabel,loadedLimits){
   for(const k of Object.keys(DATA))delete DATA[k];
   Object.assign(DATA,nd);
   initDerived();
+  if(Array.isArray(loadedLimits))LIMITS=TeacherWorkflow.clone(loadedLimits);
   sanitizeLoadedLimits(srcLabel);
   document.getElementById('dataSrc').textContent=srcLabel;
   renderAll();
@@ -3638,9 +3636,8 @@ function loadLS(){
     const o=JSON.parse(s);
     if(!o.t||Date.now()-o.t>LS_TTL_MS){storage.removeItem(storageKey);return false}
     setSetupStarted(true);
-    applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）');
-    LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
-    sanitizeLoadedLimits(o.label||'瀏覽器存檔',true);
+    applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）',o.limits);
+    RULES=o.rules||RULES;
     SOL=o.sol||null;tutorPlaced=o.tp||{};OVL=o.ovl||[];TEACHER_PACKAGES=o.teacherPackages||{};
     FORMAL_AUTO_TUTOR=!!o.formalAutoTutor;
     SCHEDULE_READY=o.scheduleReady===true||!!(o.sol&&Object.keys(o.sol).length)||(o.ovl||[]).length>0;
@@ -3724,9 +3721,8 @@ function importJSON(inp){
       const modern=o.schema==='schedule-demo-progress-v2';
       const data=modern?o.data:o.d;if(!data||!Array.isArray(data.classes)||!data.subjects)throw new Error('不是有效的排課工作進度檔');
       setSetupStarted(true);
-      applyData(data,'已載入工作進度');
-      LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
-      sanitizeLoadedLimits('工作進度檔',true);
+      applyData(data,'已載入工作進度',o.limits);
+      RULES=o.rules||RULES;
       SOL=TeacherWorkflow.clone(o.sol||null);
       tutorPlaced=TeacherWorkflow.clone(modern?(o.tp||{}):(o.tp||{}));
       OVL=TeacherWorkflow.clone(modern?(o.ovl||[]):(o.ovl||[]));
