@@ -72,6 +72,10 @@ def test_pages_workflow_copies_every_local_frontend_script():
             assert "cp -R vendor _site/vendor" in workflow
         else:
             assert script in workflow, f"GitHub Pages deployment omits {script}"
+    assert "_headers _site/" not in workflow
+    assert '<meta name="referrer" content="no-referrer">' in html
+    assert '<meta http-equiv="Content-Security-Policy"' in html
+    assert "<style>html{display:none}</style>" in html
 
 
 def test_setup_builder_preserves_combined_resource_references_when_names_change():
@@ -98,6 +102,208 @@ process.stdout.write(JSON.stringify(data.resGroups[0]));
     assert group["sources"] == ["3甲", "3丙"]
     assert group["subj"] == "學習策略"
     assert group["pullSubjects"] == ["彈性學習"]
+
+
+def test_setup_builder_keeps_native_band_sources_when_class_is_renamed():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const data={classes:[{g:1,i:1,code:'1甲',tutor:'王老師'}],
+  roster:{王老師:'導師'},teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{本土語文:{self:false,hours:[1,0,0,0,0,0]}},
+  assign:{'1甲':{本土語文:'王老師'}},assignmentModes:{},override:{},locks:[],
+  resGroups:[],nativeBands:[{g:1,d:'二',p:1,sources:['1甲']}],
+  nativeGroups:[{g:1,d:'二',p:1,grp:'一年級閩南語組',sources:['1甲']}],rooms:{R00:99}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[['1甲','一','1','不可排','']],
+  escape:String,commit:()=>{},startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.renameClass(0,'1忠');
+process.stdout.write(JSON.stringify({
+  band:data.nativeBands[0].sources,group:data.nativeGroups[0].sources,
+  assignment:data.assign['1忠'],code:data.classes[0].code
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output == {
+        "band": ["1忠"], "group": ["1忠"],
+        "assignment": {"本土語文": "王老師"}, "code": "1忠",
+    }
+
+
+def test_limit_runtime_classifies_real_codes_before_teacher_names():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('let LIMITS=[]');
+const end=html.indexOf('function renderLim',start);
+const context={
+  DATA:{classes:[{code:'1壬'},{code:'1忠'}],
+    roster:{丁美玲:'科任',辛志豪:'科任',李己:'科任'},derived:[]},
+  DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],ruleOn:()=>true
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start,end)+`
+  LIMITS=[
+    ['1壬','一','1','不可排',''],['1忠','一','2','不可排',''],
+    ['丁美玲','二','1','不可排',''],['辛志豪','二','2','不可排',''],
+    ['李己','二','3','不可排',''],['一年級','三','1','不可排','']
+  ];
+  rebuildLim();
+  result={classes:[...CLIM].sort(),teachers:[...TLIM].sort(),grades:[...GLIM].sort()};
+`,context);
+process.stdout.write(JSON.stringify(context.result));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["classes"] == ["1壬|一|1", "1忠|一|2"]
+    assert output["teachers"] == ["丁美玲|二|1", "李己|二|3", "辛志豪|二|2"]
+    assert output["grades"] == ["1|三|1"]
+
+
+def test_loading_legacy_case_removes_only_invalid_hard_limits_and_shows_notice():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('let LIMITS=[]');
+const end=html.indexOf('function rebuildLim',start);
+const elements={
+  caseCompatibilityNotice:{hidden:true},
+  caseCompatibilityMessage:{textContent:''}
+};
+const context={
+  DATA:{classes:[{code:'1壬'},{code:'1忠'}],
+    roster:{丁美玲:'科任',辛志豪:'科任'},limits:[],
+    derived:[
+      ['辛志豪','二',3],
+      ['已刪除的本土語教師','一',3],
+      ['丁美玲','六',1],
+      ['丁美玲','一','1.0']
+    ],
+    nativeGenerated:{derived:[
+      '辛志豪|二|3','已刪除的本土語教師|一|3','丁美玲|六|1','丁美玲|一|1'
+    ]}},
+  DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],
+  document:{getElementById:id=>elements[id]||null}
+};
+vm.createContext(context);
+vm.runInContext(html.slice(start,end)+`
+  LIMITS=[
+    ['1壬','一','1','不可排',''],
+    ['丁美玲','二','2','不可排',''],
+    ['一年級','三','3','不可排',''],
+    ['已離職老師','四','4','不可排',''],
+    ['9丁','五','5','不可排',''],
+    ['辛志豪','六','1','不可排',''],
+    ['辛志豪','一','9','不可排',''],
+    ['辛志豪','一','1.0','不可排',''],
+    ['舊備註對象','一','1','避免',''],
+    ['','一','1','不可排','']
+  ];
+  const first=sanitizeLoadedLimits('雲端暫存');
+  const firstRows=LIMITS.map(row=>row[0]);
+  const savedRows=DATA.limits.map(row=>row[0]);
+  const firstDerived=DATA.derived.map(row=>row[0]);
+  const generated=DATA.nativeGenerated.derived;
+  const firstNotice={hidden:document.getElementById('caseCompatibilityNotice').hidden,
+    message:document.getElementById('caseCompatibilityMessage').textContent};
+  LIMITS=[['1忠','一','1','不可排','']];
+  const appended=sanitizeLoadedLimits('雲端暫存',true);
+  const appendedNotice={hidden:document.getElementById('caseCompatibilityNotice').hidden,
+    message:document.getElementById('caseCompatibilityMessage').textContent};
+  const second=sanitizeLoadedLimits('另一案件');
+  result={first,firstRows,savedRows,firstDerived,generated,firstNotice,appended,appendedNotice,second,
+    cleared:document.getElementById('caseCompatibilityNotice').hidden};
+`,context);
+process.stdout.write(JSON.stringify(context.result));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["first"]["count"] == 8
+    assert output["first"]["limitCount"] == 5
+    assert output["first"]["derivedCount"] == 3
+    assert output["firstRows"] == ["1壬", "丁美玲", "一年級", "舊備註對象", ""]
+    assert output["savedRows"] == output["firstRows"]
+    assert output["firstDerived"] == ["辛志豪"]
+    assert output["generated"] == ["辛志豪|二|3"]
+    assert output["firstNotice"]["hidden"] is False
+    assert "已自動移除 8 筆失效的不排課相關設定" in output["firstNotice"]["message"]
+    assert "一般限制 5 筆、系統推導 3 筆" in output["firstNotice"]["message"]
+    assert "已離職老師" in output["firstNotice"]["message"]
+    assert output["appended"]["count"] == 0
+    assert output["appendedNotice"] == output["firstNotice"]
+    assert output["second"]["count"] == 0
+    assert output["cleared"] is True
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    assert "function applyData(nd,srcLabel,loadedLimits)" in html
+    assert "if(Array.isArray(loadedLimits))LIMITS=TeacherWorkflow.clone(loadedLimits)" in html
+    assert (
+        "applyData(TeacherWorkflow.clone(snapshot.data),"
+        "snapshot.label||'雲端排課暫存',snapshot.limits)"
+    ) in html
+    assert "applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label,snapshot.limits)" in html
+    assert "applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）',o.limits)" in html
+    assert "applyData(data,'已載入工作進度',o.limits)" in html
+    assert "sanitizeLoadedLimits(snapshot.label||'雲端排課暫存',true)" not in html
+    assert "sanitizeLoadedLimits(o.label||'瀏覽器存檔',true)" not in html
+    assert "sanitizeLoadedLimits('工作進度檔',true)" not in html
+
+
+def test_apply_data_sanitizes_final_loaded_limits_once():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function applyData');
+const end=html.indexOf('function commitSetupData',start);
+const elements={dataSrc:{textContent:''}};
+const context={
+  DATA:{},
+  LIMITS:[],
+  sanitizeCalls:0,
+  TeacherWorkflow:{clone:value=>JSON.parse(JSON.stringify(value))},
+  document:{getElementById:id=>elements[id]},
+};
+vm.createContext(context);
+vm.runInContext(`
+  function initDerived(){LIMITS=(DATA.limits||[]).map(row=>[...row])}
+  function sanitizeLoadedLimits(label){
+    sanitizeCalls+=1;
+    sanitizedLabel=label;
+    sanitizedRows=LIMITS.map(row=>[...row]);
+  }
+  function renderAll(){}
+`+html.slice(start,end)+`
+  applyData(
+    {limits:[['data-limit','mon','1','blocked','']]},
+    'cloud-draft',
+    [['snapshot-limit','tue','2','blocked','']]
+  );
+  result={
+    sanitizeCalls,
+    sanitizedLabel,
+    sanitizedRows,
+    sourceLabel:document.getElementById('dataSrc').textContent
+  };
+`,context);
+process.stdout.write(JSON.stringify(context.result));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["sanitizeCalls"] == 1
+    assert output["sanitizedLabel"] == "cloud-draft"
+    assert output["sanitizedRows"] == [["snapshot-limit", "tue", "2", "blocked", ""]]
+    assert output["sourceLabel"] == "cloud-draft"
 
 
 def test_assignment_table_has_viewport_bottom_horizontal_scroller():

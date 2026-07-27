@@ -575,6 +575,7 @@ def test_frontend_native_language_group_sources_must_belong_to_band():
 def test_frontend_native_language_allows_band_without_extraction_group():
     payload = _native_frontend_payload()
     payload["nativeGroups"] = []
+    payload["assign"]["1乙"] = {"本土語文": "李導師"}
 
     data = engine.load_frontend_data(payload)
 
@@ -584,16 +585,74 @@ def test_frontend_native_language_allows_band_without_extraction_group():
         ("1甲", "二", 1), ("1乙", "二", 1)}
 
 
+def test_frontend_native_language_rejects_uncovered_band_without_original_teacher():
+    payload = _native_frontend_payload()
+    payload["nativeGroups"] = []
+
+    with pytest.raises(ValueError, match="1乙.*沒有平行分組.*未指定原班授課教師"):
+        engine.load_frontend_data(payload)
+
+
 def test_legacy_minnan_group_keeps_group_teacher_and_suppresses_base_assignment():
     payload = _native_frontend_payload()
     payload["nativeGroups"][0]["lang"] = "閩南語"
 
     data = engine.load_frontend_data(payload)
-    schedule, tasks, *_ = engine.solve(data, time_limit=5)
+    schedule, tasks, warnings, *_ = engine.solve(data, time_limit=5)
 
     assert "舊配課教師" not in data["teacher_weekly_load"]
     assert tasks[("1甲", "本土語文")]["t"] == ""
     assert schedule[("1甲", "二", 1)][1] == ""
+    assert not any("鎖定課未配教師" in warning for warning in warnings)
+
+
+def test_frontend_limits_use_exact_class_grade_and_roster_targets():
+    payload = _native_frontend_payload()
+    payload["nativeLockEnabled"] = False
+    payload["classes"][1]["code"] = "1壬"
+    payload["roster"]["丁美玲"] = "科任"
+    payload["limits"] = [
+        ["1壬", "一", "1", "不可排", ""],
+        ["一年級", "二", "2", "不可排", ""],
+        ["丁美玲", "三", "3", "不可排", ""],
+    ]
+
+    data = engine.load_frontend_data(payload)
+
+    assert ("1壬", "一", 1) in data["class_limit"]
+    assert (1, "二", 2) in data["grade_limit"]
+    assert ("丁美玲", "三", 3) in data["teacher_limit"]
+
+
+def test_frontend_limits_reject_unknown_target():
+    payload = _native_frontend_payload()
+    payload["nativeLockEnabled"] = False
+    payload["limits"] = [["打錯教師", "一", "1", "不可排", ""]]
+
+    with pytest.raises(ValueError, match="不排課時間引用不存在"):
+        engine.load_frontend_data(payload)
+
+
+def test_frontend_fixed_course_reports_unavailable_grade_slot():
+    payload = _native_frontend_payload()
+    payload["nativeLockEnabled"] = False
+    payload["locks"] = [{"c": "1甲", "d": "一", "p": 5, "s": "本土語文"}]
+
+    with pytest.raises(ValueError, match="固定課不在該年級可排時段"):
+        engine.load_frontend_data(payload)
+
+
+def test_frontend_fixed_course_reports_teacher_collision():
+    payload = _native_frontend_payload()
+    payload["nativeLockEnabled"] = False
+    payload["assign"]["1乙"] = {"本土語文": "舊配課教師"}
+    payload["locks"] = [
+        {"c": "1甲", "d": "一", "p": 1, "s": "本土語文"},
+        {"c": "1乙", "d": "一", "p": 1, "s": "本土語文"},
+    ]
+
+    with pytest.raises(ValueError, match="舊配課教師的固定課發生衝堂"):
+        engine.load_frontend_data(payload)
 
 
 def test_frontend_native_language_rejects_duplicate_staff_assignment():

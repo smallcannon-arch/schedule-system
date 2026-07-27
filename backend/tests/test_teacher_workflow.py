@@ -70,7 +70,7 @@ process.stdout.write(JSON.stringify({stable:one===stable,changed:one!==changed})
 def test_frontend_loads_teacher_workflow_before_main_logic():
     html = (ONLINE / "index.html").read_text(encoding="utf-8")
 
-    assert '<script src="teacher-workflow.js?v=20260717-1"></script>' in html
+    assert '<script src="teacher-workflow.js?v=__APP_RELEASE__"></script>' in html
     assert html.index('src="teacher-workflow.js?') < html.index("const DAYS=")
     assert "if(isResourceBound(code,s))" in html
     assert "currentTeacherSignature(code)!==issued.baseSignature" in html

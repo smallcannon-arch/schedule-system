@@ -254,6 +254,14 @@ def _minnan_group_sources(groups):
     }
 
 
+def _parse_grade_limit_target(value):
+    match = re.fullmatch(r"([1-6一二三四五六])年級", _text(value))
+    if not match:
+        return None
+    return {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6}.get(
+        match.group(1), int(match.group(1)) if match.group(1).isdigit() else None)
+
+
 def excel_safe(value):
     """Prevent user/model text from becoming an active Excel formula."""
     if not isinstance(value, str):
@@ -374,11 +382,15 @@ def load_frontend_data(payload, limits=(), rules=()):
     teacher_limit, grade_limit, class_limit = set(), set(), set()
     limit_rows = list(limits or payload.get("limits") or [])
     limit_rows.extend([list(row) + ["不可排", ""] for row in (payload.get("derived") or [])])
-    cn_grade = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6}
     for row in limit_rows:
         if not isinstance(row, (list, tuple)) or len(row) < 4 or _text(row[3]) != "不可排":
             continue
         target, raw_day, raw_period = _text(row[0]), _text(row[1]), _text(row[2])
+        if raw_day != "每日" and raw_day not in DAYS:
+            raise ValueError(f"不排課時間的星期不正確：{raw_day or '未填'}")
+        if raw_period != "全部" and (
+                not raw_period.isdigit() or int(raw_period) not in PERIODS):
+            raise ValueError(f"不排課時間的節次不正確：{raw_period or '未填'}")
         days = DAYS if raw_day == "每日" else [raw_day]
         periods = PERIODS if raw_period == "全部" else [int(raw_period)] if raw_period.isdigit() else []
         for day in days:
@@ -387,12 +399,12 @@ def load_frontend_data(payload, limits=(), rules=()):
                     continue
                 if target in class_codes:
                     class_limit.add((target, day, period))
-                elif "年級" in target:
-                    grade = cn_grade.get(target[:1], int(target[:1]) if target[:1].isdigit() else 0)
-                    if grade in range(1, 7):
-                        grade_limit.add((grade, day, period))
-                elif target:
+                elif (grade := _parse_grade_limit_target(target)) is not None:
+                    grade_limit.add((grade, day, period))
+                elif target in roster:
                     teacher_limit.add((target, day, period))
+                elif target:
+                    raise ValueError(f"不排課時間引用不存在的教師、班級或年級：{target}")
 
     assign = {}
     source_assign = payload.get("assign") or {}
@@ -425,16 +437,49 @@ def load_frontend_data(payload, limits=(), rules=()):
                 room_override[(code, subject)] = _text(room)
 
     locks = []
+    fixed_counts, fixed_class_slots, fixed_teacher_slots = defaultdict(int), {}, {}
+    class_by_code_for_locks = {item["code"]: item for item in classes}
     for row in payload.get("locks") or []:
         code, day = _text(row.get("c", row.get("class"))), _text(row.get("d", row.get("day")))
         subject = _resolve_subject_name(row.get("s", row.get("subj")), subjects)
         try:
             period = int(row.get("p"))
         except (TypeError, ValueError):
-            continue
-        if code in class_codes and subject in subjects and day in DAYS and period in PERIODS:
-            locks.append({"class": code, "day": day, "p": period, "subj": subject,
-                          "teacher": _text(row.get("teacher")) or None})
+            raise ValueError(f"固定課的節次格式不正確：{row.get('p')}")
+        if code not in class_codes:
+            raise ValueError(f"固定課引用不存在的班級：{code or '未填'}")
+        if subject not in subjects:
+            raise ValueError(f"{code}固定課引用不存在的科目：{subject or '未填'}")
+        if day not in DAYS or period not in PERIODS:
+            raise ValueError(f"{code} {subject}固定課時段不正確：週{day}第{period}節")
+        grade = class_by_code_for_locks[code]["grade"]
+        if not grade_slot[(grade, day, period)]:
+            raise ValueError(f"{code} {subject}固定課不在該年級可排時段：週{day}第{period}節")
+        weekly_hours = subjects[subject]["hours"][grade]
+        if weekly_hours <= 0:
+            raise ValueError(f"{code} {subject}週節數為 0，不能設定固定課")
+        fixed_counts[(code, subject)] += 1
+        if fixed_counts[(code, subject)] > weekly_hours:
+            raise ValueError(
+                f"{code} {subject}固定 {fixed_counts[(code, subject)]} 節，超過每週 {weekly_hours} 節")
+        class_slot = (code, day, period)
+        if class_slot in fixed_class_slots:
+            raise ValueError(
+                f"{code} 週{day}第{period}節同時固定"
+                f"{fixed_class_slots[class_slot]}與{subject}")
+        fixed_class_slots[class_slot] = subject
+        teacher = _text(row.get("teacher")) or assign.get((code, subject), "")
+        if teacher and teacher not in roster:
+            raise ValueError(f"{code} {subject}固定課引用不在名冊的教師：{teacher}")
+        teacher_slot = (teacher, day, period)
+        if teacher and teacher_slot in fixed_teacher_slots:
+            raise ValueError(
+                f"{teacher}的固定課發生衝堂：週{day}第{period}節同時需要"
+                f"{fixed_teacher_slots[teacher_slot]}、{code} {subject}")
+        if teacher:
+            fixed_teacher_slots[teacher_slot] = f"{code} {subject}"
+        locks.append({"class": code, "day": day, "p": period, "subj": subject,
+                      "teacher": teacher or None})
 
     overlay = []
     class_grade = {item["code"]: item["grade"] for item in classes}
@@ -648,6 +693,8 @@ def load_frontend_data(payload, limits=(), rules=()):
         slots_by_grade = defaultdict(set)
         selected_sources = {
             code for sources in native_band_sources.values() for code in sources}
+        native_group_sources = {
+            code for group in native_groups for code in group.get("sources", [])}
         for item in classes:
             if item["code"] not in selected_sources:
                 continue
@@ -658,6 +705,10 @@ def load_frontend_data(payload, limits=(), rules=()):
                 raise ValueError(f"{item['grade']}年級本土語文每週節數必須為 1")
             if item["grade"] not in native_slots:
                 raise ValueError(f"{item['grade']}年級尚未建立本土語課鎖定分組")
+            if (item["code"] not in native_group_sources
+                    and not assign.get((item["code"], "本土語文"))):
+                raise ValueError(
+                    f"{item['code']}已納入本土語共同課程，但沒有平行分組，也未指定原班授課教師")
             matching = [lock for lock in locks
                         if lock["class"] == item["code"] and lock["subj"] == "本土語文"]
             if len(matching) != 1:
@@ -1092,7 +1143,6 @@ def _load_data_v5(wb):
     limit_sheet = next((wb[name] for name in ("不排課時間", "教師時段限制")
                         if name in wb.sheetnames), None)
     if limit_sheet:
-        cn_grade = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6}
         class_codes = {item["code"] for item in classes}
         for row_number, row in enumerate(
                 limit_sheet.iter_rows(min_row=2, values_only=True), start=2):
@@ -1124,12 +1174,13 @@ def _load_data_v5(wb):
                 for period in periods:
                     if target in class_codes:
                         class_limit.add((target, day, period))
-                    elif "年級" in target:
-                        grade = cn_grade.get(target[:1], int(target[:1]) if target[:1].isdigit() else 0)
-                        if grade in range(1, 7):
-                            grade_limit.add((grade, day, period))
-                    else:
+                    elif (grade := _parse_grade_limit_target(target)) is not None:
+                        grade_limit.add((grade, day, period))
+                    elif target in roster:
                         teacher_limit.add((target, day, period))
+                    else:
+                        raise ValueError(
+                            f"{limit_sheet.title}第 {row_number} 列引用不存在的教師、班級或年級：{target}")
     d["teacher_limit"], d["grade_limit"], d["class_limit"] = (
         teacher_limit, grade_limit, class_limit)
 
@@ -1463,7 +1514,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
                 missing_courses.append({"class": code, "subject": s, "hours": h,
                                         "reason": "未配教師"})
                 continue
-            if not t:
+            if not t and not native_group_owned:
                 warn.append(f"鎖定課未配教師，仍依鎖定排入：{code} {s}（H10>H12，請補配）")
             room = "R00" if native_lock else d["room_override"].get((code, s), info["room"])
             tasks[(code, s)] = {"h": h, "t": t, "room": room, "grade": g, "info": info}

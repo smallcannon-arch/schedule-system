@@ -157,6 +157,8 @@
     const nativeBands = Array.isArray(d.nativeBands) ? d.nativeBands : [];
     const nativeLockEnabled = d.nativeLockEnabled === true;
     const groupedMinnan = nativeLockEnabled ? minnanGroupSources(d) : new Set();
+    const nativeBandSources = new Set();
+    const nativeGroupSources = new Set();
     const nativeManagedLockKeys = new Set();
     if (nativeLockEnabled) {
       for (const band of nativeBands) {
@@ -165,8 +167,19 @@
         const sources = Object.prototype.hasOwnProperty.call(band, "sources")
           ? nativeValues(band.sources) : gradeClasses.map((item) => item.code);
         for (const code of sources) {
+          nativeBandSources.add(code);
           nativeManagedLockKeys.add(`${code}|${String(band.d || "")}|${Number(band.p) || 0}|本土語文`);
         }
+      }
+      for (const group of nativeGroups) {
+        const grade = Number(group.g) || 0;
+        const band = nativeBands.find((item) => +item.g === grade);
+        const gradeClasses = d.classes.filter((item) => +item.g === grade);
+        const sources = Object.prototype.hasOwnProperty.call(group, "sources")
+          ? nativeValues(group.sources)
+          : (band && Object.prototype.hasOwnProperty.call(band, "sources")
+            ? nativeValues(band.sources) : gradeClasses.map((item) => item.code));
+        for (const code of sources) nativeGroupSources.add(code);
       }
     }
     let assignmentTotal = 0;
@@ -202,7 +215,11 @@
         const teacher = d.assign[item.code] && d.assign[item.code][subject];
         if (!teacher) {
           assignmentMissing += 1;
-          hard.push(`${code} ${subject}尚未配課`);
+          if (subject === "本土語文" && nativeBandSources.has(code) && !nativeGroupSources.has(code)) {
+            hard.push(`${code}已納入本土語共同課程，但沒有平行分組，也未指定原班授課教師`);
+          } else {
+            hard.push(`${code} ${subject}尚未配課`);
+          }
         } else if (!teacherNames.has(teacher)) {
           hard.push(`${code} ${subject}的教師不在名冊：${teacher}`);
         } else {
@@ -301,9 +318,9 @@
       const target = String(row[0] || "").trim();
       const day = String(row[1] || "").trim();
       const period = String(row[2] || "").trim();
-      const knownGrade = /^[1-6]年級$/.test(target);
+      const knownGrade = /^[1-6一二三四五六]年級$/.test(target);
       if (target && !teacherNames.has(target) && !classCodes.has(target) && !knownGrade) {
-        warnings.push(`不排課時間引用不存在的教師、班級或年級：${target}`);
+        hard.push(`不排課時間引用不存在的教師、班級或年級：${target}`);
       }
       if (day && ![...DAYS, "每日"].includes(day)) hard.push(`${target || "不排課時間"}的星期設定不正確：${day}`);
       if (period && !["1", "2", "3", "4", "5", "6", "7", "全部"].includes(period)) {
@@ -691,6 +708,11 @@
     d.assign[code] = {};
     d.assignmentModes[code] = {};
     commit(`已新增班級 ${code}。`);
+    if (d.nativeBands.some((band) => +band.g === grade
+        && Object.prototype.hasOwnProperty.call(band, "sources")
+        && !nativeValues(band.sources).includes(code))) {
+      alert(`${code}尚未納入既有本土語共同課程；請到「語言分組鎖定」確認來源班級。`);
+    }
   }
 
   function setClass(index, key, value) {
@@ -743,6 +765,11 @@
       if (Array.isArray(group.sources)) group.sources = resourceSources(group).map((code) => code === old ? next : code);
       else if (group.code === old) group.code = next;
     });
+    d.nativeBands.forEach((band) => {
+      if (Object.prototype.hasOwnProperty.call(band, "sources")) {
+        band.sources = nativeValues(band.sources).map((code) => code === old ? next : code);
+      }
+    });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).map((code) => code === old ? next : code); });
     adapter.getLimits().forEach((row) => { if (row[0] === old) row[0] = next; });
     commit(`班級 ${old} 已更名為 ${next}。`);
@@ -760,6 +787,11 @@
       group.sources = resourceSources(group).filter((code) => code !== item.code);
       return group.sources.length > 0;
     });
+    d.nativeBands.forEach((band) => {
+      if (Object.prototype.hasOwnProperty.call(band, "sources")) {
+        band.sources = nativeValues(band.sources).filter((code) => code !== item.code);
+      }
+    });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => code !== item.code); });
     const limits = adapter.getLimits();
     for (let row = limits.length - 1; row >= 0; row -= 1) if (limits[row][0] === item.code) limits.splice(row, 1);
@@ -773,6 +805,7 @@
     if (!counts.some(Boolean)) return alert("請至少建立一個班級。");
     if (d.classes.length && !confirm("套用班級數會重建班級清單；代碼相同的導師與配課會保留。確定繼續？")) return;
     const oldClasses = Object.fromEntries(d.classes.map((item) => [item.code, item]));
+    const oldCodes = new Set(Object.keys(oldClasses));
     const oldAssign = d.assign;
     const oldModes = d.assignmentModes;
     const nextClasses = [];
@@ -796,8 +829,20 @@
       group.sources = resourceSources(group).filter((code) => codes.has(code));
       return group.sources.length > 0;
     });
+    d.nativeBands.forEach((band) => {
+      if (Object.prototype.hasOwnProperty.call(band, "sources")) {
+        band.sources = nativeValues(band.sources).filter((code) => codes.has(code));
+      }
+    });
     d.nativeGroups.forEach((group) => { group.sources = nativeValues(group.sources).filter((code) => codes.has(code)); });
     commit(`已依班級數建立 ${nextClasses.length} 個班級。`);
+    const newBandClasses = nextClasses.filter((item) =>
+      !oldCodes.has(item.code) && d.nativeBands.some((band) =>
+        +band.g === +item.g && Object.prototype.hasOwnProperty.call(band, "sources")
+        && !nativeValues(band.sources).includes(item.code)));
+    if (newBandClasses.length) {
+      alert(`新增班級 ${newBandClasses.map((item) => item.code).join("、")} 尚未納入既有本土語共同課程；請到「語言分組鎖定」確認來源班級。`);
+    }
   }
 
   function addTeacher() {

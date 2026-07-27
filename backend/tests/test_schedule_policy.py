@@ -4,6 +4,47 @@ import app
 import schedule_policy
 
 
+def complete_publish_payload():
+    days = ("一", "二", "三", "四", "五")
+    daily_counts = (5, 5, 5, 4, 4)
+    slots = [
+        (day, period)
+        for day, count in zip(days, daily_counts)
+        for period in range(1, count + 1)
+    ]
+    data = {
+        "classes": [{"code": "1甲", "g": 1, "tutor": "王導師"}],
+        "subjects": {
+            "領域課程": {
+                "hours": [23, 0, 0, 0, 0, 0],
+                "room": "R00", "banned": [], "block": "", "self": False,
+            },
+        },
+        "roster": {"王導師": "導師"},
+        "assign": {"1甲": {"領域課程": "王導師"}},
+        "gslot": {"1": [[1] * 7 for _ in days]},
+        "rooms": {"R00": 99},
+        "override": {}, "locks": [], "blocked": [], "resGroups": [], "tcap": {},
+        "policy": {
+            "profileId": schedule_policy.PROFILE_ID,
+            "region": "新北市", "academicYear": 115,
+            "periodMinutes": 40, "dailyHardCap": 6,
+            "weeklyTargets": {"導師": 16, "科任": 20, "組長": 9, "主任": 3},
+        },
+    }
+    return {
+        "data": data,
+        "schedule": {
+            f"1甲|{day}|{period}": {
+                "s": "領域課程", "t": "王導師", "room": "R00",
+            }
+            for day, period in slots
+        },
+        "tutor_placements": {}, "overlay": [], "limits": [], "rules": [],
+        "schedule_ready": True,
+    }
+
+
 def case_data(class_count=16):
     subjects = {
         "領域課程": {"hours": [20, 20, 25, 25, 26, 26]},
@@ -105,12 +146,9 @@ def test_publish_requires_custom_scope():
 
 
 def test_server_publish_normalization_enforces_custom_policy_scope():
-    data = case_data()
+    payload = complete_publish_payload()
+    data = payload["data"]
     data["policy"].update({"region": "", "academicYear": 0})
-    payload = {
-        "data": data,
-        "schedule": {"1班1|一|1": {"s": "領域課程", "t": "王導師", "room": "R00"}},
-    }
 
     with pytest.raises(ValueError, match="正式發布前的學校自訂規則檢核未通過"):
         app._normalize_schedule_snapshot(payload, require_schedule=True)
@@ -118,3 +156,64 @@ def test_server_publish_normalization_enforces_custom_policy_scope():
     data["policy"].update({"region": "新北市", "academicYear": 115})
     snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
     assert snapshot["policy_compliance"]["blocking"] == []
+
+
+def test_server_publish_rejects_empty_or_incomplete_schedule_even_when_flag_is_true():
+    payload = complete_publish_payload()
+    payload["schedule"] = {}
+
+    with pytest.raises(ValueError, match="正式課表沒有任何可發布的課程"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_server_publish_rechecks_fixed_courses():
+    payload = complete_publish_payload()
+    payload["data"]["locks"] = [{"c": "1甲", "d": "五", "p": 7, "s": "領域課程"}]
+
+    with pytest.raises(ValueError, match="正式課表硬規則檢核未通過.*H10違反"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_server_publish_accepts_resource_early_study_marker():
+    payload = complete_publish_payload()
+    payload["data"]["roster"]["資源教師"] = "資源班教師"
+    payload["overlay"] = [{
+        "group_id": "resource-early",
+        "group": "一年級早自修組",
+        "code": "1甲",
+        "subject": "領域課程",
+        "pull_subject": "早自修",
+        "teacher": "資源教師",
+        "day": "一",
+        "period": 0,
+    }]
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+    assert snapshot["overlay"][0]["pull_subject"] == "早自修"
+
+
+def test_server_publish_allows_first_stage_tutor_pool_but_complete_mode_requires_it():
+    payload = complete_publish_payload()
+    payload["data"]["subjects"] = {
+        "科任課": {
+            "hours": [1, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+        "導師課": {
+            "hours": [22, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": True,
+        },
+    }
+    payload["data"]["assign"] = {
+        "1甲": {"科任課": "王導師", "導師課": "王導師"}}
+    payload["schedule"] = {
+        "1甲|一|1": {"s": "科任課", "t": "王導師", "room": "R00"}}
+    payload["formal_auto_tutor"] = False
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
+    assert snapshot["schedule_ready"] is True
+
+    payload["formal_auto_tutor"] = True
+    with pytest.raises(ValueError, match="正式課表硬規則檢核未通過.*導師課.*排0/需22"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)

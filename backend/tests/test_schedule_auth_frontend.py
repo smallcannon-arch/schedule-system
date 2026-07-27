@@ -37,6 +37,43 @@ def test_schedule_auth_javascript_has_valid_syntax():
     )
 
 
+def test_cloud_save_queue_propagates_failure_and_backup_stops():
+    node_script = r"""
+const fs=require('fs'),vm=require('vm');
+const source=fs.readFileSync(process.argv[1],'utf8');
+const queueStart=source.indexOf('async function drainDraftSaveQueue');
+const queueEnd=source.indexOf('function saveDraft',queueStart);
+const backupStart=source.indexOf('async function createBackup');
+const backupEnd=source.indexOf('async function restoreBackup',backupStart);
+const alerts=[];
+const context={
+  state:{savePending:false,pendingManual:false,draftConflict:false,
+    profile:{is_admin:true},creatingBackup:false,restoringBackup:false,
+    hasCloudDraft:true},
+  performDraftSave:async()=>false,setSaveButtonsBusy:()=>{},
+  updateActionButtons:()=>{},saveDraft:async()=>false,
+  request:async()=>{throw new Error('不應呼叫')},loadBackups:async()=>{},
+  document:{getElementById:()=>({textContent:''})},
+  status:()=>{},alert:value=>alerts.push(value),alerts
+};
+vm.createContext(context);
+vm.runInContext(source.slice(queueStart,queueEnd)+source.slice(backupStart,backupEnd),context);
+(async()=>{
+  const queueResult=await context.drainDraftSaveQueue(true);
+  await context.createBackup();
+  process.stdout.write(JSON.stringify({queueResult,alerts,creating:context.state.creatingBackup}));
+})();
+"""
+    result = subprocess.run(
+        ["node", "-e", node_script, str(FORMAL / "schedule-auth.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["queueResult"] is False
+    assert any("本次雲端儲存未成功" in message for message in output["alerts"])
+    assert output["creating"] is False
+
+
 def test_formal_release_check_bypasses_cached_homepage():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script_text = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
@@ -45,17 +82,28 @@ def test_formal_release_check_bypasses_cached_homepage():
         encoding="utf-8")
 
     assert 'release: "__APP_RELEASE__"' in app_config
-    assert 'assetVersion = "20260727-2"' in app_config
+    assert 'assetVersion = "__APP_RELEASE__"' in app_config
     assert "requestedVersion !== assetVersion" in app_config
     assert "網站頁面已有新版" in app_config
-    assert 'app-config.js?v=20260727-2' in html
+    assert 'app-config.js?v=__APP_RELEASE__' in html
+    for script_name in (
+        "teacher-workflow.js",
+        "schedule-editor.js",
+        "schedule-policy.js",
+        "setup-builder.js",
+        "schedule-exports.js",
+        "feedback.js",
+        "readiness-center.js",
+        "schedule-auth.js",
+    ):
+        assert f'{script_name}?v=__APP_RELEASE__' in html
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
-    assert 'schedule-auth.js?v=20260718-2' in html
+    assert 'schedule-auth.js?v=__APP_RELEASE__' in html
     assert 'new URL("release.json", root.location.href)' in script_text
     assert '{cache: "no-store"}' in script_text
     assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text
     assert 'url.searchParams.set("release"' in script_text
-    assert 'sed -i "s/__APP_RELEASE__/${GITHUB_SHA}/g"' in workflow
+    assert 'sed -i "s/__APP_RELEASE__/${GITHUB_SHA}/g" _site/app-config.js _site/index.html' in workflow
     assert '_site/release.json' in workflow
 
     script = r"""
@@ -368,7 +416,7 @@ def test_formal_network_errors_are_localized_and_school_save_status_persists():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
-    assert '<script src="app-config.js?v=20260727-2"></script>' in html
+    assert '<script src="app-config.js?v=__APP_RELEASE__"></script>' in html
     assert "目前無法連線至雲端服務，請確認網路後重新整理再試。" in script
     assert "目前無法連線至排課引擎，請確認網路後再試。" in script
     assert "async function loadSchools(statusMessage)" in script

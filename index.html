@@ -8,7 +8,7 @@
 <title>國民小學課務排程輔助系統｜正式版</title>
 <meta name="application-name" content="國民小學課務排程輔助系統">
 <meta name="description" content="國民小學教師配課、課務排程與課表協作平台。">
-<script src="app-config.js?v=20260727-2"></script>
+<script src="app-config.js?v=__APP_RELEASE__"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -283,6 +283,8 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .app-footer-session .auth-status{margin:1px 0 0;font-size:12.5px}.app-footer-session .btn{padding:8px 11px;border-radius:6px;font-size:13.5px}
 .version-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:11px 13px;border-left:4px solid var(--bad);border-radius:4px;background:#fff1f4;color:var(--bad)}
 .version-notice[hidden]{display:none}.version-notice span{font-size:14px;font-weight:800}
+.case-compatibility-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:11px 13px;border-left:4px solid var(--lemon-d);border-radius:4px;background:#fffaf0;color:#6f5318}
+.case-compatibility-notice[hidden]{display:none}.case-compatibility-notice span{font-size:14px;line-height:1.55}.case-compatibility-notice .btn{flex:0 0 auto}
 .tutor-prerequisite{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px;border:1px solid #e4dce7;border-left:5px solid var(--lav-d);border-radius:6px;background:#faf8fc}
 .tutor-prerequisite[hidden]{display:none}.tutor-prerequisite b{display:block;margin-bottom:4px}.tutor-prerequisite span{display:block;color:var(--muted);font-size:14px}
 body.tutor-not-ready #tutorWorkPanel,body.tutor-not-ready #tutorHandoffPanel{display:none}
@@ -478,6 +480,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
   </div>
 </details>
+
+<div class="case-compatibility-notice" id="caseCompatibilityNotice" role="status" hidden>
+  <span id="caseCompatibilityMessage"></span>
+  <button class="btn soft sm" type="button" onclick="go('lim')">檢查不排課時間</button>
+</div>
 
 <!-- ═══ 資料建置 ═══ -->
 <section class="view on" id="v-build">
@@ -1184,13 +1191,13 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 </main>
 
 <script src="data.js"></script>
-<script src="teacher-workflow.js?v=20260717-1"></script>
-<script src="schedule-editor.js?v=20260717-1"></script>
-<script src="schedule-policy.js?v=20260713-2"></script>
-<script src="setup-builder.js?v=20260727-1"></script>
-<script src="schedule-exports.js?v=20260727-1"></script>
-<script src="feedback.js?v=20260714-1"></script>
-<script src="readiness-center.js?v=20260714-2"></script>
+<script src="teacher-workflow.js?v=__APP_RELEASE__"></script>
+<script src="schedule-editor.js?v=__APP_RELEASE__"></script>
+<script src="schedule-policy.js?v=__APP_RELEASE__"></script>
+<script src="setup-builder.js?v=__APP_RELEASE__"></script>
+<script src="schedule-exports.js?v=__APP_RELEASE__"></script>
+<script src="feedback.js?v=__APP_RELEASE__"></script>
+<script src="readiness-center.js?v=__APP_RELEASE__"></script>
 <script>
 /* ═══ 通用 ═══ */
 const APP_MODE=(window.SCHEDULE_APP_CONFIG||{}).mode==='formal'?'formal':'demo';
@@ -1259,19 +1266,87 @@ let BLK=new Set();
 let LIMITS=[];   // [對象,星期,節次,類型,原因]
 let TLIM=new Set(),GLIM=new Set(),CLIM=new Set();
 const CNNUM={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6};
+let LIMIT_CLEANUP_NOTICE='';
+let LIMIT_CLEANUP_STATE={limits:0,derived:0,targets:[]};
+function updateCaseCompatibilityNotice(){
+  const box=document.getElementById('caseCompatibilityNotice');
+  const message=document.getElementById('caseCompatibilityMessage');
+  if(!box||!message)return;
+  box.hidden=!LIMIT_CLEANUP_NOTICE;
+  message.textContent=LIMIT_CLEANUP_NOTICE;
+}
+function sanitizeLoadedLimits(sourceLabel,appendNotice=false){
+  const classCodes=new Set((DATA.classes||[]).map(item=>String(item.code||'').trim()).filter(Boolean));
+  const teacherNames=new Set(Object.keys(DATA.roster||{}).map(name=>String(name||'').trim()).filter(Boolean));
+  const validTarget=target=>classCodes.has(target)||/^[1-6一二三四五六]年級$/.test(target)||teacherNames.has(target);
+  const validDay=day=>day==='每日'||DAYS.includes(day);
+  const validPeriod=period=>period==='全部'||(/^\d+$/.test(period)&&PS.includes(Number(period)));
+  const removedLimits=[],removedDerived=[],removedDerivedKeys=[];
+  LIMITS=(Array.isArray(LIMITS)?LIMITS:[]).filter(row=>{
+    if(!Array.isArray(row)){
+      removedLimits.push('格式不完整');
+      return false;
+    }
+    if(String(row[3]||'').trim()!=='不可排')return true;
+    const target=String(row[0]||'').trim();
+    const day=String(row[1]||'').trim();
+    const period=String(row[2]||'').trim();
+    if((!target||validTarget(target))&&validDay(day)&&validPeriod(period))return true;
+    removedLimits.push(target||'未填對象');
+    return false;
+  });
+  DATA.derived=(Array.isArray(DATA.derived)?DATA.derived:[]).filter(row=>{
+    if(!Array.isArray(row)||row.length<3){
+      removedDerived.push('格式不完整');
+      return false;
+    }
+    const target=String(row[0]||'').trim();
+    const day=String(row[1]||'').trim();
+    const period=String(row[2]||'').trim();
+    if(target&&validTarget(target)&&validDay(day)&&validPeriod(period))return true;
+    removedDerived.push(target||'未填對象');
+    removedDerivedKeys.push(`${target}|${day}|${Number(period)}`);
+    return false;
+  });
+  if(removedDerivedKeys.length&&Array.isArray(DATA.nativeGenerated?.derived)){
+    const removedKeys=new Set(removedDerivedKeys);
+    DATA.nativeGenerated.derived=DATA.nativeGenerated.derived.filter(key=>!removedKeys.has(String(key)));
+  }
+  DATA.limits=LIMITS.map(row=>[...row]);
+  if(!appendNotice)LIMIT_CLEANUP_STATE={limits:0,derived:0,targets:[]};
+  LIMIT_CLEANUP_STATE.limits+=removedLimits.length;
+  LIMIT_CLEANUP_STATE.derived+=removedDerived.length;
+  LIMIT_CLEANUP_STATE.targets.push(...removedLimits,...removedDerived);
+  const total=LIMIT_CLEANUP_STATE.limits+LIMIT_CLEANUP_STATE.derived;
+  if(total){
+    const kinds=[];
+    if(LIMIT_CLEANUP_STATE.limits)kinds.push(`一般限制 ${LIMIT_CLEANUP_STATE.limits} 筆`);
+    if(LIMIT_CLEANUP_STATE.derived)kinds.push(`系統推導 ${LIMIT_CLEANUP_STATE.derived} 筆`);
+    const names=[...new Set(LIMIT_CLEANUP_STATE.targets)];
+    const preview=names.slice(0,4).join('、')+(names.length>4?'等':'');
+    LIMIT_CLEANUP_NOTICE=`${sourceLabel||'載入案件'}已自動移除 ${total} 筆失效的不排課相關設定：${kinds.join('、')}（${preview}）。請重新確認限制後再排課。`;
+  }else LIMIT_CLEANUP_NOTICE='';
+  updateCaseCompatibilityNotice();
+  return {count:removedLimits.length+removedDerived.length,limitCount:removedLimits.length,
+    derivedCount:removedDerived.length,targets:[...removedLimits,...removedDerived]};
+}
 function rebuildLim(){
   TLIM=new Set();GLIM=new Set();CLIM=new Set();
   const rows=[...LIMITS, ...DATA.derived.map(x=>[x[0],x[1],String(x[2]),'不可排',''])];
+  const classCodes=new Set((DATA.classes||[]).map(item=>String(item.code||'').trim()).filter(Boolean));
+  const teacherNames=new Set(Object.keys(DATA.roster||{}).map(name=>String(name||'').trim()).filter(Boolean));
   for(const [obj,day,p,typ] of rows){
     if(typ!=='不可排'||!obj)continue;
     const ds=day==='每日'?DAYS:[day];
     const ps=p==='全部'?PS:[+p];
     for(const d of ds)for(const pp of ps){
-      if(obj.includes('年級')){
-        if(ruleOn('H17')){const g=CNNUM[obj[0]]||(+obj[0]||0);if(g)GLIM.add(`${g}|${d}|${pp}`)}
-      }else if([...'甲乙丙丁戊己庚辛'].some(ch=>obj.includes(ch))||/^\d年\d/.test(obj)){
+      if(classCodes.has(obj)){
         if(ruleOn('H17'))CLIM.add(`${obj}|${d}|${pp}`);
-      }else if(ruleOn('H07'))TLIM.add(`${obj}|${d}|${pp}`);
+      }else if(/^[1-6一二三四五六]年級$/.test(obj)){
+        if(ruleOn('H17')){const g=CNNUM[obj[0]]||(+obj[0]||0);if(g)GLIM.add(`${g}|${d}|${pp}`)}
+      }else if(teacherNames.has(obj)&&ruleOn('H07')){
+        TLIM.add(`${obj}|${d}|${pp}`);
+      }
     }
   }
 }
@@ -3063,8 +3138,7 @@ function getScheduleAuthSnapshot(){return currentSnapshot()}
 function applyAdminDraft(snapshot){
   if(!snapshot||!snapshot.data)throw new Error('雲端暫存資料不完整');
   setSetupStarted(true);
-  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label||'雲端排課暫存');
-  LIMITS=TeacherWorkflow.clone(snapshot.limits||DATA.limits||[]);
+  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label||'雲端排課暫存',snapshot.limits);
   RULES=TeacherWorkflow.clone(snapshot.rules||DATA.rules||[]);
   SOL=TeacherWorkflow.clone(snapshot.schedule||{});
   tutorPlaced=TeacherWorkflow.clone(snapshot.tutor_placements||{});
@@ -3175,8 +3249,8 @@ async function exportTeacherResult(){
 function restoreAdminSnapshot(){
   const snapshot=ADMIN_SNAPSHOT;TEACHER_MODE=null;ADMIN_SNAPSHOT=null;document.body.classList.remove('teacher-mode','server-teacher-mode');
   if(!snapshot)return;
-  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label);
-  LIMITS=TeacherWorkflow.clone(snapshot.limits);RULES=TeacherWorkflow.clone(snapshot.rules);
+  applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label,snapshot.limits);
+  RULES=TeacherWorkflow.clone(snapshot.rules);
   SOL=TeacherWorkflow.clone(snapshot.sol);tutorPlaced=TeacherWorkflow.clone(snapshot.tp);OVL=TeacherWorkflow.clone(snapshot.ovl);
   TEACHER_PACKAGES=TeacherWorkflow.clone(snapshot.teacherPackages||{});FORMAL_AUTO_TUTOR=!!snapshot.formalAutoTutor;pickSubj=null;
   SCHEDULE_READY=!!snapshot.scheduleReady;
@@ -3509,10 +3583,12 @@ function initDerived(){
   dl.innerHTML=[...Object.keys(DATA.roster),'1年級','2年級','3年級','4年級','5年級','6年級'].map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   rebuildLim();
 }
-function applyData(nd,srcLabel){
+function applyData(nd,srcLabel,loadedLimits){
   for(const k of Object.keys(DATA))delete DATA[k];
   Object.assign(DATA,nd);
   initDerived();
+  if(Array.isArray(loadedLimits))LIMITS=TeacherWorkflow.clone(loadedLimits);
+  sanitizeLoadedLimits(srcLabel);
   document.getElementById('dataSrc').textContent=srcLabel;
   renderAll();
 }
@@ -3521,6 +3597,7 @@ function commitSetupData(message){
   DATA.limits=TeacherWorkflow.clone(LIMITS);
   DATA.rules=TeacherWorkflow.clone(RULES);
   initDerived();
+  sanitizeLoadedLimits('資料建置');
   document.getElementById('dataSrc').textContent='系統內建置案件';
   renderAll();
   saveLS('系統內建置案件');
@@ -3559,8 +3636,8 @@ function loadLS(){
     const o=JSON.parse(s);
     if(!o.t||Date.now()-o.t>LS_TTL_MS){storage.removeItem(storageKey);return false}
     setSetupStarted(true);
-    applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）');
-    LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
+    applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）',o.limits);
+    RULES=o.rules||RULES;
     SOL=o.sol||null;tutorPlaced=o.tp||{};OVL=o.ovl||[];TEACHER_PACKAGES=o.teacherPackages||{};
     FORMAL_AUTO_TUTOR=!!o.formalAutoTutor;
     SCHEDULE_READY=o.scheduleReady===true||!!(o.sol&&Object.keys(o.sol).length)||(o.ovl||[]).length>0;
@@ -3644,8 +3721,8 @@ function importJSON(inp){
       const modern=o.schema==='schedule-demo-progress-v2';
       const data=modern?o.data:o.d;if(!data||!Array.isArray(data.classes)||!data.subjects)throw new Error('不是有效的排課工作進度檔');
       setSetupStarted(true);
-      applyData(data,'已載入工作進度');
-      LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
+      applyData(data,'已載入工作進度',o.limits);
+      RULES=o.rules||RULES;
       SOL=TeacherWorkflow.clone(o.sol||null);
       tutorPlaced=TeacherWorkflow.clone(modern?(o.tp||{}):(o.tp||{}));
       OVL=TeacherWorkflow.clone(modern?(o.ovl||[]):(o.ovl||[]));
@@ -4122,7 +4199,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260718-2"></script>
+<script src="schedule-auth.js?v=__APP_RELEASE__"></script>
 <script>
 ScheduleAuth.initialize();
 ScheduleReadiness.initialize({
