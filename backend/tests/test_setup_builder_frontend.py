@@ -178,7 +178,16 @@ const elements={
 };
 const context={
   DATA:{classes:[{code:'1壬'},{code:'1忠'}],
-    roster:{丁美玲:'科任',辛志豪:'科任'},limits:[]},
+    roster:{丁美玲:'科任',辛志豪:'科任'},limits:[],
+    derived:[
+      ['辛志豪','二',3],
+      ['已刪除的本土語教師','一',3],
+      ['丁美玲','六',1],
+      ['丁美玲','一','1.0']
+    ],
+    nativeGenerated:{derived:[
+      '辛志豪|二|3','已刪除的本土語教師|一|3','丁美玲|六|1','丁美玲|一|1'
+    ]}},
   DAYS:['一','二','三','四','五'],PS:[1,2,3,4,5,6,7],
   document:{getElementById:id=>elements[id]||null}
 };
@@ -193,16 +202,22 @@ vm.runInContext(html.slice(start,end)+`
     ['辛志豪','六','1','不可排',''],
     ['辛志豪','一','9','不可排',''],
     ['辛志豪','一','1.0','不可排',''],
-    ['舊備註對象','一','1','避免','']
+    ['舊備註對象','一','1','避免',''],
+    ['','一','1','不可排','']
   ];
   const first=sanitizeLoadedLimits('雲端暫存');
   const firstRows=LIMITS.map(row=>row[0]);
   const savedRows=DATA.limits.map(row=>row[0]);
+  const firstDerived=DATA.derived.map(row=>row[0]);
+  const generated=DATA.nativeGenerated.derived;
   const firstNotice={hidden:document.getElementById('caseCompatibilityNotice').hidden,
     message:document.getElementById('caseCompatibilityMessage').textContent};
   LIMITS=[['1忠','一','1','不可排','']];
+  const appended=sanitizeLoadedLimits('雲端暫存',true);
+  const appendedNotice={hidden:document.getElementById('caseCompatibilityNotice').hidden,
+    message:document.getElementById('caseCompatibilityMessage').textContent};
   const second=sanitizeLoadedLimits('另一案件');
-  result={first,firstRows,savedRows,firstNotice,second,
+  result={first,firstRows,savedRows,firstDerived,generated,firstNotice,appended,appendedNotice,second,
     cleared:document.getElementById('caseCompatibilityNotice').hidden};
 `,context);
 process.stdout.write(JSON.stringify(context.result));
@@ -212,14 +227,25 @@ process.stdout.write(JSON.stringify(context.result));
         check=True, capture_output=True, text=True, encoding="utf-8")
     output = json.loads(result.stdout)
 
-    assert output["first"]["count"] == 5
-    assert output["firstRows"] == ["1壬", "丁美玲", "一年級", "舊備註對象"]
+    assert output["first"]["count"] == 8
+    assert output["first"]["limitCount"] == 5
+    assert output["first"]["derivedCount"] == 3
+    assert output["firstRows"] == ["1壬", "丁美玲", "一年級", "舊備註對象", ""]
     assert output["savedRows"] == output["firstRows"]
+    assert output["firstDerived"] == ["辛志豪"]
+    assert output["generated"] == ["辛志豪|二|3"]
     assert output["firstNotice"]["hidden"] is False
-    assert "已自動移除 5 筆失效的不排課設定" in output["firstNotice"]["message"]
+    assert "已自動移除 8 筆失效的不排課相關設定" in output["firstNotice"]["message"]
+    assert "一般限制 5 筆、系統推導 3 筆" in output["firstNotice"]["message"]
     assert "已離職老師" in output["firstNotice"]["message"]
+    assert output["appended"]["count"] == 0
+    assert output["appendedNotice"] == output["firstNotice"]
     assert output["second"]["count"] == 0
     assert output["cleared"] is True
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    assert "sanitizeLoadedLimits(snapshot.label||'雲端排課暫存',true)" in html
+    assert "sanitizeLoadedLimits(o.label||'瀏覽器存檔',true)" in html
+    assert "sanitizeLoadedLimits('工作進度檔',true)" in html
 
 
 def test_assignment_table_has_viewport_bottom_horizontal_scroller():

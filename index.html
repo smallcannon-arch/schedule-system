@@ -1267,6 +1267,7 @@ let LIMITS=[];   // [對象,星期,節次,類型,原因]
 let TLIM=new Set(),GLIM=new Set(),CLIM=new Set();
 const CNNUM={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6};
 let LIMIT_CLEANUP_NOTICE='';
+let LIMIT_CLEANUP_STATE={limits:0,derived:0,targets:[]};
 function updateCaseCompatibilityNotice(){
   const box=document.getElementById('caseCompatibilityNotice');
   const message=document.getElementById('caseCompatibilityMessage');
@@ -1274,34 +1275,60 @@ function updateCaseCompatibilityNotice(){
   box.hidden=!LIMIT_CLEANUP_NOTICE;
   message.textContent=LIMIT_CLEANUP_NOTICE;
 }
-function sanitizeLoadedLimits(sourceLabel){
+function sanitizeLoadedLimits(sourceLabel,appendNotice=false){
   const classCodes=new Set((DATA.classes||[]).map(item=>String(item.code||'').trim()).filter(Boolean));
   const teacherNames=new Set(Object.keys(DATA.roster||{}).map(name=>String(name||'').trim()).filter(Boolean));
-  const removed=[];
+  const validTarget=target=>classCodes.has(target)||/^[1-6一二三四五六]年級$/.test(target)||teacherNames.has(target);
+  const validDay=day=>day==='每日'||DAYS.includes(day);
+  const validPeriod=period=>period==='全部'||(/^\d+$/.test(period)&&PS.includes(Number(period)));
+  const removedLimits=[],removedDerived=[],removedDerivedKeys=[];
   LIMITS=(Array.isArray(LIMITS)?LIMITS:[]).filter(row=>{
     if(!Array.isArray(row)){
-      removed.push('格式不完整');
+      removedLimits.push('格式不完整');
       return false;
     }
     if(String(row[3]||'').trim()!=='不可排')return true;
     const target=String(row[0]||'').trim();
     const day=String(row[1]||'').trim();
     const period=String(row[2]||'').trim();
-    const validTarget=classCodes.has(target)||/^[1-6一二三四五六]年級$/.test(target)||teacherNames.has(target);
-    const validDay=day==='每日'||DAYS.includes(day);
-    const validPeriod=period==='全部'||(/^\d+$/.test(period)&&PS.includes(Number(period)));
-    if(validTarget&&validDay&&validPeriod)return true;
-    removed.push(target||'未填對象');
+    if((!target||validTarget(target))&&validDay(day)&&validPeriod(period))return true;
+    removedLimits.push(target||'未填對象');
     return false;
   });
+  DATA.derived=(Array.isArray(DATA.derived)?DATA.derived:[]).filter(row=>{
+    if(!Array.isArray(row)||row.length<3){
+      removedDerived.push('格式不完整');
+      return false;
+    }
+    const target=String(row[0]||'').trim();
+    const day=String(row[1]||'').trim();
+    const period=String(row[2]||'').trim();
+    if(target&&validTarget(target)&&validDay(day)&&validPeriod(period))return true;
+    removedDerived.push(target||'未填對象');
+    removedDerivedKeys.push(`${target}|${day}|${Number(period)}`);
+    return false;
+  });
+  if(removedDerivedKeys.length&&Array.isArray(DATA.nativeGenerated?.derived)){
+    const removedKeys=new Set(removedDerivedKeys);
+    DATA.nativeGenerated.derived=DATA.nativeGenerated.derived.filter(key=>!removedKeys.has(String(key)));
+  }
   DATA.limits=LIMITS.map(row=>[...row]);
-  if(removed.length){
-    const names=[...new Set(removed)];
+  if(!appendNotice)LIMIT_CLEANUP_STATE={limits:0,derived:0,targets:[]};
+  LIMIT_CLEANUP_STATE.limits+=removedLimits.length;
+  LIMIT_CLEANUP_STATE.derived+=removedDerived.length;
+  LIMIT_CLEANUP_STATE.targets.push(...removedLimits,...removedDerived);
+  const total=LIMIT_CLEANUP_STATE.limits+LIMIT_CLEANUP_STATE.derived;
+  if(total){
+    const kinds=[];
+    if(LIMIT_CLEANUP_STATE.limits)kinds.push(`一般限制 ${LIMIT_CLEANUP_STATE.limits} 筆`);
+    if(LIMIT_CLEANUP_STATE.derived)kinds.push(`系統推導 ${LIMIT_CLEANUP_STATE.derived} 筆`);
+    const names=[...new Set(LIMIT_CLEANUP_STATE.targets)];
     const preview=names.slice(0,4).join('、')+(names.length>4?'等':'');
-    LIMIT_CLEANUP_NOTICE=`${sourceLabel||'載入案件'}已自動移除 ${removed.length} 筆失效的不排課設定（${preview}）。請重新確認限制後再排課。`;
+    LIMIT_CLEANUP_NOTICE=`${sourceLabel||'載入案件'}已自動移除 ${total} 筆失效的不排課相關設定：${kinds.join('、')}（${preview}）。請重新確認限制後再排課。`;
   }else LIMIT_CLEANUP_NOTICE='';
   updateCaseCompatibilityNotice();
-  return {count:removed.length,targets:removed};
+  return {count:removedLimits.length+removedDerived.length,limitCount:removedLimits.length,
+    derivedCount:removedDerived.length,targets:[...removedLimits,...removedDerived]};
 }
 function rebuildLim(){
   TLIM=new Set();GLIM=new Set();CLIM=new Set();
@@ -3113,7 +3140,7 @@ function applyAdminDraft(snapshot){
   setSetupStarted(true);
   applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label||'雲端排課暫存');
   LIMITS=TeacherWorkflow.clone(snapshot.limits||DATA.limits||[]);
-  sanitizeLoadedLimits(snapshot.label||'雲端排課暫存');
+  sanitizeLoadedLimits(snapshot.label||'雲端排課暫存',true);
   RULES=TeacherWorkflow.clone(snapshot.rules||DATA.rules||[]);
   SOL=TeacherWorkflow.clone(snapshot.schedule||{});
   tutorPlaced=TeacherWorkflow.clone(snapshot.tutor_placements||{});
@@ -3226,7 +3253,7 @@ function restoreAdminSnapshot(){
   if(!snapshot)return;
   applyData(TeacherWorkflow.clone(snapshot.data),snapshot.label);
   LIMITS=TeacherWorkflow.clone(snapshot.limits);RULES=TeacherWorkflow.clone(snapshot.rules);
-  sanitizeLoadedLimits(snapshot.label||'管理員案件');
+  sanitizeLoadedLimits(snapshot.label||'管理員案件',true);
   SOL=TeacherWorkflow.clone(snapshot.sol);tutorPlaced=TeacherWorkflow.clone(snapshot.tp);OVL=TeacherWorkflow.clone(snapshot.ovl);
   TEACHER_PACKAGES=TeacherWorkflow.clone(snapshot.teacherPackages||{});FORMAL_AUTO_TUTOR=!!snapshot.formalAutoTutor;pickSubj=null;
   SCHEDULE_READY=!!snapshot.scheduleReady;
@@ -3613,7 +3640,7 @@ function loadLS(){
     setSetupStarted(true);
     applyData(o.d,o.label||'已匯入資料（瀏覽器存檔）');
     LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
-    sanitizeLoadedLimits(o.label||'瀏覽器存檔');
+    sanitizeLoadedLimits(o.label||'瀏覽器存檔',true);
     SOL=o.sol||null;tutorPlaced=o.tp||{};OVL=o.ovl||[];TEACHER_PACKAGES=o.teacherPackages||{};
     FORMAL_AUTO_TUTOR=!!o.formalAutoTutor;
     SCHEDULE_READY=o.scheduleReady===true||!!(o.sol&&Object.keys(o.sol).length)||(o.ovl||[]).length>0;
@@ -3699,7 +3726,7 @@ function importJSON(inp){
       setSetupStarted(true);
       applyData(data,'已載入工作進度');
       LIMITS=o.limits||LIMITS;RULES=o.rules||RULES;
-      sanitizeLoadedLimits('工作進度檔');
+      sanitizeLoadedLimits('工作進度檔',true);
       SOL=TeacherWorkflow.clone(o.sol||null);
       tutorPlaced=TeacherWorkflow.clone(modern?(o.tp||{}):(o.tp||{}));
       OVL=TeacherWorkflow.clone(modern?(o.ovl||[]):(o.ovl||[]));
