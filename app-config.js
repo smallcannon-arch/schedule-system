@@ -1,5 +1,5 @@
 (function configureScheduleApp(root) {
-  const assetVersion = "20260727-2";
+  const assetVersion = "__APP_RELEASE__";
   const source = document.currentScript && document.currentScript.src;
   const requestedVersion = source ? new URL(source, document.baseURI).searchParams.get("v") : "";
   const assetMismatch = !!requestedVersion && requestedVersion !== assetVersion;

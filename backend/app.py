@@ -419,11 +419,188 @@ def _normalize_schedule_snapshot(payload, require_schedule):
     if require_schedule and policy_result["blocking"]:
         raise ValueError("正式發布前的學校自訂規則檢核未通過：" +
                          "；".join(policy_result["blocking"][:5]))
+    if require_schedule:
+        _validate_published_schedule(snapshot)
     snapshot["policy_compliance"] = policy_result
     encoded = json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     if len(encoded) > MAX_PUBLISHED_SNAPSHOT_BYTES:
         raise OverflowError("排課資料過大，請改用分班儲存模式")
     return snapshot
+
+
+def _validate_published_schedule(snapshot):
+    """Revalidate a submitted timetable without rerunning CP-SAT."""
+    source_data = snapshot["data"]
+    declared_roster = {
+        str(name).strip() for name in (source_data.get("roster") or {}) if str(name).strip()}
+    declared_roster.update(
+        str(item.get("tutor") or "").strip()
+        for item in source_data.get("classes") or []
+        if str(item.get("tutor") or "").strip())
+    data = engine.load_frontend_data(
+        source_data, snapshot.get("limits") or [], snapshot.get("rules") or [])
+    classes = {item["code"]: item for item in data["classes"]}
+    native_group_sources = engine._minnan_group_sources(data.get("native_groups"))
+    locked_courses = {
+        (item["class"], item["subj"]) for item in data.get("locks") or []}
+    resource_bound_courses = {
+        (code, subject)
+        for item in data.get("overlay") or []
+        for code in engine._resource_sources(item)
+        for subject in engine._resource_pull_subjects(item)
+    }
+    tutor_owned_courses = set()
+    tasks = {}
+    for classroom in data["classes"]:
+        code, grade = classroom["code"], classroom["grade"]
+        for subject, info in data["subjects"].items():
+            hours = info["hours"][grade]
+            if not hours:
+                continue
+            native_group_owned = (
+                data.get("native_lock_enabled")
+                and subject == "本土語文"
+                and code in native_group_sources
+            )
+            teacher = "" if native_group_owned else data["assign"].get((code, subject), "")
+            room = ("R00" if native_group_owned else
+                    data["room_override"].get((code, subject), info["room"]))
+            mode = data.get("assignment_modes", {}).get((code, subject))
+            self_arrange = mode == "tutor" if mode else info["self_arrange"]
+            if (
+                not snapshot.get("formal_auto_tutor")
+                and self_arrange
+                and (code, subject) not in locked_courses
+                and (code, subject) not in resource_bound_courses
+                and (not teacher or teacher == classroom.get("tutor"))
+            ):
+                tutor_owned_courses.add((code, subject))
+            tasks[(code, subject)] = {
+                "h": hours, "t": teacher, "room": room, "grade": grade, "info": info,
+            }
+
+    schedule = {}
+
+    def add_schedule_entry(code, day, period, subject, teacher, room, source):
+        code, day, subject = str(code).strip(), str(day).strip(), str(subject).strip()
+        teacher, room = str(teacher or "").strip(), str(room or "R00").strip()
+        try:
+            period = int(period)
+        except (TypeError, ValueError):
+            raise ValueError(f"{source}含有無效節次：{period}")
+        if code not in classes:
+            raise ValueError(f"{source}引用不存在的班級：{code or '未填'}")
+        if day not in engine.DAYS or period not in engine.PERIODS:
+            raise ValueError(f"{source}時段不正確：{code} 週{day}第{period}節")
+        if (code, subject) not in tasks:
+            raise ValueError(f"{source}引用不存在或節數為 0 的課程：{code} {subject or '未填'}")
+        native_group_owned = (
+            data.get("native_lock_enabled")
+            and subject == "本土語文"
+            and code in native_group_sources
+        )
+        if not teacher and not native_group_owned:
+            raise ValueError(f"{source}缺少授課教師：{code} {subject}")
+        if teacher and teacher not in declared_roster:
+            raise ValueError(f"{source}引用不在名冊的授課教師：{teacher}")
+        if room not in data["rooms"]:
+            raise ValueError(f"{source}引用不存在的場地：{room}")
+        key = (code, day, period)
+        if key in schedule:
+            raise ValueError(f"{source}與既有課程重複：{code} 週{day}第{period}節")
+        schedule[key] = (subject, teacher, room)
+
+    for raw_key, value in (snapshot.get("schedule") or {}).items():
+        parts = str(raw_key).split("|")
+        if len(parts) != 3 or not isinstance(value, dict):
+            raise ValueError(f"引擎課表資料格式不正確：{raw_key}")
+        add_schedule_entry(
+            parts[0], parts[1], parts[2],
+            value.get("s", value.get("subject")),
+            value.get("t", value.get("teacher")),
+            value.get("room") or "R00",
+            "引擎課表",
+        )
+
+    for code, placements in (snapshot.get("tutor_placements") or {}).items():
+        if code not in classes or not isinstance(placements, dict):
+            raise ValueError(f"導師自排資料引用不存在的班級：{code}")
+        for raw_slot, subject in placements.items():
+            parts = str(raw_slot).split("|")
+            if len(parts) != 2:
+                raise ValueError(f"導師自排時段格式不正確：{code} {raw_slot}")
+            info = tasks.get((code, str(subject).strip()))
+            room = info["room"] if info else "R00"
+            add_schedule_entry(
+                code, parts[0], parts[1], subject, classes[code].get("tutor"), room,
+                "導師自排課表",
+            )
+
+    if not schedule:
+        raise ValueError("正式課表沒有任何可發布的課程，請先完成第一階段排課")
+    for code, subject in tutor_owned_courses:
+        tasks[(code, subject)]["h"] = sum(
+            1 for (class_code, _, _), (scheduled_subject, _, _) in schedule.items()
+            if class_code == code and scheduled_subject == subject)
+
+    overlay = []
+    for index, item in enumerate(snapshot.get("overlay") or [], start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"資源班抽離資料第 {index} 筆格式不正確")
+        code = str(item.get("code") or "").strip()
+        subject = str(item.get("subj") or item.get("subject") or "").strip()
+        pull_subject = str(
+            item.get("pullSubj") or item.get("pull_subject") or subject).strip()
+        teacher = str(item.get("t") or item.get("teacher") or "").strip()
+        day = str(item.get("d") or item.get("day") or "").strip()
+        try:
+            period = int(item.get("p") if item.get("p") is not None else item.get("period"))
+        except (TypeError, ValueError):
+            raise ValueError(f"資源班抽離資料第 {index} 筆節次不正確")
+        if code not in classes:
+            raise ValueError(f"資源班抽離資料引用不存在的班級：{code or '未填'}")
+        if subject not in data["subjects"] or (
+                period != 0 and pull_subject not in data["subjects"]):
+            raise ValueError(f"資源班抽離資料引用不存在的科目：{subject or pull_subject or '未填'}")
+        if teacher not in declared_roster:
+            raise ValueError(f"資源班抽離資料引用不在名冊的教師：{teacher or '未填'}")
+        if day not in engine.DAYS or period not in (0, *engine.PERIODS):
+            raise ValueError(f"資源班抽離時段不正確：{code} 週{day}第{period}節")
+        overlay.append((
+            str(item.get("id") or item.get("group_id") or f"overlay-{index}"),
+            str(item.get("grp") or item.get("group") or "資源班分組"),
+            code, subject, pull_subject, teacher, day, period,
+        ))
+
+    errors = engine.validate(data, schedule, tasks, overlay)
+
+    teacher_slots = {}
+    for (code, day, period), (subject, teacher, _) in schedule.items():
+        if teacher:
+            teacher_slots.setdefault((teacher, day, period), {})[
+                f"schedule:{code}"] = f"{code} {subject}"
+    for group_id, group, _, subject, _, teacher, day, period in overlay:
+        if teacher:
+            teacher_slots.setdefault((teacher, day, period), {})[
+                f"overlay:{group_id}"] = f"{group} {subject}"
+    for group in data.get("native_groups", []):
+        day, period = group.get("d"), group.get("p")
+        for teacher in (group.get("t"), group.get("assistant")):
+            if teacher:
+                if teacher not in declared_roster:
+                    raise ValueError(f"本土語分組引用不在名冊的教師：{teacher}")
+                group_name = group.get("grp") or "本土語分組"
+                teacher_slots.setdefault((teacher, day, period), {})[
+                    f"native:{group_name}"] = group_name
+    for (teacher, day, period), lessons in teacher_slots.items():
+        items = list(lessons.values())
+        if len(items) > 1:
+            slot = "早自修" if period == 0 else f"第{period}節"
+            errors.append(f"教師衝堂：{teacher} 週{day}{slot} {'、'.join(items)}")
+
+    if errors:
+        unique_errors = list(dict.fromkeys(errors))
+        raise ValueError("正式課表硬規則檢核未通過：" + "；".join(unique_errors[:8]))
 
 
 def _check_api_key(form_key, header_key):

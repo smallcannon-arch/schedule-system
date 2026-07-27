@@ -8,7 +8,7 @@
 <title>國民小學課務排程輔助系統｜正式版</title>
 <meta name="application-name" content="國民小學課務排程輔助系統">
 <meta name="description" content="國民小學教師配課、課務排程與課表協作平台。">
-<script src="app-config.js?v=20260727-2"></script>
+<script src="app-config.js?v=__APP_RELEASE__"></script>
 <script src="vendor/xlsx.full.min.js?v=20260712-2"></script>
 <style>html{display:none}</style>
 <script>if(window.self===window.top)document.documentElement.style.display='block';</script>
@@ -1187,7 +1187,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <script src="teacher-workflow.js?v=20260717-1"></script>
 <script src="schedule-editor.js?v=20260717-1"></script>
 <script src="schedule-policy.js?v=20260713-2"></script>
-<script src="setup-builder.js?v=20260727-1"></script>
+<script src="setup-builder.js?v=__APP_RELEASE__"></script>
 <script src="schedule-exports.js?v=20260727-1"></script>
 <script src="feedback.js?v=20260714-1"></script>
 <script src="readiness-center.js?v=20260714-2"></script>
@@ -1262,16 +1262,20 @@ const CNNUM={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6};
 function rebuildLim(){
   TLIM=new Set();GLIM=new Set();CLIM=new Set();
   const rows=[...LIMITS, ...DATA.derived.map(x=>[x[0],x[1],String(x[2]),'不可排',''])];
+  const classCodes=new Set((DATA.classes||[]).map(item=>String(item.code||'').trim()).filter(Boolean));
+  const teacherNames=new Set(Object.keys(DATA.roster||{}).map(name=>String(name||'').trim()).filter(Boolean));
   for(const [obj,day,p,typ] of rows){
     if(typ!=='不可排'||!obj)continue;
     const ds=day==='每日'?DAYS:[day];
     const ps=p==='全部'?PS:[+p];
     for(const d of ds)for(const pp of ps){
-      if(obj.includes('年級')){
-        if(ruleOn('H17')){const g=CNNUM[obj[0]]||(+obj[0]||0);if(g)GLIM.add(`${g}|${d}|${pp}`)}
-      }else if([...'甲乙丙丁戊己庚辛'].some(ch=>obj.includes(ch))||/^\d年\d/.test(obj)){
+      if(classCodes.has(obj)){
         if(ruleOn('H17'))CLIM.add(`${obj}|${d}|${pp}`);
-      }else if(ruleOn('H07'))TLIM.add(`${obj}|${d}|${pp}`);
+      }else if(/^[1-6一二三四五六]年級$/.test(obj)){
+        if(ruleOn('H17')){const g=CNNUM[obj[0]]||(+obj[0]||0);if(g)GLIM.add(`${g}|${d}|${pp}`)}
+      }else if(teacherNames.has(obj)&&ruleOn('H07')){
+        TLIM.add(`${obj}|${d}|${pp}`);
+      }
     }
   }
 }
@@ -4122,7 +4126,7 @@ window.clearFormalSessionData=clearFormalSessionData;
 window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete;
 </script>
 <script src="auth-config.js"></script>
-<script src="schedule-auth.js?v=20260718-2"></script>
+<script src="schedule-auth.js?v=__APP_RELEASE__"></script>
 <script>
 ScheduleAuth.initialize();
 ScheduleReadiness.initialize({

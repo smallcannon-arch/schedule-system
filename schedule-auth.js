@@ -925,11 +925,11 @@
       if (!snapshot || !snapshot.data) throw new Error("目前沒有可暫存的排課資料");
       if (!(snapshot.data.classes || []).length || !Object.keys(snapshot.data.subjects || {}).length) {
         if (manual) throw new Error("請先建立空白案件或匯入 Excel，再儲存至學校雲端");
-        return;
+        return false;
       }
       if (!manual && String(snapshot.label || "").includes("示範")) {
         element.textContent = "示範資料不會自動存入正式雲端暫存。";
-        return;
+        return false;
       }
       const hash = JSON.stringify(snapshot);
       if (hash === state.lastDraftHash) {
@@ -968,23 +968,25 @@
 
   async function drainDraftSaveQueue(initialManual) {
     let manual = !!initialManual;
+    let completed = false;
     setSaveButtonsBusy(true);
     try {
       while (true) {
         state.savePending = false;
         const requestedManual = manual || state.pendingManual;
         state.pendingManual = false;
-        const completed = await performDraftSave(requestedManual);
+        completed = await performDraftSave(requestedManual);
         manual = false;
         if (!completed || !state.savePending || state.draftConflict) break;
       }
+      return completed;
     } finally {
       setSaveButtonsBusy(false);
     }
   }
 
   function saveDraft(manual) {
-    if (!state.profile || !state.profile.is_admin || state.sessionExpired) return Promise.resolve();
+    if (!state.profile || !state.profile.is_admin || state.sessionExpired) return Promise.resolve(false);
     if (manual) {
       clearTimeout(state.autoSaveTimer);
       state.autoSaveTimer = null;
@@ -1192,8 +1194,10 @@
     state.creatingBackup = true;
     updateActionButtons();
     try {
-      await saveDraft(true);
-      if (!state.hasCloudDraft || state.draftConflict) throw new Error("請先完成雲端儲存，再建立案件還原點");
+      const saved = await saveDraft(true);
+      if (!saved || !state.hasCloudDraft || state.draftConflict) {
+        throw new Error("本次雲端儲存未成功，尚未建立案件還原點");
+      }
       const backup = await request("/admin/backups", {method: "POST"});
       await loadBackups();
       document.getElementById("cloudDraftStatus").textContent = `已建立案件還原點：${new Date(backup.created_at).toLocaleString("zh-TW")}。`;
@@ -1360,7 +1364,13 @@
       sessionStorage.setItem(userStorageKey("schedule_teacher_update_sequence"), "0");
       root.applyAdminDraft(result.snapshot);
       state.lastDraftHash = "";
-      await saveDraft(true);
+      const saved = await saveDraft(true);
+      if (!saved) {
+        versionStatus.textContent = "正式課表已還原，但同步學校雲端案件失敗；請先儲存至學校雲端再繼續編修。";
+        status("正式課表已還原；雲端案件尚未同步。", "error");
+        await loadVersions();
+        return;
+      }
       versionStatus.textContent = `已還原並建立新正式版本：${new Date(result.published_at).toLocaleString("zh-TW")}。`;
       status("正式課表已還原；教師重新載入後即可查看。", "ok");
       await loadVersions();
