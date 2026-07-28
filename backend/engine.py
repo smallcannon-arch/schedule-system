@@ -47,6 +47,45 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
     diagnostics = []
     slots = [(day, period) for day in DAYS for period in PERIODS]
 
+    for (code, day, period), allowed in d.get("native_pull_requirements", {}).items():
+        allowed = set(allowed)
+        allowed_label = "、".join(sorted(allowed))
+        fixed_subjects = {
+            lock["subj"] for lock in d.get("locks", [])
+            if lock["class"] == code and lock["day"] == day and lock["p"] == period
+        }
+        incompatible_fixed = sorted(fixed_subjects - allowed)
+        if incompatible_fixed:
+            diagnostics.append(_diagnostic(
+                f"{code} 語言抽離與固定課衝突",
+                f"週{day}第{period}節必須安排可抽離科目「{allowed_label}」，"
+                f"但同一節已固定「{'、'.join(incompatible_fixed)}」。",
+                "前往語言分組或固定課程，調整時段或可抽離科目。", "native"))
+
+        for group in d.get("overlay", []):
+            if (group.get("day"), group.get("p")) != (day, period):
+                continue
+            if code not in _resource_sources(group):
+                continue
+            resource_allowed = set(_resource_pull_subjects(group))
+            if resource_allowed and not resource_allowed & allowed:
+                diagnostics.append(_diagnostic(
+                    f"{code} 語言抽離與資源班抽離科目衝突",
+                    f"週{day}第{period}節語言抽離只接受「{allowed_label}」，"
+                    f"但資源班「{group.get('grp') or '未命名分組'}」只接受"
+                    f"「{'、'.join(sorted(resource_allowed))}」。",
+                    "調整其中一組的固定時段或可抽離科目，讓兩者至少有一科相同。", "native"))
+
+        available = sorted(
+            subject for subject in allowed
+            if candidates.get((code, subject, day, period)) is not None)
+        if not available:
+            diagnostics.append(_diagnostic(
+                f"{code} 語言抽離時段沒有可排科目",
+                f"週{day}第{period}節指定的可抽離科目「{allowed_label}」"
+                "均未建立可用的排課變數。",
+                "檢查可抽離科目的配課、導師自排設定及不排課時間。", "native"))
+
     invalid_by_key = {
         (lock["class"], lock["subj"], lock["day"], lock["p"]): lock
         for lock in invalid_locks
@@ -1656,6 +1695,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         for code in _resource_sources(ov)
         for subject in _resource_pull_subjects(ov)
     }
+    native_pull_set = {
+        (code, subject)
+        for (code, _, _), subjects in d.get("native_pull_requirements", {}).items()
+        for subject in subjects
+    }
     common_native_group_sources = _common_native_group_sources(d.get("native_groups"))
     tasks = {}
     pool = defaultdict(list)  # 導師自排科目池：class -> [(subj, hours, teacher)]
@@ -1676,16 +1720,24 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             mode = d.get("assignment_modes", {}).get((code, s))
             self_arrange = mode == "tutor" if mode else info["self_arrange"]
             if self_arrange and (code, s) not in locked_set:
-                # 引擎排課例外：資源班抽離科目、授課者非導師本人。
-                bind = ((code, s) in overlay_set or (t and t != c["tutor"]))
+                # 抽離綁課需要排課變數，否則無法約束原班在指定時段的科目。
+                resource_bound = (code, s) in overlay_set
+                native_bound = (code, s) in native_pull_set
+                bind = resource_bound or native_bound or (t and t != c["tutor"])
                 if auto_schedule_tutor:
                     t = t or c.get("tutor") or ""
                 elif not bind:
                     pool[code].append((s, h, t or ""))
                     continue
                 if bind:
-                    reason = ("資源班綁課" if (code, s) in overlay_set
-                              else f"授課者{t}非導師")
+                    reasons = []
+                    if resource_bound:
+                        reasons.append("資源班綁課")
+                    if native_bound:
+                        reasons.append("語言抽離綁課")
+                    if not reasons:
+                        reasons.append(f"授課者{t}非導師")
+                    reason = "、".join(reasons)
                     warn.append(f"引擎接手導師科目：{code} {s}（{reason}）")
             if not t and (code, s) not in locked_set:
                 warn.append(f"未配教師，未排：{code} {s} {h}節（H12）")

@@ -529,6 +529,29 @@ def _native_frontend_payload():
     }
 
 
+def _distributed_tutor_pull_payload(self_arrange=True):
+    payload = _native_frontend_payload()
+    payload["nativeArrangement"] = "distributed"
+    payload["nativeBands"] = []
+    payload["subjects"]["本土語文"]["hours"] = [0, 0, 0, 0, 0, 0]
+    payload["subjects"]["綜合活動"] = {
+        "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+        "block": "", "self": self_arrange, "pairMode": "",
+    }
+    payload["assign"] = {
+        "1甲": {"綜合活動": "王導師"},
+        "1乙": {"綜合活動": "李導師"},
+    }
+    payload["nativeGroups"] = [{
+        "g": 1, "d": "二", "p": 1, "lang": "客語",
+        "grp": "一年級客語組", "sources": ["1甲"],
+        "students": 2, "mode": "實體", "arrangement": "distributed",
+        "pullSubjects": ["綜合活動"],
+        "t": "客語教師", "room": "R00", "assistant": "",
+    }]
+    return payload
+
+
 def test_frontend_native_language_locks_classes_staff_and_room():
     data = engine.load_frontend_data(_native_frontend_payload())
     schedule, tasks, _, meta, overlay = engine.solve(data, time_limit=5)
@@ -634,6 +657,64 @@ def test_frontend_native_language_supports_distributed_groups_across_slots():
     assert data["teacher_weekly_load"]["直播教師"] == 1
     assert data["teacher_weekly_load"]["協同教師"] == 1
     assert "舊配課教師" not in data["teacher_weekly_load"]
+
+
+def test_distributed_native_pull_takes_over_tutor_arranged_subject():
+    data = engine.load_frontend_data(_distributed_tutor_pull_payload())
+
+    schedule, tasks, warnings, _, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=False)
+
+    assert ("1甲", "綜合活動") in tasks
+    assert schedule[("1甲", "二", 1)][0] == "綜合活動"
+    assert all(row[0] != "綜合活動" for row in data["pool"].get("1甲", []))
+    assert "引擎接手導師科目：1甲 綜合活動（語言抽離綁課）" in warnings
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_h18_diagnoses_fixed_course_subject_conflict():
+    payload = _distributed_tutor_pull_payload()
+    payload["subjects"]["數學"] = {
+        "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+        "block": "", "self": False, "pairMode": "",
+    }
+    payload["assign"]["1甲"]["數學"] = "王導師"
+    payload["assign"]["1乙"]["數學"] = "李導師"
+    payload["locks"] = [{"c": "1甲", "d": "二", "p": 1, "s": "數學"}]
+    data = engine.load_frontend_data(payload)
+
+    with pytest.raises(engine.InfeasibleScheduleError) as exc:
+        engine.solve(data, time_limit=5, auto_schedule_tutor=False)
+
+    assert any(
+        item["title"] == "1甲 語言抽離與固定課衝突"
+        and "綜合活動" in item["detail"] and "數學" in item["detail"]
+        for item in exc.value.diagnostics)
+
+
+def test_h18_diagnoses_resource_pull_subject_conflict():
+    payload = _distributed_tutor_pull_payload(self_arrange=False)
+    payload["subjects"]["數學"] = {
+        "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+        "block": "", "self": False, "pairMode": "",
+    }
+    payload["assign"]["1甲"]["數學"] = "王導師"
+    payload["assign"]["1乙"]["數學"] = "李導師"
+    payload["resGroups"] = [{
+        "id": "resource-a", "grp": "一年級資源A",
+        "sources": ["1甲"], "subj": "數學", "pullSubjects": ["數學"],
+        "t": "協同教師", "n": 1, "scheduleMode": "fixed",
+        "slots": [{"d": "二", "p": 1}],
+    }]
+    data = engine.load_frontend_data(payload)
+
+    with pytest.raises(engine.InfeasibleScheduleError) as exc:
+        engine.solve(data, time_limit=5, auto_schedule_tutor=False)
+
+    assert any(
+        item["title"] == "1甲 語言抽離與資源班抽離科目衝突"
+        and "綜合活動" in item["detail"] and "數學" in item["detail"]
+        for item in exc.value.diagnostics)
 
 
 def test_frontend_distributed_native_language_does_not_require_class_subject():

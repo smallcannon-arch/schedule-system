@@ -147,6 +147,24 @@ def test_homeroom_pool_includes_native_language_when_optional_lock_is_off():
     assert teacher_portal._allowed_pool(snapshot["data"], classroom)["本土語文"] == 1
 
 
+def test_homeroom_pool_includes_native_language_in_distributed_mode():
+    snapshot = sample_snapshot()
+    snapshot["data"]["subjects"]["本土語文"] = {
+        "hours": [0, 0, 1, 0, 0, 0], "room": "R00", "banned": [], "self": True,
+    }
+    snapshot["data"]["nativeLockEnabled"] = True
+    snapshot["data"]["nativeArrangement"] = "distributed"
+    snapshot["data"]["nativeGroups"] = [{
+        "g": 3, "d": "二", "p": 4, "lang": "客語",
+        "grp": "三年級客語組", "sources": ["3甲"],
+        "arrangement": "distributed",
+    }]
+    classroom = snapshot["data"]["classes"][0]
+
+    assert teacher_portal._allowed_pool(
+        snapshot["data"], classroom)["本土語文"] == 1
+
+
 def test_class_subject_mode_overrides_schoolwide_tutor_default():
     snapshot = sample_snapshot()
     classroom = snapshot["data"]["classes"][0]

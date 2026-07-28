@@ -34,6 +34,18 @@ def _native_lock_enabled(data):
         item.get("s") == "本土語文" for item in data.get("locks") or []))
 
 
+def _native_arrangement(data):
+    value = str(data.get("nativeArrangement") or "").strip().lower()
+    if value in {"common", "distributed"}:
+        return value
+    arrangements = {
+        str(item.get("arrangement") or "").strip().lower()
+        for item in data.get("nativeGroups") or []
+        if str(item.get("arrangement") or "").strip().lower() in {"common", "distributed"}
+    }
+    return "distributed" if arrangements == {"distributed"} else "common"
+
+
 def _schedule_entries(snapshot, include_overlay=True):
     data = snapshot.get("data") or {}
     classrooms = _classes(data)
@@ -115,7 +127,8 @@ def _allowed_pool(data, classroom):
     assigned = (data.get("assign") or {}).get(code) or {}
     result = {}
     for name, subject in (data.get("subjects") or {}).items():
-        if name == "本土語文" and _native_lock_enabled(data):
+        if (name == "本土語文" and _native_lock_enabled(data)
+                and _native_arrangement(data) == "common"):
             continue
         hours = _hours(subject, classroom.get("g") or 0)
         teacher = assigned.get(name) or ""
