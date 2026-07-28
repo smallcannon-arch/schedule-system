@@ -24,6 +24,9 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'role: classCodes.length ? "導師"' in script
     assert "importTeacherRecords" in auth
     assert "下載 Excel 母版填寫後再上傳" in html
+    assert 'href="template.xlsx?v=__APP_RELEASE__"' in html
+    assert "template.xlsx?v=20260712-2" not in html
+    assert "版本 1.26 相容性提醒" not in html
     assert "上傳填妥的 Excel" in html
     assert html.index("下載 Excel 母版</a>") < html.index("上傳填妥的 Excel")
     assert "排課母版範本_v6.xlsx" in html
