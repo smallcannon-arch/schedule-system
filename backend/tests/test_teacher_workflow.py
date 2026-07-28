@@ -51,6 +51,46 @@ process.stdout.write(JSON.stringify({
     }
 
 
+def test_distributed_native_pull_subject_is_engine_owned_in_browser_workflow():
+    output = run_node(r"""
+const workflow=require(process.argv[1]);
+const distributed={
+  nativeArrangement:'distributed',
+  nativeGroups:[{arrangement:'distributed',sources:['3甲'],pullSubjects:['綜合活動']}],
+  resGroups:[],subjects:{'綜合活動':{}}
+};
+const common={
+  nativeArrangement:'common',
+  nativeGroups:[{arrangement:'common',sources:['3甲'],pullSubjects:['綜合活動']}],
+  resGroups:[],subjects:{'綜合活動':{}}
+};
+const legacyDistributed={
+  nativeArrangement:'distributed',
+  nativeGroups:[{arrangement:'distributed',sources:['3甲']}],
+  resGroups:[],subjects:{'國語文':{},'數學':{},'綜合活動':{}}
+};
+process.stdout.write(JSON.stringify({
+  distributedNative:workflow.isNativePullBound(distributed,'3甲','綜合活動'),
+  distributedEngine:workflow.isEnginePullBound(distributed,'3甲','綜合活動'),
+  otherClass:workflow.isEnginePullBound(distributed,'3乙','綜合活動'),
+  common:workflow.isNativePullBound(common,'3甲','綜合活動'),
+  legacyLanguage:workflow.isNativePullBound(legacyDistributed,'3甲','國語文'),
+  legacyMath:workflow.isNativePullBound(legacyDistributed,'3甲','數學'),
+  legacyCustom:workflow.isNativePullBound(legacyDistributed,'3甲','綜合活動')
+}));
+""")
+
+    assert output == {
+        "distributedNative": True,
+        "distributedEngine": True,
+        "otherClass": False,
+        "common": False,
+        "legacyLanguage": True,
+        "legacyMath": True,
+        "legacyCustom": False,
+    }
+
+
 def test_teacher_package_signature_changes_when_fixed_schedule_changes():
     output = run_node(r"""
 const workflow=require(process.argv[1]);
@@ -72,7 +112,8 @@ def test_frontend_loads_teacher_workflow_before_main_logic():
 
     assert '<script src="teacher-workflow.js?v=__APP_RELEASE__"></script>' in html
     assert html.index('src="teacher-workflow.js?') < html.index("const DAYS=")
-    assert "if(isResourceBound(code,s))" in html
+    assert "if(isEnginePullBound(code,s))" in html
+    assert "nativeArrangement:nativeArrangement()" in html
     assert "currentTeacherSignature(code)!==issued.baseSignature" in html
     assert "ts.add(o.t+'（資源班）')" not in html
     assert "val.endsWith('（資源班）')" not in html

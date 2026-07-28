@@ -253,6 +253,51 @@ def test_server_publish_requires_original_native_teacher_when_class_hours_remain
         app._normalize_schedule_snapshot(payload, require_schedule=True)
 
 
+def test_server_publish_rejects_extra_tutor_copy_of_native_pull_course():
+    payload = complete_publish_payload()
+    payload["data"]["subjects"] = {
+        "綜合活動": {
+            "hours": [4, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": True,
+        },
+        "其他課程": {
+            "hours": [19, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+        "本土語文": {
+            "hours": [0, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+    }
+    payload["data"]["assign"] = {
+        "1甲": {"綜合活動": "王導師", "其他課程": "王導師"}}
+    payload["data"]["roster"]["客語教師"] = "教支人員"
+    payload["data"].update({
+        "nativeLockEnabled": True,
+        "nativeArrangement": "distributed",
+        "nativeBands": [],
+        "nativeGroups": [{
+            "g": 1, "d": "二", "p": 2, "lang": "客語", "grp": "一年級客語組",
+            "sources": ["1甲"], "students": 3, "t": "客語教師", "room": "R00",
+            "arrangement": "distributed", "pullSubjects": ["綜合活動"],
+        }],
+    })
+    schedule_slots = list(payload["schedule"])
+    payload["schedule"] = {
+        key: {
+            "s": "綜合活動" if index < 4 else "其他課程",
+            "t": "王導師", "room": "R00",
+        }
+        for index, key in enumerate(schedule_slots)
+    }
+    payload["tutor_placements"] = {"1甲": {"四|5": "綜合活動"}}
+    payload["formal_auto_tutor"] = False
+
+    with pytest.raises(
+            ValueError, match="正式課表硬規則檢核未通過.*綜合活動.*排5/需4"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
 def test_server_publish_allows_first_stage_tutor_pool_but_complete_mode_requires_it():
     payload = complete_publish_payload()
     payload["data"]["subjects"] = {

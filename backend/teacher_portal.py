@@ -3,6 +3,7 @@
 from collections import Counter
 from copy import deepcopy
 import re
+import course_ownership
 import schedule_policy
 
 
@@ -32,6 +33,18 @@ def _native_lock_enabled(data):
         return flag
     return bool(data.get("nativeBands") or data.get("nativeGroups") or any(
         item.get("s") == "本土語文" for item in data.get("locks") or []))
+
+
+def _native_arrangement(data):
+    value = str(data.get("nativeArrangement") or "").strip().lower()
+    if value in {"common", "distributed"}:
+        return value
+    arrangements = {
+        str(item.get("arrangement") or "").strip().lower()
+        for item in data.get("nativeGroups") or []
+        if str(item.get("arrangement") or "").strip().lower() in {"common", "distributed"}
+    }
+    return "distributed" if arrangements == {"distributed"} else "common"
 
 
 def _schedule_entries(snapshot, include_overlay=True):
@@ -113,16 +126,22 @@ def _allowed_pool(data, classroom):
     code = str(classroom.get("code"))
     tutor = str(classroom.get("tutor") or "")
     assigned = (data.get("assign") or {}).get(code) or {}
+    native_pull_courses = course_ownership.native_pull_courses(data)
     result = {}
     for name, subject in (data.get("subjects") or {}).items():
-        if name == "本土語文" and _native_lock_enabled(data):
+        if (name == "本土語文" and _native_lock_enabled(data)
+                and _native_arrangement(data) == "common"):
             continue
         hours = _hours(subject, classroom.get("g") or 0)
         teacher = assigned.get(name) or ""
         mode = ((data.get("assignmentModes") or {}).get(code) or {}).get(name)
         tutor_arrangeable = mode == "tutor" if mode in {"tutor", "engine"} else bool(subject.get("self"))
-        engine_owned = (not tutor_arrangeable or _is_resource_bound(data, code, name)
-                        or (teacher and teacher != tutor))
+        engine_owned = (
+            not tutor_arrangeable
+            or _is_resource_bound(data, code, name)
+            or (code, name) in native_pull_courses
+            or (teacher and teacher != tutor)
+        )
         if hours > 0 and tutor_arrangeable and not engine_owned:
             result[name] = hours
     return result
@@ -160,6 +179,7 @@ def _class_package(snapshot, class_code, teacher_name, revision, pending=None):
         "nativeBands": [deepcopy(item) for item in data.get("nativeBands") or []
                         if int(item.get("g") or 0) == int(classroom.get("g") or 0)],
         "nativeLockEnabled": _native_lock_enabled(data),
+        "nativeArrangement": _native_arrangement(data),
         "teacherNativeLangs": deepcopy(data.get("teacherNativeLangs") or {}),
         "teacherSubjects": deepcopy(data.get("teacherSubjects") or {}),
         "policy": deepcopy(data.get("policy") or {}),
@@ -238,6 +258,7 @@ def validate_teacher_placements(state, principal, class_code, placements):
         raise TeacherChangeError("課程調整資料格式不正確")
 
     pool = _allowed_pool(data, classroom)
+    native_pull_courses = course_ownership.native_pull_courses(data)
     counts = Counter()
     normalized = {}
     fixed = snapshot.get("schedule") or {}
@@ -255,6 +276,8 @@ def validate_teacher_placements(state, principal, class_code, placements):
         day, period = match.group(1), int(match.group(2))
         if _is_resource_bound(data, class_code, subject):
             raise TeacherChangeError(f"{subject} 為資源班綁課，不可由導師調整")
+        if (class_code, subject) in native_pull_courses:
+            raise TeacherChangeError(f"{subject} 為語言抽離綁課，不可由導師調整")
         if subject not in pool:
             raise TeacherChangeError(f"不允許的課程或時段：{slot}")
         if f"{class_code}|{day}|{period}" in fixed:

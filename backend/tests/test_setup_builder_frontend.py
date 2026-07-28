@@ -516,7 +516,7 @@ def test_schedule_result_counts_resource_sessions_once_and_zero_target_is_not_ov
 
     assert "uniqueResourceSessions(OVL).length" in html
     assert "const hasTarget=SchedulePolicy.hasWeeklyTarget(role)&&quota>0" in html
-    assert "可供資源班抽離" in html
+    assert "抽離綁課" in html
     assert "資源班鎖定" not in html
 
 
@@ -930,6 +930,7 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert 'id="nativeDistributedMode"' in html
     assert "各語別分開上" in html
     assert "setNativeArrangement" in html
+    assert html.count("group.pullSubjects=nativePullSubjects(group)") >= 2
     assert "setNativeLockEnabled" in html
     assert "s==='本土語文'" in html
     assert "本土語文必須設定且只能有一個固定節次" in script
