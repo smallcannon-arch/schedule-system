@@ -60,8 +60,12 @@
   }
 
   function nativeSlot(data, group) {
-    const band = (data.nativeBands || []).find((item) => Number(item.g) === Number(group.g));
-    return {d: text((band || group).d), p: Number((band || group).p)};
+    const distributed = text(group.arrangement || data.nativeArrangement) === "distributed";
+    const band = distributed ? null : (data.nativeBands || []).find((item) =>
+      Number(item.g) === Number(group.g)
+      && (!group.d || !group.p || (text(item.d) === text(group.d) && Number(item.p) === Number(group.p))));
+    return {d: text((distributed ? group : (band || group)).d),
+      p: Number((distributed ? group : (band || group)).p)};
   }
 
   function isMinnanLanguage(value) {
@@ -70,7 +74,9 @@
   }
 
   function minnanGroupSources(data) {
-    return new Set((data.nativeGroups || []).filter((group) => isMinnanLanguage(group.lang))
+    return new Set((data.nativeGroups || []).filter((group) =>
+      text(group.arrangement || data.nativeArrangement) !== "distributed"
+      && isMinnanLanguage(group.lang))
       .flatMap((group) => listValues(group.sources)));
   }
 
@@ -92,15 +98,22 @@
       for (const group of data.nativeGroups || []) {
         const slot = nativeSlot(data, group);
         const language = nativeLanguage(group.lang, "");
+        const arrangement = text(group.arrangement || data.nativeArrangement) === "distributed"
+          ? "distributed" : "common";
         for (const code of listValues(group.sources)) {
           if (text(group.t)) output.push({
-            code, d: slot.d, p: slot.p, s: "本土語文", displaySubject: language || "本土語文",
+            code, d: slot.d, p: slot.p, s: "本土語文",
+            displaySubject: arrangement === "distributed"
+              ? `抽離：${language || "本土語文"}` : (language || "本土語文"),
             language, t: text(group.t), room: text(group.room) || "R00", group: text(group.grp), source: "native",
+            arrangement,
           });
           if (text(group.assistant)) output.push({
-            code, d: slot.d, p: slot.p, s: "本土語文", displaySubject: language || "本土語文",
+            code, d: slot.d, p: slot.p, s: "本土語文",
+            displaySubject: arrangement === "distributed"
+              ? `抽離：${language || "本土語文"}` : (language || "本土語文"),
             language, t: text(group.assistant), room: text(group.room) || "R00", group: text(group.grp),
-            source: "native", assistant: true,
+            source: "native", assistant: true, arrangement,
           });
         }
       }
@@ -155,7 +168,8 @@
       const title = [text(data._school), `${classLabel(item)} 班級課表`].filter(Boolean).join("　");
       const subtitle = `導師：${text(item.tutor) || "未填"}　｜　班級代碼：${text(item.code)}`;
       const classEntries = entries.filter((entry) => entry.code === text(item.code));
-      const groupedNativeSlots = new Set(classEntries.filter((entry) => entry.source === "native")
+      const groupedNativeSlots = new Set(classEntries.filter((entry) =>
+        entry.source === "native" && entry.arrangement !== "distributed")
         .map((entry) => `${entry.d}|${entry.p}`));
       const displayEntries = classEntries.filter((entry) =>
         !groupedNativeSlots.has(`${entry.d}|${entry.p}`) || entry.s !== "本土語文");
@@ -232,6 +246,19 @@
     const classes = classMap(data);
     const uploadEntries = entries.filter((item) => item.t && !item.assistant && PERIODS.includes(item.p));
     if (!uploadEntries.length) issues.push("尚無可匯出的正式課表資料");
+    const distributedSlots = new Map();
+    for (const item of uploadEntries) {
+      const key = `${item.code}|${item.d}|${item.p}`;
+      if (!distributedSlots.has(key)) distributedSlots.set(key, []);
+      distributedSlots.get(key).push(item);
+    }
+    for (const [key, items] of distributedSlots) {
+      if (items.length > 1 && items.some((item) => item.arrangement === "distributed")) {
+        const [code, day, period] = key.split("|");
+        issues.push(
+          `${code}週${day}第${period}節含語言抽離與原班課程；上傳格式尚待確認，請先匯出班級或教師課表`);
+      }
+    }
     for (const item of uploadEntries) {
       const classroom = classes.get(item.code);
       const mapping = mappings[item.s] || defaultMapping(item.s);

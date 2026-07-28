@@ -31,6 +31,46 @@ def test_loads_v6_merged_teacher_and_assignment_sheet():
     assert data["assign"][("1甲", "國語文")] == "王導師"
 
 
+def test_v6_excel_requires_explicit_distributed_native_language_mode(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook["本土語分組"]
+    for row in range(2, 5):
+        sheet.cell(row, 12, "各語別分開上")
+        sheet.cell(row, 13, "國語文、數學")
+    values = [
+        1, "三", 2, "客語-海陸", "1年級客語海陸組", "1甲", 1,
+        "客語教支", None, "原班教室", "實體", "各語別分開上", "國語文、數學",
+    ]
+    for column, value in enumerate(values, start=1):
+        sheet.cell(5, column, value)
+    path = tmp_path / "distributed-native.xlsx"
+    workbook.save(path)
+
+    data = engine.load_data(path)
+
+    assert data["native_arrangement"] == "distributed"
+    assert data["native_bands"] == []
+    assert data["native_external_sources"] == set()
+    assert len(data["native_groups"]) == 4
+    assert not any(lock["subj"] == "本土語文" for lock in data["locks"])
+
+
+def test_v6_excel_does_not_silently_switch_multi_slot_native_language_mode(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    sheet = workbook["本土語分組"]
+    values = [
+        1, "三", 2, "客語-海陸", "1年級客語海陸組", "1甲", 1,
+        "客語教支", None, "原班教室", "實體", None, "國語文、數學",
+    ]
+    for column, value in enumerate(values, start=1):
+        sheet.cell(5, column, value)
+    path = tmp_path / "unmarked-multi-slot-native.xlsx"
+    workbook.save(path)
+
+    with pytest.raises(ValueError, match="明確選擇.*各語別分開上"):
+        engine.load_data(path)
+
+
 def test_v6_duplicate_teacher_rows_merge_only_when_metadata_matches(tmp_path):
     workbook = load_workbook(V6_TEMPLATE)
     sheet = workbook["教師與配課"]
@@ -549,6 +589,166 @@ def test_frontend_native_language_supports_three_classes_split_into_two_groups()
         ("1甲", "二", 1), ("1乙", "二", 1), ("1丙", "二", 1)}
     assert meta["completion"] == "complete"
     assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_frontend_native_language_supports_distributed_groups_across_slots():
+    payload = _native_frontend_payload()
+    payload["nativeArrangement"] = "distributed"
+    payload["nativeBands"] = []
+    payload["subjects"]["本土語文"]["hours"] = [0, 0, 0, 0, 0, 0]
+    payload["subjects"]["國語文"] = {
+        "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+        "block": "", "self": False, "pairMode": "",
+    }
+    payload["assign"] = {
+        "1甲": {"國語文": "王導師"},
+        "1乙": {"國語文": "李導師"},
+    }
+    payload["nativeGroups"] = [
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "客語",
+            "grp": "一年級客語組", "sources": ["1甲", "1乙"],
+            "students": 4, "mode": "實體", "arrangement": "distributed",
+            "pullSubjects": ["國語文"],
+            "t": "客語教師", "room": "R00", "assistant": "",
+        },
+        {
+            "g": 1, "d": "三", "p": 2, "lang": "原住民族語",
+            "grp": "一年級原住民族語組", "sources": ["1甲"],
+            "students": 1, "mode": "直播共學", "arrangement": "distributed",
+            "pullSubjects": ["國語文"],
+            "t": "直播教師", "room": "電腦教室", "assistant": "協同教師",
+        },
+    ]
+
+    data = engine.load_frontend_data(payload)
+
+    assert data["native_bands"] == []
+    assert data["native_external_sources"] == {"1甲", "1乙"}
+    assert not any(lock["subj"] == "本土語文" for lock in data["locks"])
+    assert ("客語教師", "二", 1) in data["teacher_limit"]
+    assert ("直播教師", "三", 2) in data["teacher_limit"]
+    assert ("協同教師", "三", 2) in data["teacher_limit"]
+    assert ("電腦教室", "三", 2) in data["room_blocked"]
+    assert data["teacher_weekly_load"]["客語教師"] == 1
+    assert data["teacher_weekly_load"]["直播教師"] == 1
+    assert data["teacher_weekly_load"]["協同教師"] == 1
+    assert "舊配課教師" not in data["teacher_weekly_load"]
+
+
+def test_frontend_distributed_native_language_does_not_require_class_subject():
+    payload = _native_frontend_payload()
+    payload["nativeArrangement"] = "distributed"
+    payload["nativeBands"] = []
+    payload["subjects"] = {
+        "國語文": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "R00",
+            "banned": [], "block": "", "self": False, "pairMode": "",
+        },
+    }
+    payload["assign"] = {
+        "1甲": {"國語文": "王導師"},
+        "1乙": {"國語文": "李導師"},
+    }
+    payload["nativeGroups"] = [
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "客語",
+            "grp": "一年級客語組", "sources": ["1甲"],
+            "students": 2, "mode": "實體", "arrangement": "distributed",
+            "pullSubjects": ["國語文"],
+            "t": "客語教師", "room": "R00", "assistant": "",
+        },
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "原住民族語",
+            "grp": "一年級原語組", "sources": ["1甲"],
+            "students": 1, "mode": "實體", "arrangement": "distributed",
+            "pullSubjects": ["國語文"],
+            "t": "直播教師", "room": "電腦教室", "assistant": "",
+        },
+    ]
+
+    data = engine.load_frontend_data(payload)
+
+    assert data["native_external_sources"] == {"1甲"}
+    assert data["teacher_weekly_load"]["客語教師"] == 1
+    assert data["teacher_weekly_load"]["直播教師"] == 1
+    assert not any(lock["subj"] == "本土語文" for lock in data["locks"])
+
+
+def test_distributed_native_groups_allow_same_class_same_slot_with_shared_pull_subject():
+    payload = _native_frontend_payload()
+    payload["nativeArrangement"] = "distributed"
+    payload["nativeBands"] = []
+    payload["subjects"] = {
+        "國語文": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "R00",
+            "banned": [], "block": "", "self": False, "pairMode": "",
+        },
+    }
+    payload["assign"] = {
+        "1甲": {"國語文": "王導師"},
+        "1乙": {"國語文": "李導師"},
+    }
+    payload["nativeGroups"] = [
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "客語", "grp": "客語組",
+            "sources": ["1甲"], "students": 2, "arrangement": "distributed",
+            "pullSubjects": ["國語文"], "t": "客語教師", "room": "R00",
+        },
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "原住民族語", "grp": "原語組",
+            "sources": ["1甲"], "students": 1, "arrangement": "distributed",
+            "pullSubjects": ["國語文"], "t": "直播教師", "room": "電腦教室",
+        },
+    ]
+
+    data = engine.load_frontend_data(payload)
+    schedule, tasks, *_ = engine.solve(data, time_limit=5)
+
+    assert schedule[("1甲", "二", 1)][0] == "國語文"
+    assert tasks[("1甲", "國語文")]["t"] == "王導師"
+
+
+def test_distributed_native_groups_reject_disjoint_pull_subjects_same_class_slot():
+    payload = _native_frontend_payload()
+    payload["nativeArrangement"] = "distributed"
+    payload["nativeBands"] = []
+    payload["subjects"].update({
+        "國語文": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "R00",
+            "banned": [], "block": "", "self": False, "pairMode": "",
+        },
+        "數學": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "R00",
+            "banned": [], "block": "", "self": False, "pairMode": "",
+        },
+    })
+    payload["nativeGroups"] = [
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "客語", "grp": "客語組",
+            "sources": ["1甲"], "students": 2, "arrangement": "distributed",
+            "pullSubjects": ["國語文"], "t": "客語教師", "room": "R00",
+        },
+        {
+            "g": 1, "d": "二", "p": 1, "lang": "原住民族語", "grp": "原語組",
+            "sources": ["1甲"], "students": 1, "arrangement": "distributed",
+            "pullSubjects": ["數學"], "t": "直播教師", "room": "電腦教室",
+        },
+    ]
+
+    with pytest.raises(ValueError, match="沒有共同可抽離科目"):
+        engine.load_frontend_data(payload)
+
+
+def test_frontend_distributed_native_language_rejects_stale_class_lock():
+    payload = _native_frontend_payload()
+    payload["nativeArrangement"] = "distributed"
+    payload["nativeBands"] = []
+    payload["nativeGroups"][0]["arrangement"] = "distributed"
+    payload["locks"] = [{"c": "1甲", "d": "二", "p": 1, "s": "本土語文"}]
+
+    with pytest.raises(ValueError, match="不應鎖住整班本土語文"):
+        engine.load_frontend_data(payload)
 
 
 def test_frontend_native_language_locks_only_selected_band_sources():

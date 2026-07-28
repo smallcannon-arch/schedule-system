@@ -604,7 +604,7 @@ XLSX.utils.sheet_add_aoa(bad.Sheets['場地'],[['自然教室',2]],{origin:'A21'
 XLSX.utils.sheet_add_aoa(bad.Sheets['場地'],[['創客教室',1.5]],{origin:'A22'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['科目節數'],[['閱讀','兩節',0,0,0,0,0,'原班教室','否','']],{origin:'A20'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['年段時段'],[['七年級',1,1]],{origin:'A9'});
-XLSX.utils.sheet_add_aoa(bad.Sheets['本土語分組'],[[1,'一',1,'客語','名冊外教師','原班教室','','測試組','1甲',1,'實體']],{origin:'A20'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['本土語分組'],[[1,'二',1,'客語','名冊外教師','原班教室','','測試組','1甲',1,'實體']],{origin:'A20'});
 addRow('不排課時間',['對象','星期','節次','類型','備註'],['王導師','六',1,'不可排',''],'A20');
 addRow('資源班overlay',['組別','原班','科目','資源班教師','星期','節次'],['測試組','1甲','國語文','名冊外教師','',''],'A20');
 let error='';try{parse(bad)}catch(reason){error=String(reason.message||reason)}
@@ -634,6 +634,74 @@ process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:ba
     assert "本土語分組 第 20 列" in output["error"]
     assert "不排課時間 第 20 列" in output["error"]
     assert "資源班overlay 第 20 列" in output["error"]
+
+
+def test_v6_browser_import_requires_explicit_distributed_native_language_mode():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const XLSX=require(process.argv[2]);
+const html=fs.readFileSync(process.argv[1],'utf8');
+const source=html.slice(html.indexOf('function importRowHasData'),html.indexOf('ScheduleSetup.init'));
+const workbook=XLSX.read(fs.readFileSync(process.argv[3]),{type:'buffer'});
+const sheet=workbook.Sheets['本土語分組'];
+const teacher=sheet['H3'].v;
+XLSX.utils.sheet_add_aoa(sheet,[['各語別分開上'],['各語別分開上'],['各語別分開上']],{origin:'L2'});
+XLSX.utils.sheet_add_aoa(sheet,[[1,'三',2,'客語-海陸','一年級客語海陸組','1甲',1,teacher,null,'原班教室','實體','各語別分開上','國語文、數學']],{origin:'A5'});
+const context={DEMO0:{rules:[]},DAYS:['一','二','三','四','五'],
+  nativeSourceCodes:value=>String(value||'').split(/[、,，;；\s]+/).filter(Boolean),console};
+context.__wb=workbook;context.__XLSX=XLSX;vm.createContext(context);vm.runInContext(source,context);
+vm.runInContext(`globalThis.__S=n=>__XLSX.utils.sheet_to_json(__wb.Sheets[n],{header:1,defval:null});
+  globalThis.__opt=n=>__wb.Sheets[n]?__S(n):[];globalThis.__nd=parseV5(__wb,__S,__opt);`,context);
+process.stdout.write(JSON.stringify({
+  arrangement:context.__nd.nativeArrangement,
+  bands:context.__nd.nativeBands,
+  groups:context.__nd.nativeGroups,
+  locks:context.__nd.locks,
+  errors:context.__nd._err||[]
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html"),
+         str(FORMAL / "vendor" / "xlsx.full.min.js"),
+         str(FORMAL / "backend" / "tests" / "fixtures" / "排課母版_v6.xlsx")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["arrangement"] == "distributed"
+    assert output["bands"] == []
+    assert len(output["groups"]) == 4
+    assert all(group["arrangement"] == "distributed" for group in output["groups"])
+    assert not any(lock["s"] == "本土語文" for lock in output["locks"])
+    assert output["errors"] == []
+
+
+def test_v6_browser_import_does_not_silently_switch_multi_slot_native_language_mode():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+const XLSX=require(process.argv[2]);
+const html=fs.readFileSync(process.argv[1],'utf8');
+const source=html.slice(html.indexOf('function importRowHasData'),html.indexOf('ScheduleSetup.init'));
+const workbook=XLSX.read(fs.readFileSync(process.argv[3]),{type:'buffer'});
+const sheet=workbook.Sheets['本土語分組'];
+const teacher=sheet['H3'].v;
+XLSX.utils.sheet_add_aoa(sheet,[[1,'三',2,'客語-海陸','一年級客語海陸組','1甲',1,teacher,null,'原班教室','實體',null,'國語文、數學']],{origin:'A5'});
+const context={DEMO0:{rules:[]},DAYS:['一','二','三','四','五'],
+  nativeSourceCodes:value=>String(value||'').split(/[、,，;；\s]+/).filter(Boolean),console};
+context.__wb=workbook;context.__XLSX=XLSX;vm.createContext(context);vm.runInContext(source,context);
+let error='';try{
+  vm.runInContext(`globalThis.__S=n=>__XLSX.utils.sheet_to_json(__wb.Sheets[n],{header:1,defval:null});
+    globalThis.__opt=n=>__wb.Sheets[n]?__S(n):[];globalThis.__nd=parseV5(__wb,__S,__opt);`,context);
+}catch(reason){error=String(reason.message||reason)}
+process.stdout.write(JSON.stringify({error}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html"),
+         str(FORMAL / "vendor" / "xlsx.full.min.js"),
+         str(FORMAL / "backend" / "tests" / "fixtures" / "排課母版_v6.xlsx")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["error"].count("明確選擇") == 1
 
 
 def test_teacher_quick_limits_compact_rows_and_preserve_manual_rules():
@@ -853,6 +921,9 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert "閩南語|臺語|台語" in html
     assert "group.t === name || group.assistant === name" in script
     assert 'id="nativeLockToggle"' in html
+    assert 'id="nativeDistributedMode"' in html
+    assert "各語別分開上" in html
+    assert "setNativeArrangement" in html
     assert "setNativeLockEnabled" in html
     assert "s==='本土語文'" in html
     assert "本土語文必須設定且只能有一個固定節次" in script
@@ -893,6 +964,38 @@ const data={
       sources:['5甲','5乙','5丙'],students:27,t:'閩南教師乙',room:'R00'}
   ],
   resGroups:[],rooms:{R00:99},gslot:{5:slots}
+};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},
+  startBlank:()=>true,syncTeachers:async()=>({})});
+process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    output = json.loads(result.stdout)
+    assert output["hard"] == []
+
+
+def test_distributed_native_groups_validate_without_class_locks():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const slots=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={
+  classes:[{g:1,i:1,code:'1甲',tutor:'甲導師'},{g:1,i:2,code:'1乙',tutor:'乙導師'}],
+  roster:{甲導師:'導師',乙導師:'導師',客語教師:'教支人員',原語教師:'教支人員'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{國語文:{self:false,hours:[1,0,0,0,0,0]}},
+  assign:{'1甲':{國語文:'甲導師'},'1乙':{國語文:'乙導師'}},assignmentModes:{},override:{},locks:[],
+  nativeLockEnabled:true,nativeArrangement:'distributed',nativeBands:[],
+  nativeGroups:[
+    {g:1,d:'二',p:1,grp:'一年級客語組',lang:'客語',sources:['1甲','1乙'],
+      students:4,t:'客語教師',room:'R00',arrangement:'distributed'},
+    {g:1,d:'三',p:2,grp:'一年級原語組',lang:'原住民族語',sources:['1甲'],
+      students:1,t:'原語教師',room:'R00',arrangement:'distributed'}
+  ],
+  resGroups:[],rooms:{R00:99},gslot:{1:slots}
 };
 ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},
   startBlank:()=>true,syncTeachers:async()=>({})});

@@ -31,6 +31,7 @@
     value.resGroups = value.resGroups || [];
     value.nativeBands = Array.isArray(value.nativeBands) ? value.nativeBands : [];
     value.nativeGroups = Array.isArray(value.nativeGroups) ? value.nativeGroups : [];
+    value.nativeArrangement = value.nativeArrangement === "distributed" ? "distributed" : "common";
     value.exportMappings = value.exportMappings && typeof value.exportMappings === "object" ? value.exportMappings : {};
     value.rooms = value.rooms || {};
     if (!Object.prototype.hasOwnProperty.call(value.rooms, "R00")) value.rooms.R00 = 99;
@@ -68,6 +69,34 @@
       .flatMap((group) => nativeValues(group.sources)));
   }
 
+  function commonNativeGroupSources(d) {
+    return new Set((d.nativeGroups || []).filter((group) =>
+      (group.arrangement || d.nativeArrangement || "common") === "common"
+      && isMinnanLanguage(group.lang))
+      .flatMap((group) => nativeValues(group.sources)));
+  }
+
+  function distributedNativeSources(d) {
+    if (d.nativeArrangement !== "distributed") return new Set();
+    return new Set((d.nativeGroups || []).flatMap((group) => nativeValues(group.sources)));
+  }
+
+  function distributedExternalSources(d) {
+    const sources = distributedNativeSources(d);
+    const native = d.subjects && d.subjects["本土語文"];
+    return new Set([...sources].filter((code) => {
+      const classroom = (d.classes || []).find((item) => item.code === code);
+      return !native || !classroom
+        || Math.max(0, Number((native.hours || [])[Number(classroom.g) - 1]) || 0) === 0;
+    }));
+  }
+
+  function nativePullSubjects(group, d) {
+    const selected = subjectValues(group && (group.pullSubjects || group.pull_subjects));
+    if (selected.length) return selected;
+    return ["國語文", "數學"].filter((subject) => d.subjects && d.subjects[subject]);
+  }
+
   function subjectLabel(subject) {
     return subject === "本土語文" ? "閩南語（原班）" : subject;
   }
@@ -84,12 +113,14 @@
 
   function teachingSummary(d, name) {
     const result = {retained: 0, released: 0, cross: 0, total: 0};
-    const groupedMinnan = minnanGroupSources(d);
+    const groupedMinnan = commonNativeGroupSources(d);
+    const externalSources = distributedExternalSources(d);
     for (const item of d.classes) {
       for (const [subject, info] of Object.entries(d.subjects)) {
         const hours = Math.max(0, Number((info.hours || [])[item.g - 1]) || 0);
         if (!hours) continue;
-        if (subject === "本土語文" && d.nativeLockEnabled === true && groupedMinnan.has(item.code)) continue;
+        if (subject === "本土語文" && d.nativeLockEnabled === true
+            && (groupedMinnan.has(item.code) || externalSources.has(item.code))) continue;
         const assigned = (d.assign[item.code] || {})[subject] || "";
         if (item.tutor === name) {
           if (assigned === name) result.retained += hours;
@@ -156,11 +187,13 @@
     const nativeGroups = Array.isArray(d.nativeGroups) ? d.nativeGroups : [];
     const nativeBands = Array.isArray(d.nativeBands) ? d.nativeBands : [];
     const nativeLockEnabled = d.nativeLockEnabled === true;
-    const groupedMinnan = nativeLockEnabled ? minnanGroupSources(d) : new Set();
+    const nativeArrangement = d.nativeArrangement === "distributed" ? "distributed" : "common";
+    const groupedMinnan = nativeLockEnabled ? commonNativeGroupSources(d) : new Set();
+    const distributedSources = nativeLockEnabled ? distributedExternalSources(d) : new Set();
     const nativeBandSources = new Set();
     const nativeGroupSources = new Set();
     const nativeManagedLockKeys = new Set();
-    if (nativeLockEnabled) {
+    if (nativeLockEnabled && nativeArrangement === "common") {
       for (const band of nativeBands) {
         const grade = Number(band.g) || 0;
         const gradeClasses = d.classes.filter((item) => +item.g === grade);
@@ -210,7 +243,8 @@
       for (const subject of subjectNames) {
         const hours = Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0);
         if (!hours) continue;
-        if (subject === "本土語文" && groupedMinnan.has(code)) continue;
+        if (subject === "本土語文"
+            && (groupedMinnan.has(code) || distributedSources.has(code))) continue;
         assignmentTotal += 1;
         const teacher = d.assign[item.code] && d.assign[item.code][subject];
         if (!teacher) {
@@ -328,7 +362,89 @@
       }
     }
 
-    if (nativeSubject && nativeLockEnabled) {
+    if (nativeLockEnabled && nativeArrangement === "distributed") {
+      const nativeStaffSlots = new Set();
+      const nativeRoomLoad = new Map();
+      const pullIntersections = new Map();
+      const groupNames = new Set();
+      if (!nativeGroups.length) hard.push("尚未建立語言抽離群組");
+      if ((d.locks || []).some((lock) => lock.s === "本土語文")) {
+        hard.push("各語別分開上不應鎖住整班本土語文，請重新儲存語言分組");
+      }
+      for (const group of nativeGroups) {
+        const grade = Number(group.g) || 0;
+        const groupName = String(group.grp || group.group || "").trim();
+        const day = String(group.d || "");
+        const period = Number(group.p);
+        const gradeClasses = d.classes.filter((item) => +item.g === grade);
+        const sourceCodes = nativeValues(group.sources);
+        if (!gradeClasses.length) hard.push(`${grade || "未填"}年級語言抽離群組找不到班級`);
+        if (!groupName) hard.push(`${grade}年級有語言抽離群組尚未填寫名稱`);
+        else if (groupNames.has(groupName)) hard.push(`本土語分組名稱重複：${groupName}`);
+        else groupNames.add(groupName);
+        if (!String(group.lang || "").trim()) hard.push(`${groupName || `${grade}年級分組`}尚未填寫語別`);
+        if (!sourceCodes.length) hard.push(`${groupName || `${grade}年級分組`}尚未填寫來源班級`);
+        for (const code of sourceCodes) {
+          const sourceClass = d.classes.find((item) => item.code === code);
+          if (!sourceClass) hard.push(`${groupName || `${grade}年級分組`}引用不存在的來源班級：${code}`);
+          else if (+sourceClass.g !== grade) hard.push(`${groupName || `${grade}年級分組`}的來源班級 ${code} 不屬於${grade}年級`);
+        }
+        const pullSubjects = nativePullSubjects(group, d);
+        if (!pullSubjects.length) {
+          hard.push(`${groupName || `${grade}年級分組`}尚未指定原班可抽離科目`);
+        }
+        for (const subject of pullSubjects) {
+          if (!d.subjects[subject]) {
+            hard.push(`${groupName || `${grade}年級分組`}引用不存在的原班可抽離科目：${subject}`);
+          } else if (sourceCodes.some((code) => {
+            const sourceClass = d.classes.find((item) => item.code === code);
+            return sourceClass
+              && Math.max(0, Number((d.subjects[subject].hours || [])[+sourceClass.g - 1]) || 0) === 0;
+          })) {
+            hard.push(`${groupName || `${grade}年級分組`}的來源班級沒有「${subject}」課程節數`);
+          }
+        }
+        for (const code of sourceCodes) {
+          const key = `${code}|${day}|${period}`;
+          const current = new Set(pullSubjects);
+          if (pullIntersections.has(key)) {
+            const previous = pullIntersections.get(key);
+            pullIntersections.set(key, new Set([...previous].filter((subject) => current.has(subject))));
+          } else {
+            pullIntersections.set(key, current);
+          }
+          if (!pullIntersections.get(key).size) {
+            hard.push(`${code}在週${day}第${period}節的語言抽離群組沒有共同可抽離科目`);
+          }
+        }
+        if (!DAYS.includes(day) || !Number.isInteger(period) || period < 1 || period > 7) {
+          hard.push(`${groupName || `${grade}年級分組`}的固定時段不正確`);
+        } else if (!((d.gslot || {})[grade] || [])[DAYS.indexOf(day)]?.[period - 1]) {
+          hard.push(`${groupName || `${grade}年級分組`}的固定時段不在該年級可排時段內`);
+        }
+        if (!(Number(group.students) > 0)) warnings.push(`${groupName || `${grade}年級分組`}尚未填寫學生人數`);
+        const mainTeacher = String(group.t || "").trim();
+        if (!mainTeacher) hard.push(`${groupName || `${grade}年級分組`}尚未填寫授課教師`);
+        else if (!teacherNames.has(mainTeacher)) hard.push(`${groupName || `${grade}年級分組`}的授課教師不在教師名冊：${mainTeacher}`);
+        else if (!nativeSkillMatches(group.lang, d.teacherNativeLangs[mainTeacher])) warnings.push(`${mainTeacher}尚未標示可授「${group.lang}」`);
+        const assistant = String(group.assistant || "").trim();
+        if (assistant && !teacherNames.has(assistant)) hard.push(`${groupName || `${grade}年級分組`}的協同教師不在教師名冊：${assistant}`);
+        for (const teacher of [mainTeacher, assistant].filter(Boolean)) {
+          const key = `${teacher}|${day}|${period}`;
+          if (nativeStaffSlots.has(key)) hard.push(`${teacher}在週${day}第${period}節被重複指派本土語分組`);
+          nativeStaffSlots.add(key);
+        }
+        const room = group.room || "R00";
+        if (!Object.prototype.hasOwnProperty.call(d.rooms || {}, room)) {
+          hard.push(`${groupName || `${grade}年級分組`}引用不存在的場地：${room}`);
+        } else if (room !== "R00") {
+          const roomKey = `${room}|${day}|${period}`;
+          const used = (nativeRoomLoad.get(roomKey) || 0) + 1;
+          nativeRoomLoad.set(roomKey, used);
+          if (used > Number(d.rooms[room] || 0)) hard.push(`${room}在週${day}第${period}節超過本土語分組可用容量`);
+        }
+      }
+    } else if (nativeSubject && nativeLockEnabled) {
       const nativeStaffSlots = new Set();
       const nativeRoomLoad = new Map();
       const groupNames = new Set();

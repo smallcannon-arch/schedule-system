@@ -70,10 +70,15 @@ def _schedule_entries(snapshot, include_overlay=True):
             })
     for item in (data.get("nativeGroups") or []) if _native_lock_enabled(data) else []:
         grade = int(item.get("g") or item.get("grade") or 0)
+        item_day = item.get("d") or item.get("day") or ""
+        item_period = int(item.get("p") or item.get("period") or 0)
         band = next((row for row in data.get("nativeBands") or []
-                     if int(row.get("g") or row.get("grade") or 0) == grade), {})
-        day = band.get("d") or band.get("day") or item.get("d") or item.get("day") or ""
-        period = int(band.get("p") or band.get("period") or item.get("p") or item.get("period") or 0)
+                     if int(row.get("g") or row.get("grade") or 0) == grade
+                     and (not item_day or not item_period
+                          or (row.get("d") or row.get("day")) == item_day
+                          and int(row.get("p") or row.get("period") or 0) == item_period)), {})
+        day = item_day or band.get("d") or band.get("day") or ""
+        period = item_period or int(band.get("p") or band.get("period") or 0)
         subject = item.get("lang") or item.get("language") or "本土語文"
         room = item.get("room") or "R00"
         group_name = item.get("grp") or item.get("group") or f"{grade}年級本土語組"
