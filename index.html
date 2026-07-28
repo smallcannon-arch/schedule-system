@@ -2316,11 +2316,13 @@ function roomOf(code,s){return (DATA.override[code]&&DATA.override[code][s])||DA
 // 引擎科目 vs 導師池
 function hasResG(code,s){return (DATA.resGroups||[]).some(group=>resourceSources(group).includes(code)&&resourcePullSubjects(group).includes(s))}
 function isResourceBound(code,s){return TeacherWorkflow.isResourceBound(DATA,code,s)}
+function isNativePullBound(code,s){return TeacherWorkflow.isNativePullBound(DATA,code,s)}
+function isEnginePullBound(code,s){return TeacherWorkflow.isEnginePullBound(DATA,code,s)}
 function isResourceLockedSlot(code,d,p){return TeacherWorkflow.isResourceLockedSlot(DATA,SOL,OVL,code,d,p)}
 function isEngine(code,s){
   const sub=DATA.subjects[s], t=DATA.assign[code]&&DATA.assign[code][s], c=CODE2C[code];
   if(s==='本土語文'&&nativeManagedSources().has(code))return true;
-  if(isResourceBound(code,s))return true;            // 可供資源班抽離的科目先由引擎排定
+  if(isEnginePullBound(code,s))return true;          // 抽離綁課科目先由引擎排定
   if(!c||!c.tutor||t!==c.tutor)return true;          // 釋出或跨班授課 → 引擎
   const mode=DATA.assignmentModes?.[code]?.[s];
   return mode?mode!=='tutor':!sub.self;
@@ -2747,8 +2749,8 @@ function editorRenderSummary(){
   let required=0;const rows=[];
   for(const subject of Object.keys(DATA.subjects||{})){
     const need=hoursOf(subject,c.g)||0;if(!need)continue;required+=need;
-    const got=counts[subject]||0,bound=isResourceBound(c.code,subject);
-    rows.push(`<li><b>${esc(subject)}</b>　${got}/${need}　${got===need?'完成':`尚缺 ${need-got}`}${bound?'・可供資源班抽離':''}</li>`);
+    const got=counts[subject]||0,bound=isEnginePullBound(c.code,subject);
+    rows.push(`<li><b>${esc(subject)}</b>　${got}/${need}　${got===need?'完成':`尚缺 ${need-got}`}${bound?'・抽離綁課':''}</li>`);
   }
   const check=validateSchedule(),remaining=Math.max(0,required-entries.length);
   document.getElementById('editorMetrics').innerHTML=`<span><b>${entries.length}</b>已排節數</span><span><b>${remaining}</b>待排節數</span><span><b>${check.hard.length}</b>硬規則問題</span><span><b>${EDIT_HISTORY.length}</b>可復原步驟</span>`;
@@ -3255,7 +3257,7 @@ function buildTeacherData(code,busySlots){
     limits,derived:[],rules:TeacherWorkflow.clone(RULES),blocked:TeacherWorkflow.clone(DATA.blocked||[]),
     gslot:TeacherWorkflow.clone(DATA.gslot),rooms:TeacherWorkflow.clone(DATA.rooms),roster,
     resGroups:(DATA.resGroups||[]).filter(item=>resourceSources(item).includes(code)).map(item=>TeacherWorkflow.clone(item)),tcap,
-    nativeLockEnabled:!!DATA.nativeLockEnabled,
+    nativeLockEnabled:!!DATA.nativeLockEnabled,nativeArrangement:nativeArrangement(),
     nativeBands:(DATA.nativeBands||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
     nativeGroups:(DATA.nativeGroups||[]).filter(item=>+item.g===+c.g).map(item=>TeacherWorkflow.clone(item)),
     teacherNativeLangs:TeacherWorkflow.clone(DATA.teacherNativeLangs||{}),
@@ -3433,7 +3435,7 @@ function importTeacherResult(input){
       for(const [slot,subject] of Object.entries(placements).sort()){
         const match=/^([一二三四五])\|([1-7])$/.exec(slot);
         if(!match||typeof subject!=='string'||!allowed.has(subject))throw new Error(`不允許的課程或時段：${slot}`);
-        if(isResourceBound(code,subject))throw new Error(`${subject} 為資源班綁課，不可由導師調整`);
+        if(isEnginePullBound(code,subject))throw new Error(`${subject} 為抽離綁課，不可由導師調整`);
         const left=remainPool(code).find(([name])=>name===subject);
         if(!left||left[1]<=0)throw new Error(`${subject} 超過應排節數`);
         const reason=canPlaceTutor(code,subject,match[1],+match[2]);if(reason)throw new Error(`${slot} ${subject}：${reason}`);
@@ -3531,7 +3533,7 @@ function canPlaceTutor(code,s,d,p){
   const c=CODE2C[code],info=DATA.subjects[s];
   if(!c||!info)return '班級或科目設定不存在';
   if(TEACHER_MODE&&code!==TEACHER_MODE.code)return '教師調整檔只允許修改指定班級';
-  if(isResourceBound(code,s))return `${s} 為資源班綁課，不可由導師調整`;
+  if(isEnginePullBound(code,s))return `${s} 為抽離綁課，不可由導師調整`;
   if(isResourceLockedSlot(code,d,p))return '此時段為資源班綁課，已鎖定';
   if((SOL&&SOL[`${code}|${d}|${p}`])||(tutorPlaced[code]&&tutorPlaced[code][`${d}|${p}`]))return '該班此時段已有課程';
   if(ruleOn('H05')&&!DATA.gslot[c.g][DAYS.indexOf(d)]?.[p-1])return '此時段不是該年級可上課時段';

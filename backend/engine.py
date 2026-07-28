@@ -17,6 +17,7 @@ import sys
 from collections import defaultdict
 from openpyxl import load_workbook
 from ortools.sat.python import cp_model
+import course_ownership
 import schedule_policy
 
 DAYS = ["一", "二", "三", "四", "五"]
@@ -1695,11 +1696,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         for code in _resource_sources(ov)
         for subject in _resource_pull_subjects(ov)
     }
-    native_pull_set = {
-        (code, subject)
-        for (code, _, _), subjects in d.get("native_pull_requirements", {}).items()
-        for subject in subjects
-    }
+    native_pull_set = course_ownership.native_pull_courses(d)
     common_native_group_sources = _common_native_group_sources(d.get("native_groups"))
     tasks = {}
     pool = defaultdict(list)  # 導師自排科目池：class -> [(subj, hours, teacher)]

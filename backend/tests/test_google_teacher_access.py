@@ -258,6 +258,38 @@ def test_combined_resource_group_locks_configured_pull_subject_and_reaches_each_
     assert groups[0]["pullSubjects"] == ["綜合活動"]
 
 
+def test_distributed_native_pull_subject_is_engine_owned_across_teacher_workflow():
+    native_state = state()
+    data = native_state["snapshot"]["data"]
+    data["subjects"]["綜合活動"] = {
+        "hours": [0, 0, 1, 0, 0, 0], "room": "R00", "banned": [], "self": True,
+    }
+    data["assign"]["3甲"]["綜合活動"] = "王導師"
+    data["assign"]["3乙"]["綜合活動"] = "李導師"
+    data["nativeLockEnabled"] = True
+    data["nativeArrangement"] = "distributed"
+    data["nativeGroups"] = [{
+        "g": 3, "d": "三", "p": 4, "lang": "客語",
+        "grp": "三年級客語組", "sources": ["3甲"],
+        "arrangement": "distributed", "pullSubjects": ["綜合活動"],
+        "t": "陳科任", "room": "R00",
+    }]
+
+    assert "綜合活動" not in teacher_portal._allowed_pool(
+        data, data["classes"][0])
+
+    workspace = teacher_portal.build_teacher_workspace(
+        native_state, principal("王導師", "homeroom_teacher", ("3甲",)))
+    package_data = workspace["editable_classes"][0]["data"]
+    assert package_data["nativeArrangement"] == "distributed"
+    assert package_data["nativeGroups"][0]["pullSubjects"] == ["綜合活動"]
+
+    with pytest.raises(teacher_portal.TeacherChangeError, match="語言抽離綁課"):
+        teacher_portal.validate_teacher_placements(
+            native_state, principal("王導師", "homeroom_teacher", ("3甲",)),
+            "3甲", {"一|2": "綜合活動"})
+
+
 def test_google_account_is_bound_on_first_authorized_login(monkeypatch):
     store = MemoryScheduleStore()
     store.import_teachers([{

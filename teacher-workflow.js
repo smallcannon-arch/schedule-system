@@ -106,6 +106,28 @@
     });
   }
 
+  function nativeArrangement(data, group) {
+    const value = String((group && group.arrangement) ||
+      data.nativeArrangement || data.native_arrangement || "common").toLowerCase();
+    return value === "distributed" ? "distributed" : "common";
+  }
+
+  function isNativePullBound(data, code, subject) {
+    return (data.nativeGroups || data.native_groups || []).some((group) => {
+      if (nativeArrangement(data, group) !== "distributed") return false;
+      const sources = Array.isArray(group.sources) ? group.sources :
+        String(group.sources || group.code || group.class || "").split(/[、,，;；\s]+/);
+      const rawSubjects = group.pullSubjects || group.pull_subjects || [];
+      const pullSubjects = Array.isArray(rawSubjects) ? rawSubjects :
+        String(rawSubjects).split(/[、,，;；\s]+/);
+      return sources.includes(code) && pullSubjects.includes(subject);
+    });
+  }
+
+  function isEnginePullBound(data, code, subject) {
+    return isResourceBound(data, code, subject) || isNativePullBound(data, code, subject);
+  }
+
   function isResourceLockedSlot(data, schedule, overlays, code, day, period) {
     return (overlays || []).some((item) =>
       item.code === code && item.d === day && Number(item.p) === Number(period));
@@ -127,7 +149,7 @@
       .map((row) => clone(row))
       .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
     const boundSubjects = Object.keys(data.subjects || {})
-      .filter((subject) => isResourceBound(data, code, subject)).sort();
+      .filter((subject) => isEnginePullBound(data, code, subject)).sort();
     return JSON.stringify({
       code,
       tutor: classroom.tutor || "",
@@ -143,5 +165,6 @@
   }
 
   return {clone, encryptPackage, decryptPackage, randomAccessCode,
-    isResourceBound, isResourceLockedSlot, fixedSignature};
+    isResourceBound, isNativePullBound, isEnginePullBound,
+    isResourceLockedSlot, fixedSignature};
 }));

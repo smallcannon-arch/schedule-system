@@ -22,6 +22,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 import auth_service
+import course_ownership
 import engine
 import openai_advisor
 import schedule_store
@@ -450,6 +451,7 @@ def _validate_published_schedule(snapshot):
         for code in engine._resource_sources(item)
         for subject in engine._resource_pull_subjects(item)
     }
+    native_pull_courses = course_ownership.native_pull_courses(data)
     tutor_owned_courses = set()
     tasks = {}
     for classroom in data["classes"]:
@@ -475,6 +477,7 @@ def _validate_published_schedule(snapshot):
                 and self_arrange
                 and (code, subject) not in locked_courses
                 and (code, subject) not in resource_bound_courses
+                and (code, subject) not in native_pull_courses
                 and (not teacher or teacher == classroom.get("tutor"))
             ):
                 tutor_owned_courses.add((code, subject))

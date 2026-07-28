@@ -516,7 +516,7 @@ def test_schedule_result_counts_resource_sessions_once_and_zero_target_is_not_ov
 
     assert "uniqueResourceSessions(OVL).length" in html
     assert "const hasTarget=SchedulePolicy.hasWeeklyTarget(role)&&quota>0" in html
-    assert "可供資源班抽離" in html
+    assert "抽離綁課" in html
     assert "資源班鎖定" not in html
 
 
