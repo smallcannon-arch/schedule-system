@@ -6,7 +6,7 @@
 
   root.SCHEDULE_APP_CONFIG = {
     mode: "formal",
-    version: "1.29",
+    version: "1.30",
     release: "__APP_RELEASE__",
     assetVersion,
     assetMismatch,

@@ -122,6 +122,49 @@ process.stdout.write(JSON.stringify({
     assert output["nativeEntries"] == 6
 
 
+def test_distributed_native_group_keeps_original_class_lesson_visible():
+    output = run_node(r"""
+const exp=require(process.argv[1]);
+const data={
+  classes:[{g:1,i:1,code:'1甲',tutor:'王導師'}],
+  subjects:{'數學':{},'本土語文':{}},nativeLockEnabled:true,
+  nativeArrangement:'distributed',nativeBands:[],
+  nativeGroups:[{g:1,d:'三',p:2,grp:'一年級客語組',lang:'客語',
+    sources:['1甲'],t:'客語教師',arrangement:'distributed'}]
+};
+const entries=exp.buildEntries(data,[
+  {code:'1甲',d:'三',p:2,s:'數學',t:'王導師',room:'R00'}
+],[]);
+const sheet=exp.classSheets(data,entries)[0];
+process.stdout.write(JSON.stringify({cell:sheet.rows[4][3],entries}));
+""")
+
+    assert "數學" in output["cell"]
+    assert "抽離：客語" in output["cell"]
+    assert any(item.get("arrangement") == "distributed" for item in output["entries"])
+
+
+def test_upload_blocks_distributed_native_duplicate_slot_until_format_confirmed():
+    output = run_node(r"""
+const exp=require(process.argv[1]);
+const data={
+  classes:[{g:1,i:1,code:'1甲',tutor:'王導師'}],
+  subjects:{'國語文':{},'本土語文':{}},nativeLockEnabled:true,
+  nativeArrangement:'distributed',nativeBands:[],
+  nativeGroups:[{g:1,d:'三',p:2,grp:'一年級客語組',lang:'客語',
+    sources:['1甲'],t:'客語教師',arrangement:'distributed'}]
+};
+const entries=exp.buildEntries(data,[
+  {code:'1甲',d:'三',p:2,s:'國語文',t:'王導師',room:'R00'}
+],[]);
+process.stdout.write(JSON.stringify(exp.validateUpload(data,entries,{
+  王導師:'A123456789',客語教師:'B123456789'
+})));
+""")
+
+    assert any("上傳格式尚待確認" in issue for issue in output)
+
+
 def test_upload_validation_requires_private_teacher_id_mapping():
     output = run_node(r"""
 const exp=require(process.argv[1]);

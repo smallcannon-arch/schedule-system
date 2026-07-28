@@ -71,7 +71,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.29",
+    title="排課引擎 API", version="1.30",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -440,7 +440,8 @@ def _validate_published_schedule(snapshot):
     data = engine.load_frontend_data(
         source_data, snapshot.get("limits") or [], snapshot.get("rules") or [])
     classes = {item["code"]: item for item in data["classes"]}
-    native_group_sources = engine._minnan_group_sources(data.get("native_groups"))
+    native_group_sources = engine._common_native_group_sources(data.get("native_groups"))
+    native_external_sources = set(data.get("native_external_sources") or [])
     locked_courses = {
         (item["class"], item["subj"]) for item in data.get("locks") or []}
     resource_bound_courses = {
@@ -456,6 +457,8 @@ def _validate_published_schedule(snapshot):
         for subject, info in data["subjects"].items():
             hours = info["hours"][grade]
             if not hours:
+                continue
+            if subject == "本土語文" and code in native_external_sources:
                 continue
             native_group_owned = (
                 data.get("native_lock_enabled")

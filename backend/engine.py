@@ -220,6 +220,10 @@ def _resource_pull_subjects(item):
     return _list_values(item.get("pull_subjects")) or [_text(item.get("subj"))]
 
 
+def _native_pull_subjects(item):
+    return _list_values(item.get("pull_subjects", item.get("pullSubjects")))
+
+
 def _normalize_subject_name(value):
     subject = _text(value)
     compact = re.sub(r"[\s（）()]", "", subject)
@@ -252,6 +256,25 @@ def _minnan_group_sources(groups):
         if _is_minnan_language(group.get("lang", group.get("language")))
         for code in _list_values(group.get("sources", group.get("classes")))
     }
+
+
+def _common_native_group_sources(groups):
+    return {
+        code
+        for group in groups or []
+        if _native_arrangement(group.get("arrangement")) == "common"
+        and _is_minnan_language(group.get("lang", group.get("language")))
+        for code in _list_values(group.get("sources", group.get("classes")))
+    }
+
+
+def _native_arrangement(value, fallback="common"):
+    normalized = re.sub(r"[\s_-]", "", _text(value)).lower()
+    if normalized in {"distributed", "pullout", "分散抽離", "各語別分開上", "分開上"}:
+        return "distributed"
+    if normalized in {"common", "parallel", "共同時段", "同年級一起上", "一起上"}:
+        return "common"
+    return fallback
 
 
 def _parse_grade_limit_target(value):
@@ -548,18 +571,21 @@ def load_frontend_data(payload, limits=(), rules=()):
 
     native_rows = payload.get("nativeGroups") or []
     native_band_rows = payload.get("nativeBands") or []
+    native_arrangement = _native_arrangement(payload.get("nativeArrangement"))
     native_flag = payload.get("nativeLockEnabled")
     native_locks_present = any(lock["subj"] == "本土語文" for lock in locks)
     native_lock_enabled = (native_flag if isinstance(native_flag, bool)
                            else bool(native_band_rows or native_rows or native_locks_present))
     if native_flag is False and native_locks_present:
         raise ValueError("本土語課鎖定未啟用，但案件仍含固定鎖定資料")
+    if native_lock_enabled and native_arrangement == "distributed" and native_locks_present:
+        raise ValueError("各語別分開上不應鎖住整班本土語文，請重新儲存語言分組")
 
     native_groups, native_slots, native_band_sources, native_staff_slots = [], {}, {}, set()
     native_room_load = defaultdict(int)
     native_group_names = set()
     class_by_code = {item["code"]: item for item in classes}
-    for row in native_band_rows if native_lock_enabled else []:
+    for row in native_band_rows if native_lock_enabled and native_arrangement == "common" else []:
         try:
             grade = int(row.get("g", row.get("grade")))
             period = int(row.get("p", row.get("period")))
@@ -585,9 +611,13 @@ def load_frontend_data(payload, limits=(), rules=()):
         native_slots[grade] = (day, period)
         native_band_sources[grade] = sources
 
-    # 舊案件沒有 nativeBands 時，仍可由原本分組列的星期、節次遷移。
-    if native_lock_enabled and not native_slots:
-        for row in native_rows:
+    common_native_rows = [
+        row for row in native_rows
+        if _native_arrangement(row.get("arrangement"), native_arrangement) == "common"
+    ]
+    # 舊案件沒有 nativeBands 時，仍可由原本共同分組列的星期、節次遷移。
+    if native_lock_enabled and not native_slots and common_native_rows:
+        for row in common_native_rows:
             try:
                 grade = int(row.get("g", row.get("grade")))
                 period = int(row.get("p", row.get("period")))
@@ -602,7 +632,7 @@ def load_frontend_data(payload, limits=(), rules=()):
         for grade in native_slots:
             native_band_sources[grade] = [
                 item["code"] for item in classes if item["grade"] == grade]
-    if native_lock_enabled and not native_slots:
+    if native_lock_enabled and common_native_rows and not native_slots:
         raise ValueError("尚未建立本土語共同課程")
 
     for row in native_rows if native_lock_enabled else []:
@@ -610,16 +640,25 @@ def load_frontend_data(payload, limits=(), rules=()):
             grade = int(row.get("g", row.get("grade")))
         except (TypeError, ValueError, AttributeError):
             raise ValueError("本土語分組的年級格式不正確")
-        slot = native_slots.get(grade)
-        if not slot:
+        arrangement = _native_arrangement(row.get("arrangement"), native_arrangement)
+        slot = native_slots.get(grade) if arrangement == "common" else None
+        if arrangement == "common" and not slot:
             raise ValueError(f"{grade}年級尚未設定本土語共同時段")
-        day, period = slot
         row_day = _text(row.get("d", row.get("day")))
         try:
-            row_period = int(row.get("p", row.get("period"))) if row.get("p", row.get("period")) not in (None, "") else period
+            raw_period = row.get("p", row.get("period"))
+            row_period = int(raw_period) if raw_period not in (None, "") else (slot[1] if slot else 0)
         except (TypeError, ValueError):
             raise ValueError("本土語分組的節次格式不正確")
-        if row_day and (row_day, row_period) != slot:
+        if arrangement == "common":
+            day, period = slot
+        else:
+            day, period = row_day, row_period
+            if day not in DAYS or period not in PERIODS:
+                raise ValueError(f"{grade}年級分散抽離時段無效：週{day}第{period}節")
+            if not grade_slot.get((grade, day, period), False):
+                raise ValueError(f"{grade}年級分散抽離時段不在該年級可排時段內：週{day}第{period}節")
+        if arrangement == "common" and row_day and (row_day, row_period) != slot:
             raise ValueError(f"{grade}年級本土語分組未使用年級共同時段")
         language = _text(row.get("lang", row.get("language"))) or "本土語文"
         group_name = (_text(row.get("grp", row.get("group"))) or
@@ -630,7 +669,8 @@ def load_frontend_data(payload, limits=(), rules=()):
         has_source_field = "sources" in row or "classes" in row
         sources = _list_values(row.get("sources", row.get("classes")))
         if not has_source_field:
-            sources = list(native_band_sources.get(grade, []))
+            sources = (list(native_band_sources.get(grade, [])) if arrangement == "common"
+                       else [item["code"] for item in classes if item["grade"] == grade])
         if not sources:
             raise ValueError(f"{group_name}尚未填寫來源班級")
         for code in sources:
@@ -639,7 +679,7 @@ def load_frontend_data(payload, limits=(), rules=()):
                 raise ValueError(f"{group_name}引用不存在的來源班級：{code}")
             if source_class["grade"] != grade:
                 raise ValueError(f"{group_name}的來源班級 {code} 不屬於{grade}年級")
-            if code not in native_band_sources.get(grade, []):
+            if arrangement == "common" and code not in native_band_sources.get(grade, []):
                 raise ValueError(f"{group_name}的來源班級 {code} 未納入{grade}年級共同課程")
         try:
             students = max(0, int(row.get("students") or 0))
@@ -657,6 +697,21 @@ def load_frontend_data(payload, limits=(), rules=()):
             raise ValueError(f"{group_name}的授課教師不在教師名冊：{teacher}")
         if assistant and assistant not in roster:
             raise ValueError(f"{group_name}的協同教師不在教師名冊：{assistant}")
+        pull_subjects = []
+        if arrangement == "distributed":
+            raw_pull_subjects = _native_pull_subjects(row) or [
+                subject for subject in ("國語文", "數學") if subject in subjects]
+            for raw_subject in raw_pull_subjects:
+                subject = _resolve_subject_name(raw_subject, subjects)
+                if subject not in subjects:
+                    raise ValueError(f"{group_name}引用不存在的原班可抽離科目：{raw_subject}")
+                if any(subjects[subject]["hours"][class_by_code[code]["grade"]] <= 0
+                       for code in sources):
+                    raise ValueError(f"{group_name}的來源班級沒有「{subject}」課程節數")
+                if subject not in pull_subjects:
+                    pull_subjects.append(subject)
+            if not pull_subjects:
+                raise ValueError(f"{group_name}尚未指定原班可抽離科目")
         if room != "R00":
             room_slot = (room, day, period)
             native_room_load[room_slot] += 1
@@ -664,7 +719,9 @@ def load_frontend_data(payload, limits=(), rules=()):
                 raise ValueError(f"{room}在週{day}第{period}節超過本土語分組可用容量")
         native_groups.append({"g": grade, "d": day, "p": period, "lang": language,
                               "grp": group_name, "sources": sources, "students": students,
-                              "mode": mode, "t": teacher, "room": room, "assistant": assistant})
+                              "mode": mode, "arrangement": arrangement,
+                              "pull_subjects": pull_subjects,
+                              "t": teacher, "room": room, "assistant": assistant})
         if room != "R00":
             blocked.add((room, day, period))
         for name in (teacher, assistant):
@@ -675,7 +732,22 @@ def load_frontend_data(payload, limits=(), rules=()):
                 native_staff_slots.add(staff_slot)
                 teacher_limit.add((name, day, period))
 
-    if native_lock_enabled and "本土語文" not in subjects:
+    distributed_pull_intersections = {}
+    for group in native_groups:
+        if group.get("arrangement") != "distributed":
+            continue
+        allowed = set(group.get("pull_subjects") or [])
+        for code in group.get("sources", []):
+            key = (code, group["d"], group["p"])
+            distributed_pull_intersections[key] = (
+                allowed if key not in distributed_pull_intersections
+                else distributed_pull_intersections[key] & allowed)
+            if not distributed_pull_intersections[key]:
+                raise ValueError(
+                    f"{code}在週{group['d']}第{group['p']}節的語言抽離群組沒有共同可抽離科目")
+
+    if (native_lock_enabled and (native_slots or common_native_rows)
+            and "本土語文" not in subjects):
         raise ValueError("已設定本土語分組，但科目節數缺少「本土語文」")
     if native_slots:
         for grade, slot in native_slots.items():
@@ -689,10 +761,19 @@ def load_frontend_data(payload, limits=(), rules=()):
                     raise ValueError(f"{code} 本土語固定節次與分組設定不一致")
 
     native_subject = subjects.get("本土語文")
+    common_native_sources = {
+        code for sources in native_band_sources.values() for code in sources}
+    distributed_native_sources = {
+        code for group in native_groups if group.get("arrangement") == "distributed"
+        for code in group.get("sources", [])}
+    native_external_sources = {
+        code for code in distributed_native_sources
+        if not native_subject
+        or native_subject["hours"][class_by_code[code]["grade"]] <= 0
+    } - common_native_sources
     if native_subject and native_lock_enabled:
         slots_by_grade = defaultdict(set)
-        selected_sources = {
-            code for sources in native_band_sources.values() for code in sources}
+        selected_sources = set(common_native_sources)
         native_group_sources = {
             code for group in native_groups for code in group.get("sources", [])}
         for item in classes:
@@ -731,9 +812,10 @@ def load_frontend_data(payload, limits=(), rules=()):
     policy_result = schedule_policy.validate_case(payload)
     teacher_caps = payload.get("tcap") or {}
     load = defaultdict(int)
-    minnan_group_sources = _minnan_group_sources(native_groups)
+    common_group_sources = _common_native_group_sources(native_groups)
     for (code, subject), teacher in assign.items():
-        if native_lock_enabled and subject == "本土語文" and code in minnan_group_sources:
+        if (native_lock_enabled and subject == "本土語文"
+                and (code in common_group_sources or code in native_external_sources)):
             continue
         grade = next(item["grade"] for item in classes if item["code"] == code)
         load[teacher] += subjects[subject]["hours"][grade]
@@ -770,6 +852,9 @@ def load_frontend_data(payload, limits=(), rules=()):
                           "sources": list(native_band_sources.get(grade, []))}
                          for grade, slot in sorted(native_slots.items())],
         "native_groups": native_groups, "native_lock_enabled": native_lock_enabled,
+        "native_arrangement": native_arrangement,
+        "native_external_sources": native_external_sources,
+        "native_pull_requirements": distributed_pull_intersections,
         "teacher_weekly_quota": teacher_weekly_quota,
         "teacher_weekly_load": dict(load),
         "weekly_cap_violations": weekly_cap_violations, "derived_notes": notes,
@@ -978,9 +1063,51 @@ def _load_data_v5(wb):
         "assistant": native_col("協同教師", 6), "group": native_col("分組名稱", 7),
         "sources": native_col("來源班級", 8), "students": native_col("學生人數", 9),
         "mode": native_col("上課方式", 10),
+        "arrangement": native_col("安排方式", 11),
+        "pull_subjects": native_col("可抽離科目", 12),
     }
-    for row_number, row in enumerate(
-            native_ws.iter_rows(min_row=2, values_only=True), start=2):
+    native_sheet_rows = list(enumerate(
+        native_ws.iter_rows(min_row=2, values_only=True), start=2))
+    grade_native_slots = defaultdict(set)
+    for _, row in native_sheet_rows:
+        if not row or not any(_text(value) for value in row):
+            continue
+        try:
+            scan_grade = _whole_number(row[native_idx["grade"]])
+            scan_period = _whole_number(row[native_idx["period"]])
+        except (TypeError, ValueError):
+            continue
+        scan_day = _text(row[native_idx["day"]])
+        if scan_grade in range(1, 7) and scan_day in DAYS and scan_period in PERIODS:
+            grade_native_slots[scan_grade].add((scan_day, scan_period))
+    arrangement_values = set()
+    for row_number, row in native_sheet_rows:
+        if not row or not any(_text(value) for value in row):
+            continue
+        raw_arrangement = _text(
+            row[native_idx["arrangement"]]
+            if len(row) > native_idx["arrangement"] else None)
+        if not raw_arrangement:
+            continue
+        arrangement = _native_arrangement(raw_arrangement, "__invalid__")
+        if arrangement == "__invalid__":
+            raise ValueError(
+                f"本土語分組第 {row_number} 列的安排方式不正確：{raw_arrangement}")
+        arrangement_values.add(arrangement)
+    if len(arrangement_values) > 1:
+        raise ValueError("本土語分組的安排方式不一致，請全表統一選擇")
+    native_arrangement = next(iter(arrangement_values), "common")
+    if native_arrangement == "common":
+        multiple_slot_grades = [
+            grade for grade, slots in grade_native_slots.items() if len(slots) > 1]
+        if multiple_slot_grades:
+            labels = "、".join(f"{grade}年級" for grade in multiple_slot_grades)
+            raise ValueError(
+                f"{labels}有多個本土語時段；請在「安排方式」明確選擇「各語別分開上」")
+    distributed_native = native_arrangement == "distributed"
+    distributed_native_sources = set()
+
+    for row_number, row in native_sheet_rows:
         if not row or not any(_text(value) for value in row):
             continue
         try:
@@ -992,11 +1119,13 @@ def _load_data_v5(wb):
         if grade not in range(1, 7) or day not in DAYS or period not in PERIODS:
             raise ValueError(
                 f"本土語分組第 {row_number} 列時段無效：{grade}年級 週{day} 第{period}節")
-        previous = band_seen and next((x for x in band_seen if x[0] == grade), None)
-        if previous and previous[1:] != (day, period):
-            raise ValueError(f"本土語分組同一年級出現不同時段：{grade}年級")
-        if not previous:
-            band_seen.add((grade, day, period))
+        arrangement = "distributed" if distributed_native else "common"
+        if arrangement == "common":
+            previous = band_seen and next((x for x in band_seen if x[0] == grade), None)
+            if previous and previous[1:] != (day, period):
+                raise ValueError(f"本土語分組同一年級出現不同時段：{grade}年級")
+            if not previous:
+                band_seen.add((grade, day, period))
         rid = room_key(row[native_idx["room"]] if len(row) > native_idx["room"] else None)
         if rid not in rooms:
             raise ValueError(f"本土語分組引用不存在的場地：{rid}")
@@ -1020,7 +1149,10 @@ def _load_data_v5(wb):
                 raise ValueError(f"{group_name}引用不存在的來源班級：{code}")
             if class_by_code[code]["grade"] != grade:
                 raise ValueError(f"{group_name}的來源班級 {code} 不屬於{grade}年級")
-            native_band_sources[grade].add(code)
+            if arrangement == "common":
+                native_band_sources[grade].add(code)
+            else:
+                distributed_native_sources.add(code)
         try:
             raw_students = row[native_idx["students"]] if len(row) > native_idx["students"] else None
             students = 0 if raw_students in (None, "") else _whole_number(raw_students)
@@ -1029,6 +1161,24 @@ def _load_data_v5(wb):
         if students < 0:
             raise ValueError(f"{group_name}的學生人數不可為負數")
         mode = _text(row[native_idx["mode"]] if len(row) > native_idx["mode"] else None) or ("直播共學" if "直播" in language else "實體")
+        pull_subjects = []
+        if distributed_native:
+            raw_pull_subjects = _list_values(
+                row[native_idx["pull_subjects"]]
+                if len(row) > native_idx["pull_subjects"] else None) or [
+                    subject for subject in ("國語文", "數學") if subject in subjects]
+            for raw_subject in raw_pull_subjects:
+                subject = _resolve_subject_name(raw_subject, subjects)
+                if subject not in subjects:
+                    raise ValueError(
+                        f"{group_name}引用不存在的原班可抽離科目：{raw_subject}")
+                if any(subjects[subject]["hours"][class_by_code[code]["grade"]] <= 0
+                       for code in sources):
+                    raise ValueError(f"{group_name}的來源班級沒有「{subject}」課程節數")
+                if subject not in pull_subjects:
+                    pull_subjects.append(subject)
+            if not pull_subjects:
+                raise ValueError(f"{group_name}尚未指定原班可抽離科目")
         if not teacher:
             raise ValueError(f"{group_name}尚未填寫授課教師")
         for name, label in ((teacher, "授課教師"), (assistant, "協同教師")):
@@ -1042,7 +1192,22 @@ def _load_data_v5(wb):
             teacher_limit.add(staff_slot)
         native_groups.append({"g": grade, "d": day, "p": period, "lang": language,
                               "grp": group_name, "sources": sources, "students": students,
-                              "mode": mode, "t": teacher, "room": rid, "assistant": assistant})
+                              "mode": mode, "arrangement": arrangement,
+                              "pull_subjects": pull_subjects,
+                              "t": teacher, "room": rid, "assistant": assistant})
+    native_pull_requirements = {}
+    for group in native_groups:
+        if group.get("arrangement") != "distributed":
+            continue
+        allowed = set(group.get("pull_subjects") or [])
+        for code in group.get("sources", []):
+            key = (code, group["d"], group["p"])
+            native_pull_requirements[key] = (
+                allowed if key not in native_pull_requirements
+                else native_pull_requirements[key] & allowed)
+            if not native_pull_requirements[key]:
+                raise ValueError(
+                    f"{code}在週{group['d']}第{group['p']}節的語言抽離群組沒有共同可抽離科目")
     for grade, day, period in band_seen:
         for code in sorted(native_band_sources[grade]):
             locks.append({"class": code, "day": day, "p": period,
@@ -1054,6 +1219,15 @@ def _load_data_v5(wb):
                           "sources": sorted(native_band_sources[grade])}
                          for grade, day, period in sorted(band_seen)]
     d["native_groups"] = native_groups
+    d["native_lock_enabled"] = bool(native_groups)
+    d["native_arrangement"] = native_arrangement
+    native_subject = subjects.get("本土語文")
+    d["native_external_sources"] = {
+        code for code in distributed_native_sources
+        if not native_subject
+        or native_subject["hours"][class_by_code[code]["grade"]] <= 0
+    } - {code for values in native_band_sources.values() for code in values}
+    d["native_pull_requirements"] = native_pull_requirements
     d["teacher_limit"], d["grade_limit"], d["class_limit"] = teacher_limit, set(), set()
 
     # 配課：v6 讀取合併工作表右側 I:K；v5 讀取獨立配課工作表。
@@ -1227,7 +1401,9 @@ def _load_data_v5(wb):
     load = defaultdict(int)
     minnan_group_sources = _minnan_group_sources(native_groups)
     for (code, subject), teacher in assign.items():
-        if native_groups and subject == "本土語文" and code in minnan_group_sources:
+        if (native_groups and subject == "本土語文"
+                and (code in minnan_group_sources
+                     or code in d.get("native_external_sources", set()))):
             continue
         load[teacher] += subjects[subject]["hours"][class_map[code]["grade"]]
     for group in native_groups:
@@ -1480,7 +1656,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         for code in _resource_sources(ov)
         for subject in _resource_pull_subjects(ov)
     }
-    minnan_group_sources = _minnan_group_sources(d.get("native_groups"))
+    common_native_group_sources = _common_native_group_sources(d.get("native_groups"))
     tasks = {}
     pool = defaultdict(list)  # 導師自排科目池：class -> [(subj, hours, teacher)]
     missing_courses = []
@@ -1491,9 +1667,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             h = info["hours"][g]
             if h == 0:
                 continue
+            if s == "本土語文" and code in d.get("native_external_sources", set()):
+                continue
             required_total += h
             native_lock = bool(native_enabled) and s == "本土語文" and (code, s) in locked_set
-            native_group_owned = native_lock and code in minnan_group_sources
+            native_group_owned = native_lock and code in common_native_group_sources
             t = "" if native_group_owned else (lock_teachers.get((code, s)) or assign.get((code, s)))
             mode = d.get("assignment_modes", {}).get((code, s))
             self_arrange = mode == "tutor" if mode else info["self_arrange"]
@@ -1564,6 +1742,20 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             vs = [v for (cc, s, dd, pp), v in x.items() if v is not None and cc == code and dd == day and pp == p]
             if vs:
                 m.Add(sum(vs) <= 1)
+
+    # 分散語言抽離：原班在抽離時段必須安排學校指定的可抽離科目。
+    for (code, day, period), subjects_allowed in d.get("native_pull_requirements", {}).items():
+        values = [
+            var(code, subject, day, period)
+            for subject in subjects_allowed
+            if var(code, subject, day, period) is not None
+        ]
+        if not values:
+            raise InfeasibleScheduleError(
+                f"{code}在週{day}第{period}節沒有可排入的語言抽離科目",
+                [{"rule": "H18", "message":
+                  f"請調整語言抽離群組的可抽離科目、原班配課或不排課時間：{'、'.join(sorted(subjects_allowed))}"}])
+        m.Add(sum(values) == 1)
 
     # H01 教師不衝堂
     teacher_slot = defaultdict(list)
@@ -1951,6 +2143,13 @@ def validate(d, sched, tasks, ov_sched=()):
         if len(set(grps)) > 1:
             slot = "早自修" if p == 0 else f"第{p}節"
             errs.append(f"H13違反(來源班級重複抽離)：{code} 週{day}{slot} {grps}")
+    for (code, day, period), allowed in d.get("native_pull_requirements", {}).items():
+        got = sched.get((code, day, period))
+        if not got or got[0] not in allowed:
+            actual = got[0] if got else "沒有原班課程"
+            errs.append(
+                f"H18違反(語言抽離科目)：{code} 週{day}第{period}節為{actual}，"
+                f"可抽離科目為{'、'.join(sorted(allowed))}")
     tslot, cslot, rslot, tday = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
     for (code, day, p), (s, t, room) in sched.items():
         g = grade_of[code]

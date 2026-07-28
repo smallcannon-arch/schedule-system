@@ -1,6 +1,7 @@
 import pytest
 
 import app
+import pytest
 import schedule_policy
 
 
@@ -191,6 +192,65 @@ def test_server_publish_accepts_resource_early_study_marker():
     snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
 
     assert snapshot["overlay"][0]["pull_subject"] == "早自修"
+
+
+def test_server_publish_accepts_distributed_native_language_as_external_course():
+    payload = complete_publish_payload()
+    payload["data"]["subjects"] = {
+        "領域課程": {
+            "hours": [23, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+        "本土語文": {
+            "hours": [0, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+    }
+    payload["data"]["assign"] = {"1甲": {"領域課程": "王導師"}}
+    payload["data"]["roster"]["客語教師"] = "教支人員"
+    payload["data"].update({
+        "nativeLockEnabled": True,
+        "nativeArrangement": "distributed",
+        "nativeBands": [],
+        "nativeGroups": [{
+            "g": 1, "d": "二", "p": 2, "lang": "客語", "grp": "一年級客語組",
+            "sources": ["1甲"], "students": 3, "t": "客語教師", "room": "R00",
+            "arrangement": "distributed", "pullSubjects": ["領域課程"],
+        }],
+    })
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+    assert snapshot["schedule_ready"] is True
+
+
+def test_server_publish_requires_original_native_teacher_when_class_hours_remain():
+    payload = complete_publish_payload()
+    payload["data"]["subjects"] = {
+        "領域課程": {
+            "hours": [22, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+        "本土語文": {
+            "hours": [1, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+    }
+    payload["data"]["assign"] = {"1甲": {"領域課程": "王導師"}}
+    payload["data"]["roster"]["客語教師"] = "教支人員"
+    payload["data"].update({
+        "nativeLockEnabled": True,
+        "nativeArrangement": "distributed",
+        "nativeBands": [],
+        "nativeGroups": [{
+            "g": 1, "d": "二", "p": 2, "lang": "客語", "grp": "一年級客語組",
+            "sources": ["1甲"], "students": 3, "t": "客語教師", "room": "R00",
+            "arrangement": "distributed", "pullSubjects": ["領域課程"],
+        }],
+    })
+
+    with pytest.raises(ValueError, match="本土語文.*未配教師|本土語文.*節數不符|本土語文.*排0"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
 
 
 def test_server_publish_allows_first_stage_tutor_pool_but_complete_mode_requires_it():
