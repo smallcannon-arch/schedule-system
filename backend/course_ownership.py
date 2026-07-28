@@ -22,6 +22,19 @@ def _arrangement(data, group):
     return "distributed" if value == "distributed" else "common"
 
 
+def _default_native_pull_subjects(data):
+    subjects = data.get("subjects") or {}
+    if isinstance(subjects, dict):
+        names = {str(name or "").strip() for name in subjects}
+    else:
+        names = {
+            str(item.get("name") or item.get("subject") or item.get("id") or "").strip()
+            for item in subjects
+            if isinstance(item, dict)
+        }
+    return [subject for subject in ("國語文", "數學") if subject in names]
+
+
 def native_pull_courses(data):
     """Return (class, subject) pairs that need variables for H18 constraints."""
     requirements = data.get("native_pull_requirements")
@@ -42,5 +55,7 @@ def native_pull_courses(data):
         sources = _values(group.get("sources")) or _values(
             group.get("code") or group.get("class"))
         subjects = _values(group.get("pullSubjects") or group.get("pull_subjects"))
+        if not subjects:
+            subjects = _default_native_pull_subjects(data)
         result.update((code, subject) for code in sources for subject in subjects)
     return result

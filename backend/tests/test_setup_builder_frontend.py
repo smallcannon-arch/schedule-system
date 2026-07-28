@@ -930,6 +930,7 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert 'id="nativeDistributedMode"' in html
     assert "各語別分開上" in html
     assert "setNativeArrangement" in html
+    assert html.count("group.pullSubjects=nativePullSubjects(group)") >= 2
     assert "setNativeLockEnabled" in html
     assert "s==='本土語文'" in html
     assert "本土語文必須設定且只能有一個固定節次" in script

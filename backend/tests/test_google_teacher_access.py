@@ -5,6 +5,7 @@ import pytest
 
 import app
 import auth_service
+import course_ownership
 import schedule_store
 from schedule_store import (
     FirestoreScheduleStore,
@@ -288,6 +289,34 @@ def test_distributed_native_pull_subject_is_engine_owned_across_teacher_workflow
         teacher_portal.validate_teacher_placements(
             native_state, principal("王導師", "homeroom_teacher", ("3甲",)),
             "3甲", {"一|2": "綜合活動"})
+
+
+def test_distributed_native_pull_defaults_are_engine_owned_for_legacy_frontend_data():
+    native_state = state()
+    data = native_state["snapshot"]["data"]
+    data["subjects"]["數學"] = {
+        "hours": [0, 0, 1, 0, 0, 0], "room": "R00", "banned": [], "self": True,
+    }
+    data["assign"]["3甲"]["數學"] = "王導師"
+    data["nativeLockEnabled"] = True
+    data["nativeArrangement"] = "distributed"
+    data["nativeGroups"] = [{
+        "g": 3, "d": "三", "p": 4, "lang": "客語",
+        "grp": "三年級客語組", "sources": ["3甲"],
+        "arrangement": "distributed", "t": "陳科任", "room": "R00",
+    }]
+
+    assert course_ownership.native_pull_courses(data) == {
+        ("3甲", "國語文"), ("3甲", "數學"),
+    }
+    pool = teacher_portal._allowed_pool(data, data["classes"][0])
+    assert "國語文" not in pool
+    assert "數學" not in pool
+
+    with pytest.raises(teacher_portal.TeacherChangeError, match="語言抽離綁課"):
+        teacher_portal.validate_teacher_placements(
+            native_state, principal("王導師", "homeroom_teacher", ("3甲",)),
+            "3甲", {"一|2": "國語文"})
 
 
 def test_google_account_is_bound_on_first_authorized_login(monkeypatch):

@@ -64,11 +64,19 @@ const common={
   nativeGroups:[{arrangement:'common',sources:['3甲'],pullSubjects:['綜合活動']}],
   resGroups:[],subjects:{'綜合活動':{}}
 };
+const legacyDistributed={
+  nativeArrangement:'distributed',
+  nativeGroups:[{arrangement:'distributed',sources:['3甲']}],
+  resGroups:[],subjects:{'國語文':{},'數學':{},'綜合活動':{}}
+};
 process.stdout.write(JSON.stringify({
   distributedNative:workflow.isNativePullBound(distributed,'3甲','綜合活動'),
   distributedEngine:workflow.isEnginePullBound(distributed,'3甲','綜合活動'),
   otherClass:workflow.isEnginePullBound(distributed,'3乙','綜合活動'),
-  common:workflow.isNativePullBound(common,'3甲','綜合活動')
+  common:workflow.isNativePullBound(common,'3甲','綜合活動'),
+  legacyLanguage:workflow.isNativePullBound(legacyDistributed,'3甲','國語文'),
+  legacyMath:workflow.isNativePullBound(legacyDistributed,'3甲','數學'),
+  legacyCustom:workflow.isNativePullBound(legacyDistributed,'3甲','綜合活動')
 }));
 """)
 
@@ -77,6 +85,9 @@ process.stdout.write(JSON.stringify({
         "distributedEngine": True,
         "otherClass": False,
         "common": False,
+        "legacyLanguage": True,
+        "legacyMath": True,
+        "legacyCustom": False,
     }
 
 

@@ -1640,6 +1640,8 @@ function nativeRows(){
     }else{
       group.d=DAYS.includes(group.d)?group.d:'二';group.p=PS.includes(+group.p)?+group.p:1;
       group.arrangement='distributed';
+      if(!nativeSourceCodes(group.pullSubjects||group.pull_subjects).length)
+        group.pullSubjects=nativePullSubjects(group);
     }
   });
   DATA.nativeSchemaVersion=4;
@@ -1791,7 +1793,11 @@ function setNativeArrangement(mode){
       const band=byGrade.get(+group.g);group.d=band.d;group.p=+band.p;group.arrangement='common';
     }
   }else{
-    for(const group of previous)group.arrangement='distributed';
+    for(const group of previous){
+      group.arrangement='distributed';
+      if(!nativeSourceCodes(group.pullSubjects||group.pull_subjects).length)
+        group.pullSubjects=nativePullSubjects(group);
+    }
   }
   DATA.nativeGroups=previous;DATA.nativeArrangement=mode;DATA.nativeSchemaVersion=4;
   syncNativeHardLocks(previous);invalidateSchedule();renderAll();
