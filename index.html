@@ -705,10 +705,11 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <details class="step-help">
       <summary>操作說明</summary>
       <div class="step-help-body"><ol>
-        <li><b>建立共同課程：</b>選擇年級、來源班級與固定節次；預設勾選該年級全部班級，也可只選部分班級。</li>
-        <li><b>建立平行群組：</b>同一批來源班級可以拆成 A、B 等多組，例如三班學生重新分成兩個閩南語群組。</li>
+        <li><b>選擇安排方式：</b>目前同一案件統一使用「同年級一起上」或「各語別分開上」。</li>
+        <li><b>同年級一起上：</b>設定年級、來源班級與共同節次，再建立同時上課的平行群組。</li>
+        <li><b>各語別分開上：</b>逐組設定時段、來源班級、教師與原班可抽離科目。</li>
         <li><b>重新排課：</b>任何異動都會使舊課表失效，請重新執行 CP-SAT 並確認硬規則為零違反。</li>
-      </ol><div class="step-help-note">原班課表每班只鎖一節「本土語文（分組上課）」；每個平行群組分別檢查教師與教室衝突。</div></div>
+      </ol><div class="step-help-note">共同模式會鎖定原班本土語文；分開模式保留原班課程，並把抽離時段限制在勾選科目。兩種模式都會檢查教師與教室衝突。</div></div>
     </details>
     <div class="panel native-common-panel" id="nativeCommonPanel">
       <h2>本土語共同課程</h2>
@@ -1726,7 +1727,7 @@ function renderNative(){
   const commonPanel=document.getElementById('nativeCommonPanel');if(commonPanel)commonPanel.hidden=isDistributed;
   const distributedAdd=document.getElementById('nativeDistributedAdd');if(distributedAdd)distributedAdd.hidden=!isDistributed;
   const note=document.getElementById('nativeArrangementNote');
-  if(note)note.textContent=isDistributed?'每組自選時段並限定可抽離科目；原班本土語文節數大於 0 時仍照常排課。':'同年級固定在同一節，班級課表鎖一節本土語文。';
+  if(note)note.textContent=isDistributed?'全案使用分開上：每組自選時段並限定可抽離科目；原班本土語文仍照常排課。':'全案使用共同模式：同年級固定在同一節，班級課表鎖一節本土語文。';
   const heading=document.getElementById('nativeGroupHeading'),description=document.getElementById('nativeGroupDescription');
   if(heading)heading.textContent=isDistributed?'語言抽離群組':'平行上課群組';
   if(description)description.textContent=isDistributed?'直接設定各組時段、來源班級與教師。':'群組預設使用共同課程的全部來源班級；只有少數學生來自部分班級時，才需要展開更多設定調整。';

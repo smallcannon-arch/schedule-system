@@ -916,7 +916,10 @@ def test_native_language_lock_supports_original_class_and_optional_extraction_gr
     assert "符合可授語別" in html
     assert "依班級建立閩南語組" not in html
     assert "語言分組鎖定" in html
-    assert "同一批來源班級可以拆成 A、B 等多組" in html
+    assert "目前同一案件統一使用" in html
+    assert "同年級一起上" in html
+    assert "各語別分開上" in html
+    assert "原班可抽離科目" in html
     assert 'return subject === "本土語文" ? "閩南語（原班）"' in script
     assert "閩南語|臺語|台語" in html
     assert "group.t === name || group.assistant === name" in script
