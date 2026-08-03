@@ -105,6 +105,7 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .formal-grid textarea{min-height:76px;resize:vertical}.checkline{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important}.checkline input{width:18px;height:18px}
 .formal-mode-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;border:0}.formal-mode-picker legend{grid-column:1/-1;margin-bottom:7px;color:var(--ink);font-size:15px;font-weight:900}.formal-mode-option{display:flex!important;align-items:flex-start;gap:10px;padding:13px;border:2px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}.formal-mode-option:has(input:checked){border-color:var(--mint-d);background:#f2fbf7}.formal-mode-option input{width:19px;height:19px;flex:0 0 auto;margin:2px 0 0}.formal-mode-option span{display:grid;gap:4px}.formal-mode-option b{font-size:15px}.formal-mode-option small{color:var(--muted);font-size:12px;line-height:1.6}.formal-mode-summary{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7}.formal-mode-summary b{white-space:nowrap}.formal-mode-summary span{color:var(--muted);font-size:13px}
 .solve-diagnosis{margin-top:16px;border:1px solid #e4c8c4;border-left:5px solid #b64c43;background:#fffafa;padding:18px 20px;text-align:left}.solve-diagnosis-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.solve-diagnosis-head h3{margin:0 0 4px;color:#87372f;font-size:18px}.solve-diagnosis-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}.solve-diagnosis-source{flex:0 0 auto;padding:4px 8px;border:1px solid #d9c6c2;background:#fff;color:#745b56;font-size:11px;font-weight:900}.solve-diagnosis-list{display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid #eadbd8}.solve-diagnosis-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid #eadbd8}.solve-diagnosis-index{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f3ded9;color:#87372f;font-size:13px;font-weight:900}.solve-diagnosis-copy{display:grid;gap:4px}.solve-diagnosis-title{display:flex;align-items:center;gap:8px;font-weight:900;color:var(--ink)}.solve-diagnosis-tag{padding:2px 6px;background:#f2e9d6;color:#795d20;font-size:10px;font-weight:900}.solve-diagnosis-tag.confirmed{background:#f3ded9;color:#87372f}.solve-diagnosis-copy p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}.solve-diagnosis-action{color:#74534d!important}.solve-diagnosis-foot{margin-top:12px;color:#685f5d;font-size:12.5px;line-height:1.55}
+.solve-quality{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);text-align:left}.solve-quality-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.solve-quality-head h3{margin:0 0 4px;font-size:18px}.solve-quality-head p{margin:0;color:var(--muted);font-size:13px}.solve-quality-badge{padding:5px 9px;background:#edf8f4;color:var(--mint-d);font-size:12px;font-weight:900;white-space:nowrap}.solve-quality-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.solve-quality-metrics span{padding:10px 12px;border-right:1px solid var(--line);color:var(--muted);font-size:12px}.solve-quality-metrics span:last-child{border-right:0}.solve-quality-metrics b{display:block;margin-bottom:2px;color:var(--ink);font-size:18px}.solve-quality details{margin-top:10px}.solve-quality summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.solve-quality-table-wrap{margin-top:9px;overflow-x:auto}.solve-quality-table{width:100%;min-width:760px;border-collapse:collapse;font-size:13px}.solve-quality-table th,.solve-quality-table td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.solve-quality-table th{color:var(--muted);font-size:12px}.solve-quality-status{font-weight:900;color:var(--mint-d)}.solve-quality-status.missed{color:#9a6a12}.solve-quality-detail{max-width:520px;color:var(--muted);line-height:1.55}
 .tutor-mode-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:12px 14px;border-left:4px solid var(--mint-d);background:#f2fbf7}.tutor-mode-notice:empty{display:none}.tutor-mode-notice.warn{border-color:var(--lemon-d);background:#fff9e8}.tutor-mode-notice span{color:var(--muted);font-size:13px;line-height:1.6}.tutor-mode-notice b{color:var(--ink)}
 .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:18px auto;max-width:680px}
 .rcell{border-radius:15px;padding:16px 8px}
@@ -307,7 +308,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .logo{margin-bottom:8px;padding:10px 12px}.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
-  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head{display:grid}.solve-diagnosis-source{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}
+  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head,.solve-quality-head{display:grid}.solve-diagnosis-source,.solve-quality-badge{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}.solve-quality-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.solve-quality-metrics span:nth-child(2){border-right:0}.solve-quality-metrics span:nth-child(-n+2){border-bottom:1px solid var(--line)}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}.onboarding-checklist-body{grid-template-columns:repeat(2,minmax(0,1fr))}.onboarding-step:nth-child(4n){border-right:1px solid var(--line)}.onboarding-step:nth-child(2n){border-right:0}.readiness-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.readiness-summary>div:nth-child(2){border-right:0}.readiness-summary>div:nth-child(-n+2){border-bottom:1px solid var(--line)}.readiness-item{grid-template-columns:62px minmax(0,1fr)}.readiness-item .btn{grid-column:2;justify-self:start}.readiness-filters{overflow-x:auto;width:100%}
   .policy-grid,.policy-context-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
@@ -367,7 +368,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.30</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.31</b></span></div>
   </div>
 </section>
 
@@ -905,6 +906,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <div class="wide"><button class="btn pink" id="formalBtn" type="button" onclick="runFormal()">執行第一階段排課並下載</button></div>
     </div>
     <div id="formalStat" style="margin-top:14px"></div>
+    <section class="solve-quality" id="formalQuality" aria-live="polite" hidden></section>
     <section class="solve-diagnosis" id="formalDiagnosis" aria-live="polite" hidden></section>
   </div>
 </section>
@@ -1191,7 +1193,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.30</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.31</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -2883,6 +2885,48 @@ function formalMessage(kind,title,detail=''){
   const box=document.getElementById('formalStat');
   box.innerHTML=`<span class="chip ${kind}">${esc(title)}</span>${detail?`<div class="sub" style="margin-top:8px;margin-bottom:0">${esc(detail)}</div>`:''}`;
 }
+function clearFormalQuality(){
+  const box=document.getElementById('formalQuality');
+  if(box){box.hidden=true;box.innerHTML=''}
+}
+function qualityDetailText(detail={}){
+  const parts=[];
+  if(detail.class)parts.push(detail.class);
+  if(detail.subject)parts.push(detail.subject);
+  if(detail.teacher)parts.push(detail.teacher);
+  if(detail.day)parts.push(`週${detail.day}${detail.period?`第${detail.period}節`:''}`);
+  if(Array.isArray(detail.days))parts.push(detail.days.map(day=>`週${day}`).join('／'));
+  if(detail.from_period)parts.push(`第${detail.from_period}節 ${detail.from_room||''} → 第${detail.to_period}節 ${detail.to_room||''}`);
+  if(Number(detail.units)>1)parts.push(`${detail.units} 單位`);
+  return parts.filter(Boolean).join('｜');
+}
+function renderFormalQuality(meta={}){
+  const box=document.getElementById('formalQuality');
+  const report=Array.isArray(meta.quality_report)?meta.quality_report:[];
+  if(!box||!report.length)return clearFormalQuality();
+  const enabled=report.filter(item=>item.enabled),violationTotal=Number(meta.quality_violation_total||0);
+  const penaltyTotal=Number(meta.quality_penalty_total??meta.penalty??0);
+  const optimal=meta.status==='OPTIMAL',gap=Math.max(0,Number(meta.relative_gap||0));
+  const rows=report.map(item=>{
+    const details=Array.isArray(item.details)?item.details:[];
+    const detailText=details.slice(0,4).map(qualityDetailText).filter(Boolean).join('；');
+    const more=details.length>4||item.details_truncated?`；另有 ${Math.max(1,details.length-4)} 筆`:'';
+    const status=!item.enabled?'未啟用':item.violations?'部分未達成':'達成';
+    return `<tr>
+      <td><b>${esc(item.rule_id||'')}</b></td><td>${esc(item.label||'')}</td>
+      <td><span class="solve-quality-status ${item.violations?'missed':''}">${esc(status)}</span></td>
+      <td>${Number(item.weight||0)}</td><td>${Number(item.violations||0)}</td><td>${Number(item.weighted_penalty||0)}</td>
+      <td class="solve-quality-detail">${esc((detailText+more).replace(/^；/,''))||'—'}</td></tr>`;
+  }).join('');
+  box.innerHTML=`
+    <div class="solve-quality-head"><div><h3>排課品質</h3><p>${violationTotal?'部分偏好未完全達成，可展開查看明細。':'本次已達成所有啟用的軟規則偏好。'}</p></div><span class="solve-quality-badge">硬規則檢核通過</span></div>
+    <div class="solve-quality-metrics">
+      <span><b>${enabled.length}</b>啟用偏好</span><span><b>${violationTotal}</b>未達成單位</span>
+      <span><b>${penaltyTotal}</b>加權值</span><span><b>${optimal?'最佳':(gap*100).toFixed(1)+'%'}</b>${optimal?'已證明最佳':'與最佳界差距'}</span>
+    </div>
+    <details><summary>查看逐條偏好結果</summary><div class="solve-quality-table-wrap"><table class="solve-quality-table"><thead><tr><th>規則</th><th>偏好</th><th>狀態</th><th>權重</th><th>未達成</th><th>加權值</th><th>明細</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  box.hidden=false;
+}
 const FORMAL_DIAG_VIEWS=new Set(['build','alloc','native','res','lim','rules']);
 function clearFormalDiagnosis(){
   const box=document.getElementById('formalDiagnosis');
@@ -2927,6 +2971,7 @@ function formalRunModeChanged(){
 async function runFormal(){
   const btn=document.getElementById('formalBtn');
   clearFormalDiagnosis();
+  clearFormalQuality();
   const setup=ScheduleSetup.validate();
   if(setup.hard.length)return formalMessage('bad','排課資料尚未完整',setup.hard.slice(0,4).join('；'));
   const resourceIssues=resourceValidationIssues();
@@ -2976,6 +3021,7 @@ async function runFormal(){
     OVL=(result.overlay||[]).map(row=>({id:row.group_id||'',grp:row.group,code:row.code,subj:row.subject,pullSubj:row.pull_subject||row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
     tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};SCHEDULE_READY=true;renderAll();saveLS();
     clearFormalDiagnosis();
+    renderFormalQuality(result.meta||{});
     formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
       completeness==='complete'?'正式課表已下載':'部分課表已下載',
       `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；自訂規則問題 ${compliance} 項`+
@@ -3634,7 +3680,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.30');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.31');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';

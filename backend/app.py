@@ -72,7 +72,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.30",
+    title="排課引擎 API", version="1.31",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -702,6 +702,23 @@ def _solve_loaded_data(schedule_data, time_limit, use_openai=False, ai_goal="",
     return output, meta, ai_status, schedule_rows, overlay_rows
 
 
+PUBLIC_SOLVE_META_KEYS = (
+    "status", "penalty", "best_bound", "relative_gap", "wall", "conflicts",
+    "branches", "required_total", "scheduled_total", "remaining_total",
+    "pool_total", "missing_total", "diagnostic_shortfall_total",
+    "missing_course_count", "tutor_pending_course_count",
+    "diagnostic_shortfall_course_count", "unfinished_course_count",
+    "missing_courses", "incomplete_totals", "completion",
+    "quality_report", "quality_violation_total", "quality_penalty_total",
+    "weekly_cap_violations", "compliance_blocking_issues", "compliance_warnings",
+    "policy", "auto_schedule_tutor",
+)
+
+
+def _public_solve_meta(meta):
+    return {key: meta.get(key) for key in PUBLIC_SOLVE_META_KEYS}
+
+
 def _run_solver(data, time_limit, use_openai=False, ai_goal="", auto_schedule_tutor=False):
     with tempfile.TemporaryDirectory() as td:
         src = os.path.join(td, "in.xlsx")
@@ -1082,6 +1099,9 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
                 "scheduled_total": meta.get("scheduled_total", 0),
                 "missing_total": meta.get("missing_total", 0),
                 "tutor_pool": meta.get("pool_total", 0),
+                "missing_courses": meta.get("missing_courses", []),
+                "incomplete_totals": meta.get("incomplete_totals", {}),
+                "quality_report": meta.get("quality_report", []),
                 "weekly_cap_issues": meta.get("weekly_cap_violations", []),
                 "compliance_issues": compliance_issues,
                 "compliance_warnings": meta.get("compliance_warnings", []),
@@ -1099,12 +1119,7 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
                    "X-Compliance-Issues": str(len(compliance_issues)),
                    "X-OpenAI-Status": ai_status,
                    "X-OpenAI-Model": OPENAI_MODEL if request.use_openai else "none"}
-        public_meta = {key: meta.get(key) for key in (
-            "status", "penalty", "best_bound", "relative_gap", "wall", "conflicts",
-            "branches", "required_total", "scheduled_total", "remaining_total",
-            "pool_total", "missing_total", "completion", "weekly_cap_violations",
-            "compliance_blocking_issues", "compliance_warnings", "policy",
-            "auto_schedule_tutor")}
+        public_meta = _public_solve_meta(meta)
         _record_usage(solve_principal, "solve_success")
         return JSONResponse(content={
             "filename": filename,
@@ -1172,6 +1187,9 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
                 "scheduled_total": meta.get("scheduled_total", 0),
                 "missing_total": meta.get("missing_total", 0),
                 "tutor_pool": meta.get("pool_total", 0),
+                "missing_courses": meta.get("missing_courses", []),
+                "incomplete_totals": meta.get("incomplete_totals", {}),
+                "quality_report": meta.get("quality_report", []),
                 "weekly_cap_issues": meta.get("weekly_cap_violations", []),
                 "compliance_issues": compliance_issues,
                 "compliance_warnings": meta.get("compliance_warnings", []),
@@ -1190,12 +1208,7 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
                    "X-OpenAI-Status": ai_status,
                    "X-OpenAI-Model": OPENAI_MODEL if use_openai else "none"}
         if return_json:
-            public_meta = {key: meta.get(key) for key in (
-                "status", "penalty", "best_bound", "relative_gap", "wall", "conflicts",
-                "branches", "required_total", "scheduled_total", "remaining_total",
-                "pool_total", "missing_total", "completion", "weekly_cap_violations",
-                "compliance_blocking_issues", "compliance_warnings", "policy",
-                "auto_schedule_tutor")}
+            public_meta = _public_solve_meta(meta)
             _record_usage(solve_principal, "solve_success")
             return JSONResponse(content={
                 "filename": filename,

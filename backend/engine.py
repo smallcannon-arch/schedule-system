@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-排課引擎 v1.6（CP-SAT）
+排課引擎 v1.7（CP-SAT）
 用法：python 排課引擎.py 配課表範本.xlsx 課表輸出.xlsx
 需求：Python 3.10+、openpyxl、ortools
 v1.1：H13 資源班overlay、S05 行政空堂集中、S07 跨場地移動、科目欄動態讀取
@@ -10,6 +10,7 @@ v1.3：兩階段排課——「導師自排」科目留空位並輸出工作單�
 v1.4：新增母版 v5 九分頁格式、強化獨立檢核與輸入資料驗證
 v1.5：新增 OpenAI 軟規則規劃介面，硬規則與最終驗證仍由 CP-SAT 負責
 v1.6：新增完整度指標、正式模式自動排導師課、週節數上限與求解品質資訊
+v1.7：新增逐條軟規則品質報告與統一的待完成課程原因格式
 """
 import os
 import re
@@ -27,6 +28,17 @@ MORNING = {1, 2, 3, 4}
 PAIR_START = [(1, 2), (2, 3), (3, 4), (5, 6), (6, 7)]  # 連堂不跨午休
 V5_REQUIRED = {"班級", "教師", "場地", "科目節數", "配課", "年段時段", "本土語分組"}
 V6_REQUIRED = {"班級", "教師與配課", "場地", "科目節數", "年段時段", "本土語分組"}
+SOFT_RULE_LABELS = {
+    "S01": "國語文優先排上午",
+    "S02": "數學優先排上午",
+    "S03": "體育避免連續兩天",
+    "S04": "自然科學避免連續兩天",
+    "S05": "行政教師空堂集中",
+    "S06": "盡量保留偏好課表",
+    "S07": "減少教師相鄰節次跨場地",
+    "S08": "科任每日負荷以五節內為佳",
+    "S09": "導師每日負荷以四節內為佳",
+}
 
 
 class InfeasibleScheduleError(RuntimeError):
@@ -1725,6 +1737,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
                     t = t or c.get("tutor") or ""
                 elif not bind:
                     pool[code].append((s, h, t or ""))
+                    missing_courses.append({
+                        "class": code, "subject": s, "hours": h,
+                        "required": h, "scheduled": 0,
+                        "reason_code": "tutor_pending", "reason": "導師待排",
+                    })
                     continue
                 if bind:
                     reasons = []
@@ -1738,8 +1755,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
                     warn.append(f"引擎接手導師科目：{code} {s}（{reason}）")
             if not t and (code, s) not in locked_set:
                 warn.append(f"未配教師，未排：{code} {s} {h}節（H12）")
-                missing_courses.append({"class": code, "subject": s, "hours": h,
-                                        "reason": "未配教師"})
+                missing_courses.append({
+                    "class": code, "subject": s, "hours": h,
+                    "required": h, "scheduled": 0,
+                    "reason_code": "missing_teacher", "reason": "未配教師",
+                })
                 continue
             if not t and not native_group_owned:
                 warn.append(f"鎖定課未配教師，仍依鎖定排入：{code} {s}（H10>H12，請補配）")
@@ -1979,17 +1999,27 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
 
     # ---------------- 軟規則 ----------------
     pen = []
+    soft_terms = defaultdict(list)
     R = d["rules"]
 
     def w(rid, default=0):
         return R.get(rid, {}).get("w", default) if R.get(rid, {}).get("on") else 0
+
+    def add_soft_term(rid, expression, detail):
+        weight = w(rid)
+        if not weight:
+            return
+        pen.append(weight * expression)
+        soft_terms[rid].append((expression, detail))
 
     for (code, s), tk in tasks.items():
         rid = "S01" if s == "國語文" else "S02" if s == "數學" else None
         if rid and w(rid):
             for day, p, v in active(code, s):
                 if p not in MORNING:
-                    pen.append(w(rid) * v)
+                    add_soft_term(rid, v, {
+                        "class": code, "subject": s, "day": day, "period": p,
+                    })
 
     for (code, s), tk in tasks.items():
         rid = "S03" if s == "體育" else "S04" if s == "自然科學" else None
@@ -2005,7 +2035,9 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
                 if d1 in db and d2 in db:
                     both = m.NewBoolVar(f"cc_{code}_{s}_{d1}")
                     m.AddMinEquality(both, [db[d1], db[d2]])
-                    pen.append(w(rid) * both)
+                    add_soft_term(rid, both, {
+                        "class": code, "subject": s, "days": [d1, d2],
+                    })
 
     # S05 行政教師空堂集中
     if w("S05"):
@@ -2029,7 +2061,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             minb = -(-admin_load[t] // 4)
             ex = m.NewIntVar(0, 10, f"exb_{t}")
             m.Add(ex >= sum(bs) - minb)
-            pen.append(w("S05") * ex)
+            add_soft_term("S05", ex, {"teacher": t, "preferred_blocks": minb})
 
     # S07 減少相鄰節次跨場地移動（聚合式：教師×時段×場地型別；R00 間不計）
     if w("S07"):
@@ -2062,7 +2094,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
                             if b1 is not None and b2 is not None:
                                 mv = m.NewBoolVar(f"mv_{t}_{day}{p1}_{r1}{r2}")
                                 m.Add(mv >= b1 + b2 - 1)
-                                pen.append(w("S07") * mv)
+                                add_soft_term("S07", mv, {
+                                    "teacher": t, "day": day,
+                                    "from_period": p1, "to_period": p2,
+                                    "from_room": r1, "to_room": r2,
+                                })
 
     # S08/S09 每日負荷；固定的本土語授課與協同節數也納入計算。
     soft_caps = {"科任": 5, "導師": 4, "組長": 4, "主任": 4,
@@ -2088,13 +2124,18 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         if w(rid) and soft < 7 and len(vs) + fixed > soft:
             over = m.NewIntVar(0, 7, f"ov_{t}_{day}")
             m.Add(over >= sum(vs) + fixed - soft)
-            pen.append(w(rid) * over)
+            add_soft_term(rid, over, {
+                "teacher": t, "day": day, "preferred_daily_cap": soft,
+            })
 
     # S06 偏好（保留去年課表）
     for pf in d["prefs"]:
         v = var(pf["class"], pf["subj"], pf["day"], pf["p"])
         if v is not None and w("S06"):
-            pen.append(w("S06") * (1 - v))
+            add_soft_term("S06", 1 - v, {
+                "class": pf["class"], "subject": pf["subj"],
+                "day": pf["day"], "period": pf["p"],
+            })
 
     m.Minimize(sum(pen))
     solver = cp_model.CpSolver()
@@ -2140,13 +2181,40 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         for code in _resource_sources(ov):
             ov_sched.append((ov.get("id") or f"resource-{i + 1}", ov["grp"], code,
                              ov["subj"], "早自修", ov["t"], ov["day"], 0))
-    pool_total = sum(hours for rows in pool.values() for _, hours, _ in rows)
-    missing_total = sum(item["hours"] for item in missing_courses)
+    incomplete_totals = defaultdict(int)
+    incomplete_counts = defaultdict(int)
+    for item in missing_courses:
+        reason_code = item.get("reason_code", "missing_teacher")
+        incomplete_totals[reason_code] += int(item.get("hours", 0))
+        incomplete_counts[reason_code] += 1
+    pool_total = incomplete_totals["tutor_pending"]
+    missing_total = incomplete_totals["missing_teacher"]
+    diagnostic_shortfall_total = incomplete_totals["diagnostic_shortfall"]
     remaining_total = max(0, required_total - len(sched))
     objective = solver.ObjectiveValue()
     bound = solver.BestObjectiveBound()
     gap = 0.0 if objective == bound else abs(objective - bound) / max(1.0, abs(objective))
     completion = "complete" if remaining_total == 0 else "partial"
+    quality_report = []
+    for rid, label in SOFT_RULE_LABELS.items():
+        rule = R.get(rid, {})
+        weight = int(rule.get("w", 0)) if rule.get("on") else 0
+        details = []
+        violations = 0
+        for expression, detail in soft_terms.get(rid, []):
+            units = int(solver.Value(expression))
+            if units <= 0:
+                continue
+            violations += units
+            details.append({**detail, "units": units})
+        quality_report.append({
+            "rule_id": rid, "label": label, "enabled": bool(weight),
+            "weight": weight, "violations": violations,
+            "weighted_penalty": weight * violations,
+            "details": details[:100], "details_truncated": len(details) > 100,
+        })
+    quality_violation_total = sum(item["violations"] for item in quality_report)
+    quality_penalty_total = sum(item["weighted_penalty"] for item in quality_report)
     meta = {
         "status": solver.StatusName(status), "penalty": objective,
         "best_bound": bound, "relative_gap": round(gap, 6),
@@ -2154,7 +2222,17 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         "branches": solver.NumBranches(), "required_total": required_total,
         "scheduled_total": len(sched), "remaining_total": remaining_total,
         "pool_total": pool_total, "missing_total": missing_total,
-        "missing_course_count": len(missing_courses), "completion": completion,
+        "diagnostic_shortfall_total": diagnostic_shortfall_total,
+        "missing_course_count": incomplete_counts["missing_teacher"],
+        "tutor_pending_course_count": incomplete_counts["tutor_pending"],
+        "diagnostic_shortfall_course_count": incomplete_counts["diagnostic_shortfall"],
+        "unfinished_course_count": len(missing_courses),
+        "missing_courses": list(missing_courses),
+        "incomplete_totals": dict(incomplete_totals),
+        "completion": completion,
+        "quality_report": quality_report,
+        "quality_violation_total": quality_violation_total,
+        "quality_penalty_total": quality_penalty_total,
         "weekly_cap_violations": list(d.get("weekly_cap_violations", [])),
         "policy": d.get("policy_meta") or d.get("policy") or {},
         "compliance_blocking_issues": list(d.get("compliance_blocking_issues", [])),
@@ -2299,6 +2377,74 @@ def write_output(path, d, sched, tasks, warn, meta, errs, ov_sched=()):
     for i, t in enumerate(lines, 1):
         ws.cell(i, 1, excel_safe(t)).font = Font(name=F, size=11, bold=True)
     ws.column_dimensions["A"].width = 80
+
+    quality_ws = wb.create_sheet("排課品質")
+    quality_headers = ["規則", "偏好", "狀態", "權重", "未達成單位", "加權值", "明細"]
+    for column, value in enumerate(quality_headers, 1):
+        cell = quality_ws.cell(1, column, value)
+        cell.font = HDR; cell.fill = FILL; cell.alignment = CTR; cell.border = THIN
+
+    def quality_detail_text(detail):
+        parts = []
+        if detail.get("class"):
+            parts.append(str(detail["class"]))
+        if detail.get("subject"):
+            parts.append(str(detail["subject"]))
+        if detail.get("teacher"):
+            parts.append(str(detail["teacher"]))
+        if detail.get("day"):
+            period = detail.get("period")
+            parts.append(f"週{detail['day']}" + (f"第{period}節" if period else ""))
+        if detail.get("days"):
+            parts.append("／".join(f"週{day}" for day in detail["days"]))
+        if detail.get("from_period"):
+            parts.append(
+                f"第{detail['from_period']}節 {detail.get('from_room', '')} → "
+                f"第{detail.get('to_period')}節 {detail.get('to_room', '')}")
+        units = int(detail.get("units", 1))
+        if units > 1:
+            parts.append(f"{units} 單位")
+        return "｜".join(part for part in parts if part)
+
+    for row, item in enumerate(meta.get("quality_report", []), 2):
+        details = "；".join(
+            text for text in (quality_detail_text(detail) for detail in item.get("details", []))
+            if text)
+        if item.get("details_truncated"):
+            details += "；其餘明細已省略"
+        values = [
+            item.get("rule_id", ""), item.get("label", ""),
+            "未啟用" if not item.get("enabled") else (
+                "達成" if not item.get("violations") else "部分未達成"),
+            item.get("weight", 0), item.get("violations", 0),
+            item.get("weighted_penalty", 0), details,
+        ]
+        for column, value in enumerate(values, 1):
+            cell = quality_ws.cell(row, column, excel_safe(value))
+            cell.font = Font(name=F, size=10); cell.border = THIN
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+    for column, width in zip("ABCDEFG", [10, 32, 14, 9, 14, 11, 70]):
+        quality_ws.column_dimensions[column].width = width
+    quality_ws.freeze_panes = "A2"
+
+    if meta.get("missing_courses"):
+        pending_ws = wb.create_sheet("待完成課程")
+        pending_headers = ["班級", "科目", "應排節數", "已排節數", "待完成節數", "原因"]
+        for column, value in enumerate(pending_headers, 1):
+            cell = pending_ws.cell(1, column, value)
+            cell.font = HDR; cell.fill = FILL; cell.alignment = CTR; cell.border = THIN
+        for row, item in enumerate(meta["missing_courses"], 2):
+            values = [
+                item.get("class", ""), item.get("subject", ""),
+                item.get("required", item.get("hours", 0)), item.get("scheduled", 0),
+                item.get("hours", 0), item.get("reason", ""),
+            ]
+            for column, value in enumerate(values, 1):
+                cell = pending_ws.cell(row, column, excel_safe(value))
+                cell.font = Font(name=F, size=10); cell.border = THIN; cell.alignment = CTR
+        for column, width in zip("ABCDEF", [14, 24, 13, 13, 14, 22]):
+            pending_ws.column_dimensions[column].width = width
+        pending_ws.freeze_panes = "A2"
 
     def grid(ws, r0, title, cellmap, periods=PERIODS):
         ws.cell(r0, 1, excel_safe(title)).font = Font(name=F, size=11, bold=True)

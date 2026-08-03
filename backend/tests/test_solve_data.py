@@ -22,6 +22,13 @@ def test_solve_data_returns_json_schedule_and_workbook(monkeypatch):
         "wall": 0.1, "conflicts": 0, "branches": 0, "required_total": 1,
         "scheduled_total": 1, "remaining_total": 0, "pool_total": 0,
         "missing_total": 0, "completion": "complete", "weekly_cap_violations": [],
+        "missing_courses": [], "incomplete_totals": {},
+        "quality_report": [{
+            "rule_id": "S01", "label": "國語文優先排上午", "enabled": True,
+            "weight": 4, "violations": 0, "weighted_penalty": 0,
+            "details": [], "details_truncated": False,
+        }],
+        "quality_violation_total": 0, "quality_penalty_total": 0,
         "auto_schedule_tutor": True,
     }
     monkeypatch.setattr(app, "_check_solve_access", lambda *args: True)
@@ -40,6 +47,8 @@ def test_solve_data_returns_json_schedule_and_workbook(monkeypatch):
     assert response.status_code == 200
     assert response.json()["schedule"][0]["teacher"] == "王老師"
     assert response.json()["workbook_base64"] == "d29ya2Jvb2s="
+    assert response.json()["meta"]["quality_report"][0]["rule_id"] == "S01"
+    assert response.json()["meta"]["missing_courses"] == []
     assert response.headers["X-Schedule-Completeness"] == "complete"
 
 
