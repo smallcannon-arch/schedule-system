@@ -20,6 +20,10 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'id="formalFile"' not in html
     assert "ScheduleAuth.solveData(payload)" in html
     assert "ScheduleSetup.validate()" in html
+    assert 'id="formalQuality"' in html
+    assert "renderFormalQuality(result.meta||{})" in html
+    assert "查看逐條偏好結果" in html
+    assert "硬規則檢核通過" in html
     assert "teacherAccounts" in script
     assert 'role: classCodes.length ? "導師"' in script
     assert "importTeacherRecords" in auth

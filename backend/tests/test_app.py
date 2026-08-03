@@ -120,6 +120,9 @@ def test_strict_mode_rejects_partial_result_without_inventing_weekly_targets():
     payload = response.json()
     assert payload["error"] == "課表尚未達到正式完成標準"
     assert payload["completion"] == "partial"
+    assert payload["missing_courses"]
+    assert payload["incomplete_totals"]["missing_teacher"] > 0
+    assert len(payload["quality_report"]) == 9
     assert payload["weekly_cap_issues"] == []
     assert any("尚未填寫教師每週基準節數" in item for item in payload["compliance_warnings"])
 
@@ -139,6 +142,11 @@ def test_json_response_contains_workbook_and_structured_schedule():
     assert payload["schedule"]
     assert payload["meta"]["auto_schedule_tutor"] is False
     assert payload["meta"]["pool_total"] > 0
+    assert len(payload["meta"]["quality_report"]) == 9
+    assert payload["meta"]["missing_courses"]
+    workbook = load_workbook(BytesIO(base64.b64decode(payload["workbook_base64"])))
+    assert "排課品質" in workbook.sheetnames
+    assert "待完成課程" in workbook.sheetnames
     assert all({"code", "day", "period", "subject", "teacher", "room"} <= set(row)
                for row in payload["schedule"])
 

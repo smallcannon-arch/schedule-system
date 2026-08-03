@@ -284,6 +284,69 @@ def test_loads_frontend_cloud_draft_schema_without_excel():
     assert meta["completion"] == "complete"
 
 
+def test_soft_rule_quality_report_explains_weighted_penalty():
+    closed = [0, 0, 0, 0, 0, 0, 0]
+    grade_slots = [[0, 0, 0, 0, 1, 0, 0], closed, closed, closed, closed]
+    payload = {
+        "classes": [{"g": 1, "i": 1, "code": "1甲", "tutor": "王老師"}],
+        "roster": {"王老師": "科任"}, "rooms": {"R00": 99},
+        "subjects": {"國語文": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+            "block": "", "self": False, "pairMode": "",
+        }},
+        "gslot": {str(grade): grade_slots for grade in range(1, 7)},
+        "assign": {"1甲": {"國語文": "王老師"}},
+        "override": {}, "locks": [], "blocked": [], "resGroups": [],
+    }
+    data = engine.load_frontend_data(
+        payload, rules=[["S01", "軟", "偏好", "國語優先上午", "penalty=4", "是"]])
+
+    schedule, _, _, meta, _ = engine.solve(data, time_limit=5, auto_schedule_tutor=True)
+
+    assert schedule[("1甲", "一", 5)][0] == "國語文"
+    report = {item["rule_id"]: item for item in meta["quality_report"]}
+    assert report["S01"]["violations"] == 1
+    assert report["S01"]["weighted_penalty"] == 4
+    assert report["S01"]["details"] == [{
+        "class": "1甲", "subject": "國語文", "day": "一", "period": 5, "units": 1,
+    }]
+    assert meta["quality_violation_total"] == 1
+    assert meta["quality_penalty_total"] == meta["penalty"] == 4
+
+
+def test_missing_courses_is_canonical_for_tutor_pending_and_missing_teacher():
+    grade_slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
+    payload = {
+        "classes": [{"g": 1, "i": 1, "code": "1甲", "tutor": "王老師"}],
+        "roster": {"王老師": "導師"}, "rooms": {"R00": 99},
+        "subjects": {
+            "國語文": {"hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+                       "block": "", "self": True, "pairMode": ""},
+            "音樂": {"hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+                     "block": "", "self": False, "pairMode": ""},
+        },
+        "gslot": {str(grade): grade_slots for grade in range(1, 7)},
+        "assign": {"1甲": {"國語文": "王老師"}},
+        "override": {}, "locks": [], "blocked": [], "resGroups": [],
+    }
+    data = engine.load_frontend_data(payload)
+
+    _, _, _, meta, _ = engine.solve(data, time_limit=5, auto_schedule_tutor=False)
+
+    by_reason = {item["reason_code"]: item for item in meta["missing_courses"]}
+    assert by_reason["tutor_pending"] == {
+        "class": "1甲", "subject": "國語文", "hours": 1,
+        "required": 1, "scheduled": 0,
+        "reason_code": "tutor_pending", "reason": "導師待排",
+    }
+    assert by_reason["missing_teacher"]["subject"] == "音樂"
+    assert meta["pool_total"] == 1
+    assert meta["missing_total"] == 1
+    assert meta["diagnostic_shortfall_total"] == 0
+    assert meta["unfinished_course_count"] == 2
+    assert meta["remaining_total"] == 2
+
+
 def _resource_frontend_payload():
     slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
     return {
@@ -1006,6 +1069,7 @@ def test_v5_solves_and_passes_independent_validation():
     assert meta["status"] in {"OPTIMAL", "FEASIBLE"}
     assert sched
     assert data["pool"]
+    assert meta["quality_penalty_total"] == pytest.approx(meta["penalty"])
     assert engine.validate(data, sched, tasks, overlay) == []
 
 
