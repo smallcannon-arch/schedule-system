@@ -39,6 +39,7 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'id="setupTutorNames"' in html
     assert "導師可調整負責班級" in html
     assert "只填帳號，不需提供密碼" in html
+    assert "角色與班級會自動帶入" in html
     assert "學校 Google 帳號" in script
     assert "教育部學校代碼（6碼）" in html
     assert 'id="platformSchoolRecordId"' in html
@@ -1119,6 +1120,36 @@ process.stdout.write(JSON.stringify(result.hardItems));
     assert next(
         item for item in items if "一年級A組尚未指定來源班級" in item["text"])["view"] == "res"
     assert any(item.get("view") == "native" and "客語組" in item["text"] for item in items)
+
+
+def test_teacher_login_csv_only_merges_accounts_into_existing_assignment_roster():
+    script = r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+global.requestAnimationFrame=()=>0;
+require(process.argv[1]);
+const messages=[];
+const data={classes:[{code:'1甲',tutor:'王老師'}],roster:{王老師:'導師兼主任',陳老師:'科任'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},subjects:{},assign:{},rooms:{R00:99}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:(message)=>messages.push(message),startBlank:()=>true,syncTeachers:async()=>({})});
+const result=ScheduleSetup.applyTeacherLoginRecords([
+  {name:'王老師',email:'WANG@SCHOOL.EDU.TW',role:'subject_teacher',class_codes:[]},
+  {name:'不存在教師',email:'other@school.edu.tw',role:'homeroom_teacher',class_codes:['6甲']}
+]);
+process.stdout.write(JSON.stringify({result,data,messages}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    output = json.loads(result.stdout)
+
+    assert output["result"] == {"updated": 1, "unknown": ["不存在教師"]}
+    assert output["data"]["teacherAccounts"] == {"王老師": "wang@school.edu.tw"}
+    assert output["data"]["roster"]["王老師"] == "導師兼主任"
+    assert "角色與班級維持由配課資料自動判定" in output["messages"][0]
 
 
 def test_tutor_workflow_is_locked_until_first_stage_is_ready():

@@ -347,23 +347,57 @@ def test_formal_cloud_draft_delete_has_two_warnings_and_preserves_published_sche
     assert "window.resetFormalProjectAfterCloudDelete=resetFormalProjectAfterCloudDelete" in html
 
 
-def test_teacher_csv_template_remains_available_but_import_locks_after_case_start():
+def test_teacher_csv_template_uses_assignments_and_remains_importable_after_case_start():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
 
     assert "下載教師帳號 CSV 範本" in html
     assert 'class="btn soft sm always-available"' in html
+    assert 'id="teacherCsvDownloadButton"' in html
     assert 'id="teacherCsvImportButton"' in html
     assert 'id="teacherCsvImportInput"' in html
     assert 'id="teacherCsvImportHint"' in html
     assert "downloadTeacherCsvTemplate" in script
-    assert 'link.download = "教師帳號匯入範本.csv"' in script
-    assert 'const setupStarted = !document.body.classList.contains("setup-pending")' in script
-    assert "state.hasCloudDraft" in script
+    assert '"教師登入名冊_依配課預填.csv"' in script
+    assert '"配課班級（參考）"' in script
+    assert '"配課科目（參考）"' in script
+    assert 'body.append("replace", hasCase ? "false" : "true")' in script
+    assert 'body.append("case_teacher_names"' in script
+    assert 'const setupStarted = !document.body.classList.contains("setup-pending")' not in script
     assert "input.disabled = locked" in script
-    assert "案件已開始編輯，批次匯入已鎖定" in script
+    assert "下載後只需補 Google 帳號再匯入" in script
+    assert "applyTeacherLoginRecords" in script
     assert "同步教師登入名冊" in script
     assert "ScheduleAuth.updateTeacherCsvImportState" in html
+
+
+def test_teacher_csv_rows_are_prefilled_from_current_assignments():
+    script = r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+global.location={hostname:'localhost'};
+require(process.argv[1]);
+const rows=ScheduleAuth.teacherCsvRowsFromCurrentCase({
+  classes:[{code:'1甲',tutor:'王老師'},{code:'1乙',tutor:'林老師'}],
+  roster:{王老師:'導師兼主任',林老師:'導師',陳老師:'科任',資源老師:'資源班教師'},
+  teacherAccounts:{王老師:'WANG@SCHOOL.EDU.TW'},
+  assign:{'1甲':{國語文:'王老師',自然科學:'陳老師'},'1乙':{國語文:'林老師',自然科學:'陳老師'}}
+});
+process.stdout.write(JSON.stringify(rows));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "schedule-auth.js")],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    rows = json.loads(result.stdout)
+
+    assert rows[0] == ["教師姓名", "學校Google帳號", "角色", "負責班級", "配課班級（參考）", "配課科目（參考）"]
+    by_name = {row[0]: row for row in rows[1:]}
+    assert by_name["王老師"] == ["王老師", "wang@school.edu.tw", "導師", "1甲", "1甲", "國語文"]
+    assert by_name["陳老師"] == ["陳老師", "", "科任", "", "1甲、1乙", "自然科學"]
+    assert by_name["資源老師"][2] == "資源班教師"
 
 
 def test_formal_session_expiry_stops_autosave_and_locks_editing():

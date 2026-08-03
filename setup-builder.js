@@ -1058,8 +1058,28 @@
     return "科任";
   }
 
+  function applyTeacherLoginRecords(records) {
+    const d = data();
+    const unknown = [];
+    let updated = 0;
+    for (const record of Array.isArray(records) ? records : []) {
+      const name = String(record && record.name || "").trim();
+      const email = String(record && record.email || "").trim().toLowerCase();
+      if (!name || !email) continue;
+      if (!Object.prototype.hasOwnProperty.call(d.roster, name)) {
+        unknown.push(name);
+        continue;
+      }
+      d.teacherAccounts[name] = email;
+      updated += 1;
+    }
+    if (updated) commit(`已從教師登入名冊帶入 ${updated} 位 Google 帳號；角色與班級維持由配課資料自動判定。`);
+    else renderTeachers();
+    return {updated, unknown};
+  }
+
   async function syncTeachers() {
-    if (syncingTeachers) return;
+    if (syncingTeachers) return {ok: false, message: "教師登入名冊正在同步中。"};
     const d = data();
     const allRecords = Object.keys(d.roster).map((name) => {
       const classCodes = d.classes.filter((item) => item.tutor === name).map((item) => item.code);
@@ -1078,15 +1098,17 @@
     if (invalid) {
       syncMessage = `${invalid.name}尚未填寫有效的 Google 帳號。`;
       renderTeachers();
-      return;
+      return {ok: false, message: syncMessage};
     }
     syncingTeachers = true;
     try {
       syncMessage = "正在同步教師登入名冊…"; renderTeachers();
       const result = await adapter.syncTeachers(records);
       syncMessage = `已同步 ${result.imported} 位教師，可使用學校 Google 帳號登入。${skipped ? `另有 ${skipped} 位未填帳號的教支人員未建立登入權限。` : ""}`;
+      return {ok: true, result, message: syncMessage};
     } catch (error) {
       syncMessage = `同步失敗：${error.message}`;
+      return {ok: false, message: syncMessage};
     } finally {
       syncingTeachers = false;
       renderTeachers();
@@ -1230,7 +1252,7 @@
     init, render, validate, show, showIssues, startBlank,
     setPolicy, setWeeklyTarget,
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
-    addTeacher, setTeacher, renameTeacher, removeTeacher, syncTeachers,
+    addTeacher, setTeacher, renameTeacher, removeTeacher, applyTeacherLoginRecords, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,
     setAssignment, setAssignmentMode, autofillTutors,
   };
