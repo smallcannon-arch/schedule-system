@@ -512,7 +512,8 @@
       if (!snapshot || !snapshot.scheduleReady) throw new Error("請先完成排課，再發布正式課表");
       if (root.schedulePublishability) {
         const result = root.schedulePublishability();
-        if (!result.ready) throw new Error(`課表尚未完成：${result.hard} 項硬規則問題、${result.pending} 項待排課程`);
+        if (!result.ready) throw new Error(result.message ||
+          `課表尚未完成：${result.hard} 項硬規則問題、${result.pending} 項待排課程`);
       }
       if (root.SchedulePolicy) {
         const compliance = root.SchedulePolicy.validate(snapshot.data, {requireApproval: true});
@@ -595,8 +596,9 @@
     if (publish) {
       publish.disabled = state.publishing || !!state.saveInFlight || !adminReady || !state.draftReady || !publishability.ready;
       publish.textContent = state.publishing ? "正在發布…" : "發布正式教師課表";
-      publish.title = publishability.ready ? "" : (publishability.hard || publishability.pending ?
-        `尚有 ${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程` : "請先完成正式排課");
+      publish.title = publishability.ready ? "" : (publishability.message ||
+        (publishability.hard || publishability.pending ?
+          `尚有 ${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程` : "請先完成正式排課"));
     }
     const sync = document.getElementById("syncTeacherUpdatesButton");
     if (sync) {

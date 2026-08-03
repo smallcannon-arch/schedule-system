@@ -105,6 +105,7 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .formal-grid textarea{min-height:76px;resize:vertical}.checkline{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important}.checkline input{width:18px;height:18px}
 .formal-mode-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;border:0}.formal-mode-picker legend{grid-column:1/-1;margin-bottom:7px;color:var(--ink);font-size:15px;font-weight:900}.formal-mode-option{display:flex!important;align-items:flex-start;gap:10px;padding:13px;border:2px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}.formal-mode-option:has(input:checked){border-color:var(--mint-d);background:#f2fbf7}.formal-mode-option input{width:19px;height:19px;flex:0 0 auto;margin:2px 0 0}.formal-mode-option span{display:grid;gap:4px}.formal-mode-option b{font-size:15px}.formal-mode-option small{color:var(--muted);font-size:12px;line-height:1.6}.formal-mode-summary{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7}.formal-mode-summary b{white-space:nowrap}.formal-mode-summary span{color:var(--muted);font-size:13px}
 .solve-diagnosis{margin-top:16px;border:1px solid #e4c8c4;border-left:5px solid #b64c43;background:#fffafa;padding:18px 20px;text-align:left}.solve-diagnosis-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.solve-diagnosis-head h3{margin:0 0 4px;color:#87372f;font-size:18px}.solve-diagnosis-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}.solve-diagnosis-source{flex:0 0 auto;padding:4px 8px;border:1px solid #d9c6c2;background:#fff;color:#745b56;font-size:11px;font-weight:900}.solve-diagnosis-list{display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid #eadbd8}.solve-diagnosis-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid #eadbd8}.solve-diagnosis-index{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f3ded9;color:#87372f;font-size:13px;font-weight:900}.solve-diagnosis-copy{display:grid;gap:4px}.solve-diagnosis-title{display:flex;align-items:center;gap:8px;font-weight:900;color:var(--ink)}.solve-diagnosis-tag{padding:2px 6px;background:#f2e9d6;color:#795d20;font-size:10px;font-weight:900}.solve-diagnosis-tag.confirmed{background:#f3ded9;color:#87372f}.solve-diagnosis-copy p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}.solve-diagnosis-action{color:#74534d!important}.solve-diagnosis-foot{margin-top:12px;color:#685f5d;font-size:12.5px;line-height:1.55}
+.diagnostic-draft-action{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px;padding:13px 15px;border-left:4px solid #9a6a12;background:#fff9e8;text-align:left}.diagnostic-draft-action[hidden]{display:none}.diagnostic-draft-action b{display:block;margin-bottom:3px}.diagnostic-draft-action span{color:var(--muted);font-size:13px;line-height:1.55}.diagnostic-draft-action .btn{flex:0 0 auto}.diagnostic-draft-banner{margin:12px 0;padding:11px 13px;border-left:4px solid #b64c43;background:#fff2f1;color:#87372f;font-size:13px;font-weight:900;line-height:1.55}
 .solve-quality{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);text-align:left}.solve-quality-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.solve-quality-head h3{margin:0 0 4px;font-size:18px}.solve-quality-head p{margin:0;color:var(--muted);font-size:13px}.solve-quality-badge{padding:5px 9px;background:#edf8f4;color:var(--mint-d);font-size:12px;font-weight:900;white-space:nowrap}.solve-quality-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.solve-quality-metrics span{padding:10px 12px;border-right:1px solid var(--line);color:var(--muted);font-size:12px}.solve-quality-metrics span:last-child{border-right:0}.solve-quality-metrics b{display:block;margin-bottom:2px;color:var(--ink);font-size:18px}.solve-quality details{margin-top:10px}.solve-quality summary{cursor:pointer;color:var(--sky-d);font-size:13px;font-weight:900}.solve-quality-table-wrap{margin-top:9px;overflow-x:auto}.solve-quality-table{width:100%;min-width:760px;border-collapse:collapse;font-size:13px}.solve-quality-table th,.solve-quality-table td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.solve-quality-table th{color:var(--muted);font-size:12px}.solve-quality-status{font-weight:900;color:var(--mint-d)}.solve-quality-status.missed{color:#9a6a12}.solve-quality-detail{max-width:520px;color:var(--muted);line-height:1.55}
 .tutor-mode-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:12px 14px;border-left:4px solid var(--mint-d);background:#f2fbf7}.tutor-mode-notice:empty{display:none}.tutor-mode-notice.warn{border-color:var(--lemon-d);background:#fff9e8}.tutor-mode-notice span{color:var(--muted);font-size:13px;line-height:1.6}.tutor-mode-notice b{color:var(--ink)}
 .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:18px auto;max-width:680px}
@@ -308,7 +309,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .logo{margin-bottom:8px;padding:10px 12px}.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
   nav button{justify-content:center;padding:10px 4px;margin:0;font-size:13px;gap:4px;white-space:normal;text-align:center}
   body{font-size:16px}nav .ic{width:auto}main{margin-left:0;width:100%;min-height:0;padding:16px 12px 48px;max-width:none}h1{font-size:27px}.sub{font-size:14.5px}.panel{padding:16px 12px}.panel h2{font-size:18px}.rgrid{grid-template-columns:repeat(2,1fr)}
-  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head,.solve-quality-head{display:grid}.solve-diagnosis-source,.solve-quality-badge{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}.solve-quality-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.solve-quality-metrics span:nth-child(2){border-right:0}.solve-quality-metrics span:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .formal-grid{grid-template-columns:1fr}.formal-mode-picker{grid-template-columns:1fr}.formal-mode-summary{align-items:flex-start;flex-direction:column;gap:4px}.formal-mode-summary b{white-space:normal}.solve-diagnosis-head,.solve-quality-head{display:grid}.solve-diagnosis-source,.solve-quality-badge{justify-self:start}.solve-diagnosis-item{grid-template-columns:30px minmax(0,1fr)}.solve-diagnosis-item .btn{grid-column:2;justify-self:start}.solve-quality-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.solve-quality-metrics span:nth-child(2){border-right:0}.solve-quality-metrics span:nth-child(-n+2){border-bottom:1px solid var(--line)}.diagnostic-draft-action{align-items:flex-start;flex-direction:column}.diagnostic-draft-action .btn{width:100%}
   .setup-stepbar{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-grade-counts{grid-template-columns:repeat(3,minmax(82px,1fr))}.onboarding-checklist-body{grid-template-columns:repeat(2,minmax(0,1fr))}.onboarding-step:nth-child(4n){border-right:1px solid var(--line)}.onboarding-step:nth-child(2n){border-right:0}.readiness-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.readiness-summary>div:nth-child(2){border-right:0}.readiness-summary>div:nth-child(-n+2){border-bottom:1px solid var(--line)}.readiness-item{grid-template-columns:62px minmax(0,1fr)}.readiness-item .btn{grid-column:2;justify-self:start}.readiness-filters{overflow-x:auto;width:100%}
   .policy-grid,.policy-context-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}
   .policy-heading{flex-direction:column}.policy-heading .chip{white-space:nowrap;align-self:flex-start}.policy-actions{align-items:flex-start;flex-direction:column}.policy-status{align-items:flex-start;flex-direction:column;gap:4px}
@@ -368,7 +369,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.31</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.32</b></span></div>
   </div>
 </section>
 
@@ -906,6 +907,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <div class="wide"><button class="btn pink" id="formalBtn" type="button" onclick="runFormal()">執行第一階段排課並下載</button></div>
     </div>
     <div id="formalStat" style="margin-top:14px"></div>
+    <div class="diagnostic-draft-action" id="formalDiagnosticAction" hidden>
+      <div><b>仍需要一份可調整的草案？</b><span>只容許一般課程暫時缺節，衝堂與固定課等硬規則不放寬；草案不可發布或產生上傳檔。</span></div>
+      <button class="btn soft" id="formalDiagnosticBtn" type="button" onclick="runFormal(true)">產生診斷草案</button>
+    </div>
     <section class="solve-quality" id="formalQuality" aria-live="polite" hidden></section>
     <section class="solve-diagnosis" id="formalDiagnosis" aria-live="polite" hidden></section>
   </div>
@@ -1003,16 +1008,16 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <h3>正式課表 PDF</h3>
         <p>A4 橫式排版，每班或每位教師一頁；在列印視窗選擇「另存為 PDF」。</p>
         <div class="export-actions">
-          <button class="btn mint sm" type="button" data-schedule-export onclick="printTimetables('class')">班級課表 PDF</button>
-          <button class="btn mint sm" type="button" data-schedule-export onclick="printTimetables('teacher')">教師課表 PDF</button>
+          <button class="btn mint sm" type="button" data-draft-preview data-schedule-export onclick="printTimetables('class')">班級課表 PDF</button>
+          <button class="btn mint sm" type="button" data-draft-preview data-schedule-export onclick="printTimetables('teacher')">教師課表 PDF</button>
         </div>
       </section>
       <section class="export-group">
         <h3>可編輯 Excel</h3>
         <p>保留正式版面、科目色彩與列印設定，供承辦人後續編修或核對。</p>
         <div class="export-actions">
-          <button class="btn soft sm" type="button" data-schedule-export onclick="exportClassTimetables()">班級課表 Excel</button>
-          <button class="btn soft sm" type="button" data-schedule-export onclick="exportTeacherTimetables()">教師課表 Excel</button>
+          <button class="btn soft sm" type="button" data-draft-preview data-schedule-export onclick="exportClassTimetables()">班級課表 Excel</button>
+          <button class="btn soft sm" type="button" data-draft-preview data-schedule-export onclick="exportTeacherTimetables()">教師課表 Excel</button>
         </div>
       </section>
       <section class="export-group">
@@ -1193,7 +1198,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.31</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.32</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1241,10 +1246,12 @@ function openSetupIssues(){
 }
 function printCurrentSchedule(){
   if(!SCHEDULE_READY)return alert('請先完成正式排課，再列印課表。');
+  if(DIAGNOSTIC_DRAFT)return alert('目前是診斷草案，不可直接列印成正式課表；請到「課表匯出」下載有草案標示的預覽。');
   window.print();
 }
 function printTutorWorksheet(){
   if(!SCHEDULE_READY)return alert('請先完成第一階段排課，再列印導師工作單。');
+  if(DIAGNOSTIC_DRAFT)return alert('診斷草案不可交付導師調整；請先調整條件並重新執行正式排課。');
   window.print();
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
@@ -2384,6 +2391,7 @@ function setA(code,s,v){
 function invalidateSchedule(){
   if(!SCHEDULE_READY){renderExportPanel();return}
   SOL=null;tutorPlaced={};OVL=[];pickSubj=null;TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;SCHEDULE_READY=false;
+  DIAGNOSTIC_DRAFT=false;DIAGNOSTIC_MISSING=[];
   editorResetHistory();
   const result=document.getElementById('runResult');if(result)result.style.display='none';
   const btn=document.getElementById('runBtn');if(btn)btn.textContent='⚡ 開始排課';
@@ -2431,7 +2439,7 @@ function renderTLoad(){
 }
 
 /* ═══ 瀏覽器內排課（貪婪＋隨機重啟）═══ */
-let SOL=null, tutorPlaced={}, SCHEDULE_READY=false;  // tutorPlaced[code]['day|p']=subj
+let SOL=null, tutorPlaced={}, SCHEDULE_READY=false, DIAGNOSTIC_DRAFT=false, DIAGNOSTIC_MISSING=[];  // tutorPlaced[code]['day|p']=subj
 const DAILY_HARD_CAP={'科任':6,'導師':6,'組長':6,'主任':6,'導師兼組長':6,'導師兼主任':6,'資源班教師':6,'資源班導師':6,'專任輔導教師':6,'教支人員':6,'鐘點教師':6,'其他':6,'':6};
 function buildTasks(){
   const tasks=[];
@@ -2648,6 +2656,7 @@ function refreshValidation(poolN){
   if(hardEl)hardEl.textContent=check.hard.length;
   if(poolN===undefined)poolN=DATA.classes.reduce((a,c)=>a+remainPool(c.code).reduce((x,[,h])=>x+Math.max(0,h),0),0);
   if(badge){
+    if(DIAGNOSTIC_DRAFT){badge.className='chip bad';badge.textContent='診斷草案｜不可發布';return check}
     badge.className='chip '+(check.hard.length?'bad':(poolN||check.pending.length?'warn':'ok'));
     badge.textContent=check.hard.length?`有 ${check.hard.length} 項硬規則問題`:(poolN||check.pending.length?'第一階段完成，仍有課程待排':'✓ 完整課表通過檢核');
   }
@@ -2656,7 +2665,10 @@ function refreshValidation(poolN){
 function schedulePublishability(){
   if(!SCHEDULE_READY)return {ready:false,hard:0,pending:0};
   const check=validateSchedule();
-  return {ready:!check.hard.length&&!check.pending.length,hard:check.hard.length,pending:check.pending.length};
+  if(DIAGNOSTIC_DRAFT)return {ready:false,hard:check.hard.length,
+    pending:DIAGNOSTIC_MISSING.reduce((sum,item)=>sum+Math.max(0,Number(item.hours)||0),0),
+    diagnostic:true,message:'診斷草案含有未排課程，不可發布'};
+  return {ready:!check.hard.length&&!check.pending.length,hard:check.hard.length,pending:check.pending.length,diagnostic:false};
 }
 /* ═══ 三欄同步編修 ═══ */
 function editorSnapshot(){return {sol:ScheduleEditor.clone(SOL||{}),tp:ScheduleEditor.clone(tutorPlaced||{}),ovl:ScheduleEditor.clone(OVL||[])}}
@@ -2861,7 +2873,8 @@ function doSolve(){
       if(!best||score<best.score)best={...r,score};
       if(best.score===0)break;
     }
-    SOL=best.cls;tutorPlaced={};TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;SCHEDULE_READY=true;editorResetHistory();
+    SOL=best.cls;tutorPlaced={};TEACHER_PACKAGES={};FORMAL_AUTO_TUTOR=false;SCHEDULE_READY=true;
+    DIAGNOSTIC_DRAFT=false;DIAGNOSTIC_MISSING=[];editorResetHistory();
     const ov=placeOverlay(SOL);OVL=ov.out;
     best.unplaced=best.unplaced.concat(ov.warn.map(w=>({code:'',s:w,isMsg:true})));
     const placed=Object.keys(SOL).length;
@@ -2906,7 +2919,11 @@ function renderFormalQuality(meta={}){
   if(!box||!report.length)return clearFormalQuality();
   const enabled=report.filter(item=>item.enabled),violationTotal=Number(meta.quality_violation_total||0);
   const penaltyTotal=Number(meta.quality_penalty_total??meta.penalty??0);
-  const optimal=meta.status==='OPTIMAL',gap=Math.max(0,Number(meta.relative_gap||0));
+  const qualityOptimized=meta.diagnostic_quality_optimized!==false;
+  const validationBadge=meta.diagnostic_draft?'衝堂與結構規則通過':'硬規則檢核通過';
+  const optimal=qualityOptimized&&meta.status==='OPTIMAL',gap=Math.max(0,Number(meta.relative_gap||0));
+  const qualityResult=qualityOptimized?(optimal?'最佳':(gap*100).toFixed(1)+'%'):'未最佳化';
+  const qualityResultLabel=qualityOptimized?(optimal?'已證明最佳':'與最佳界差距'):'保留第一階段草案';
   const rows=report.map(item=>{
     const details=Array.isArray(item.details)?item.details:[];
     const detailText=details.slice(0,4).map(qualityDetailText).filter(Boolean).join('；');
@@ -2919,10 +2936,10 @@ function renderFormalQuality(meta={}){
       <td class="solve-quality-detail">${esc((detailText+more).replace(/^；/,''))||'—'}</td></tr>`;
   }).join('');
   box.innerHTML=`
-    <div class="solve-quality-head"><div><h3>排課品質</h3><p>${violationTotal?'部分偏好未完全達成，可展開查看明細。':'本次已達成所有啟用的軟規則偏好。'}</p></div><span class="solve-quality-badge">硬規則檢核通過</span></div>
+    <div class="solve-quality-head"><div><h3>排課品質</h3><p>${violationTotal?'部分偏好未完全達成，可展開查看明細。':'本次已達成所有啟用的軟規則偏好。'}</p></div><span class="solve-quality-badge">${validationBadge}</span></div>
     <div class="solve-quality-metrics">
       <span><b>${enabled.length}</b>啟用偏好</span><span><b>${violationTotal}</b>未達成單位</span>
-      <span><b>${penaltyTotal}</b>加權值</span><span><b>${optimal?'最佳':(gap*100).toFixed(1)+'%'}</b>${optimal?'已證明最佳':'與最佳界差距'}</span>
+      <span><b>${penaltyTotal}</b>加權值</span><span><b>${qualityResult}</b>${qualityResultLabel}</span>
     </div>
     <details><summary>查看逐條偏好結果</summary><div class="solve-quality-table-wrap"><table class="solve-quality-table"><thead><tr><th>規則</th><th>偏好</th><th>狀態</th><th>權重</th><th>未達成</th><th>加權值</th><th>明細</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   box.hidden=false;
@@ -2931,6 +2948,9 @@ const FORMAL_DIAG_VIEWS=new Set(['build','alloc','native','res','lim','rules']);
 function clearFormalDiagnosis(){
   const box=document.getElementById('formalDiagnosis');
   if(box){box.hidden=true;box.innerHTML=''}
+}
+function setFormalDiagnosticAction(visible){
+  const box=document.getElementById('formalDiagnosticAction');if(box)box.hidden=!visible;
 }
 function formalDiagnosticGo(view){
   if(FORMAL_DIAG_VIEWS.has(view))go(view);
@@ -2968,14 +2988,28 @@ function formalRunModeChanged(){
     '<b>目前模式：導師自行安排</b><span>CP-SAT 先排科任與鎖定課，完成後到「導師自排」交給老師接續處理。</span>';
   if(button)button.textContent=complete?'執行完整排課並下載':'執行第一階段排課並下載';
 }
-async function runFormal(){
-  const btn=document.getElementById('formalBtn');
+function formalDiagnosticEligibleSetupIssue(message){
+  return /需要\s*\d+\s*節，但該年級只有\s*\d+\s*個可排時段/.test(String(message||''));
+}
+async function runFormal(diagnosticDraft=false){
+  diagnosticDraft=diagnosticDraft===true;
+  const btn=document.getElementById(diagnosticDraft?'formalDiagnosticBtn':'formalBtn');
   clearFormalDiagnosis();
   clearFormalQuality();
+  setFormalDiagnosticAction(false);
   const setup=ScheduleSetup.validate();
-  if(setup.hard.length)return formalMessage('bad','排課資料尚未完整',setup.hard.slice(0,4).join('；'));
+  const eligibleSetupIssues=(setup.hard||[]).filter(formalDiagnosticEligibleSetupIssue);
+  const blockingSetupIssues=diagnosticDraft?
+    (setup.hard||[]).filter(issue=>!formalDiagnosticEligibleSetupIssue(issue)):(setup.hard||[]);
+  if(blockingSetupIssues.length){
+    if(diagnosticDraft||eligibleSetupIssues.length)setFormalDiagnosticAction(true);
+    return formalMessage('bad','排課資料尚未完整',blockingSetupIssues.slice(0,4).join('；'));
+  }
   const resourceIssues=resourceValidationIssues();
-  if(resourceIssues.length)return formalMessage('bad','資源班設定尚未完整',resourceIssues.slice(0,4).join('；'));
+  if(resourceIssues.length){
+    if(diagnosticDraft)setFormalDiagnosticAction(true);
+    return formalMessage('bad','資源班設定尚未完整',resourceIssues.slice(0,4).join('；'));
+  }
   const localData=TeacherWorkflow.clone(DATA);
   const completeMode=formalRunIsComplete();
   const payload={
@@ -2984,16 +3018,19 @@ async function runFormal(){
     rules:TeacherWorkflow.clone(RULES),
     time_limit:120,
     auto_schedule_tutor:completeMode,
-    strict_complete:completeMode,
+    strict_complete:completeMode&&!diagnosticDraft,
+    diagnostic_draft:diagnosticDraft,
     use_openai:false,
     ai_goal:'',
   };
-  btn.disabled=true;formalMessage('warn','正式引擎求解中','請保持此頁開啟，完成後會自動下載。');
+  btn.disabled=true;formalMessage('warn',diagnosticDraft?'診斷草案產生中':'正式引擎求解中',
+    diagnosticDraft?'系統會先把未排節數降到最低，再利用剩餘時間改善排課品質。':'請保持此頁開啟，完成後會自動下載。');
   try{
     const response=await ScheduleAuth.solveData(payload);
     if(!response.ok){
       let data={};try{data=await response.json()}catch(e){}
       const details=[data.error,...(data.issues||[])].filter(Boolean).join('；')||`HTTP ${response.status}`;
+      if(diagnosticDraft||['INFEASIBLE','UNKNOWN'].includes(data.status))setFormalDiagnosticAction(true);
       if(Array.isArray(data.diagnostics)&&data.diagnostics.length){
         renderFormalDiagnosis(data.diagnostics,data.status);
         return formalMessage('bad',data.status==='UNKNOWN'?'本次尚未找到可行解':'排課無解，請依診斷調整',data.error||'請查看下方診斷結果。');
@@ -3019,14 +3056,21 @@ async function runFormal(){
     SOL={};
     for(const row of result.schedule)SOL[`${row.code}|${row.day}|${row.period}`]={s:row.subject,t:row.teacher||'',room:row.room||'R00'};
     OVL=(result.overlay||[]).map(row=>({id:row.group_id||'',grp:row.group,code:row.code,subj:row.subject,pullSubj:row.pull_subject||row.subject,t:row.teacher||'',d:row.day,p:+row.period}));
-    tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};SCHEDULE_READY=true;renderAll();saveLS();
+    tutorPlaced={};pickSubj=null;TEACHER_PACKAGES={};SCHEDULE_READY=true;
+    DIAGNOSTIC_DRAFT=!!result.meta?.diagnostic_draft;
+    DIAGNOSTIC_MISSING=TeacherWorkflow.clone(result.meta?.missing_courses||[]);
+    renderAll();saveLS();
     clearFormalDiagnosis();
     renderFormalQuality(result.meta||{});
-    formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
+    const shortfall=Number(result.meta?.diagnostic_shortfall_total||0);
+    if(DIAGNOSTIC_DRAFT)formalMessage('bad','診斷草案已下載｜不可發布',
+      `尚有 ${shortfall} 節一般課程未排入；可進入課表編修並下載預覽，調整條件後請重新執行正式排課。`);
+    else formalMessage(completeness==='complete'&&weekly==='0'&&compliance==='0'?'ok':'warn',
       completeness==='complete'?'正式課表已下載':'部分課表已下載',
       `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；自訂規則問題 ${compliance} 項`+
       (FORMAL_AUTO_TUTOR?'':'；科任與鎖定課已載入，可前往導師自排交給老師接續安排'));
   }catch(error){
+    if(diagnosticDraft)setFormalDiagnosticAction(true);
     formalMessage('bad','無法連線正式 API','請確認 API 網址、CORS 與服務是否已啟動。');
   }finally{btn.disabled=false}
 }
@@ -3123,36 +3167,72 @@ function writeWorkbook(workbook,filename){
   XLSX.writeFile(workbook,filename,{compression:true});
   const status=document.getElementById('exportStatus');if(status){status.className='export-status';status.textContent=`已產生 ${filename}`}
 }
-function exportScheduleReady(){
+function diagnosticPreviewSheets(sheets){
+  if(!DIAGNOSTIC_DRAFT)return sheets;
+  const pending=schedulePublishability().pending;
+  return sheets.map(sheet=>{
+    const rows=(sheet.rows||[]).map(row=>Array.isArray(row)?[...row]:row);
+    if(rows[0])rows[0][0]=`【診斷草案｜不可發布】 ${rows[0][0]||sheet.name||''}`;
+    if(rows[1])rows[1][0]=`尚缺 ${pending} 節｜${rows[1][0]||''}`;
+    return {...sheet,rows};
+  });
+}
+function diagnosticPreviewFilename(kind){
+  return `${exportSchoolName()}_${DIAGNOSTIC_DRAFT?'診斷草案_':''}${kind}_${exportFileDate()}.xlsx`;
+}
+function diagnosticDraftStillMatches(){
+  if(!DIAGNOSTIC_DRAFT)return true;
+  const expected=new Map(DIAGNOSTIC_MISSING.map(item=>[`${item.class}|${item.subject}`,Math.max(0,Number(item.hours)||0)]));
+  const counts={};scheduleEntries(false).forEach(entry=>counts[`${entry.code}|${entry.s}`]=(counts[`${entry.code}|${entry.s}`]||0)+1);
+  const distributedSources=distributedExternalSources(),seen=new Set();
+  for(const c of DATA.classes)for(const s in DATA.subjects){
+    const need=hoursOf(s,c.g)||0;if(!need)continue;
+    if(s==='本土語文'&&distributedSources.has(c.code))continue;
+    const key=`${c.code}|${s}`,missing=Math.max(0,need-(counts[key]||0));seen.add(key);
+    if(missing!==(expected.get(key)||0)||(counts[key]||0)>need)return false;
+  }
+  return [...expected.keys()].every(key=>seen.has(key));
+}
+function exportScheduleReady(allowDiagnosticPreview=false){
   if(!SOL){alert('請先完成正式排課，再匯出課表。');return false}
   const check=validateSchedule();
+  if(DIAGNOSTIC_DRAFT){
+    if(!allowDiagnosticPreview){alert('診斷草案不可產生人力資源網或校務系統上傳檔，請調整條件後重新執行正式排課。');return false}
+    if(check.hard.length||!diagnosticDraftStillMatches()){
+      alert('診斷草案已被修改或出現硬規則問題，請重新產生後再下載預覽課表。');return false;
+    }
+    return true;
+  }
   if(check.hard.length||check.pending.length){
     alert(`課表尚未完成，暫不匯出。\n硬規則問題：${check.hard.length} 項\n待排課程：${check.pending.length} 項`);return false;
   }
   return true;
 }
 function exportClassTimetables(){
-  if(!exportScheduleReady())return;
-  const wb=XLSX.utils.book_new(),sheets=ScheduleExports.classSheets(DATA,exportEntries());
+  if(!exportScheduleReady(true))return;
+  const wb=XLSX.utils.book_new(),sheets=diagnosticPreviewSheets(ScheduleExports.classSheets(DATA,exportEntries()));
   if(!sheets.length)return alert('沒有可匯出的班級課表。');
-  appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_班級課表_${exportFileDate()}.xlsx`);
+  appendSheets(wb,sheets);writeWorkbook(wb,diagnosticPreviewFilename('班級課表'));
 }
 function exportTeacherTimetables(){
-  if(!exportScheduleReady())return;
-  const wb=XLSX.utils.book_new(),sheets=ScheduleExports.teacherSheets(DATA,exportEntries());
+  if(!exportScheduleReady(true))return;
+  const wb=XLSX.utils.book_new(),sheets=diagnosticPreviewSheets(ScheduleExports.teacherSheets(DATA,exportEntries()));
   if(!sheets.length)return alert('沒有可匯出的教師課表。');
-  appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_教師課表_${exportFileDate()}.xlsx`);
+  appendSheets(wb,sheets);writeWorkbook(wb,diagnosticPreviewFilename('教師課表'));
 }
 function printTimetables(kind){
-  if(!exportScheduleReady())return;
+  if(!exportScheduleReady(true))return;
   const entries=exportEntries(),isTeacher=kind==='teacher';
-  const sheets=isTeacher?ScheduleExports.teacherSheets(DATA,entries):ScheduleExports.classSheets(DATA,entries);
+  const sheets=diagnosticPreviewSheets(isTeacher?ScheduleExports.teacherSheets(DATA,entries):ScheduleExports.classSheets(DATA,entries));
   if(!sheets.length)return alert(`沒有可列印的${isTeacher?'教師':'班級'}課表。`);
   const popup=window.open('','_blank');
   if(!popup)return alert('瀏覽器已封鎖列印視窗，請允許此網站開啟彈出式視窗。');
   popup.opener=null;
   popup.document.open();
-  popup.document.write(ScheduleExports.printDocument(sheets,`${exportSchoolName()}_${isTeacher?'教師':'班級'}課表`));
+  const draftLabel=DIAGNOSTIC_DRAFT?'_診斷草案':'';
+  popup.document.write(ScheduleExports.printDocument(
+    sheets,`${exportSchoolName()}${draftLabel}_${isTeacher?'教師':'班級'}課表`,
+    {diagnosticDraft:DIAGNOSTIC_DRAFT}));
   popup.document.close();
   const trigger=()=>{popup.focus();popup.print()};
   if(popup.document.readyState==='complete')setTimeout(trigger,350);else popup.addEventListener('load',()=>setTimeout(trigger,250),{once:true});
@@ -3221,8 +3301,12 @@ function renderExportPanel(){
   const printButton=document.getElementById('schedulePrintButton');
   if(printButton){printButton.disabled=!SCHEDULE_READY;printButton.title=SCHEDULE_READY?'':'請先完成正式排課'}
   document.querySelectorAll('[data-schedule-export]').forEach(button=>{
+    const diagnosticPreview=DIAGNOSTIC_DRAFT&&button.hasAttribute('data-draft-preview');
     button.disabled=!hasSchedule;
-    button.title=hasSchedule?'':(SCHEDULE_READY?`尚有 ${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程`:'請先完成正式排課');
+    if(diagnosticPreview)button.disabled=!SCHEDULE_READY;
+    button.title=diagnosticPreview?'診斷草案預覽，文件不代表正式課表':
+      (hasSchedule?'':(publishability.diagnostic?'診斷草案不可產生正式上傳檔':
+      (SCHEDULE_READY?`尚有 ${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程`:'請先完成正式排課')));
   });
   const mappings=ScheduleExports.ensureMappings(DATA),names=Object.keys(DATA.subjects||{});
   let html='<tr><th>排課科目</th><th>類別</th><th>領域</th><th>人力網科目</th><th>語言別</th><th>校訂課程名稱</th><th>上課頻率</th></tr>';
@@ -3240,7 +3324,10 @@ function renderExportPanel(){
   const status=document.getElementById('exportTeacherIdStatus'),matched=Object.keys(EXPORT_TEACHER_IDS).filter(name=>Object.prototype.hasOwnProperty.call(DATA.roster||{},name)).length;
   if(status){status.className=`chip ${matched?'ok':'warn'}`;status.textContent=matched?`已在記憶體載入 ${matched} 位教師資料`:'尚未載入教師身分證對照表'}
   const exportStatus=document.getElementById('exportStatus');
-  if(exportStatus&&!hasSchedule){
+  if(exportStatus&&DIAGNOSTIC_DRAFT){
+    exportStatus.className='export-status bad';
+    exportStatus.textContent=`診斷草案尚缺 ${publishability.pending} 節：可下載班級／教師預覽，但不可發布或產生人力資源網、校務系統上傳檔。`;
+  }else if(exportStatus&&!hasSchedule){
     exportStatus.className='export-status';
     exportStatus.textContent=SCHEDULE_READY?`課表尚未完成：${publishability.hard} 項硬規則問題、${publishability.pending} 項待排課程。`:'完成正式排課後即可匯出。';
   }
@@ -3273,7 +3360,8 @@ function currentSnapshot(){
   return {data:TeacherWorkflow.clone(DATA),limits:TeacherWorkflow.clone(LIMITS),rules:TeacherWorkflow.clone(RULES),
     sol:TeacherWorkflow.clone(SOL),tp:TeacherWorkflow.clone(tutorPlaced),ovl:TeacherWorkflow.clone(OVL),
     label:document.getElementById('dataSrc').textContent,teacherPackages:TeacherWorkflow.clone(TEACHER_PACKAGES),
-    formalAutoTutor:FORMAL_AUTO_TUTOR,scheduleReady:SCHEDULE_READY};
+    formalAutoTutor:FORMAL_AUTO_TUTOR,scheduleReady:SCHEDULE_READY,
+    diagnosticDraft:DIAGNOSTIC_DRAFT,diagnosticMissing:TeacherWorkflow.clone(DIAGNOSTIC_MISSING)};
 }
 function signatureData(){const data=TeacherWorkflow.clone(DATA);data.limits=TeacherWorkflow.clone(LIMITS);return data}
 function teacherBusySlots(code){
@@ -3342,6 +3430,8 @@ function applyAdminDraft(snapshot){
   tutorPlaced=TeacherWorkflow.clone(snapshot.tutor_placements||{});
   OVL=TeacherWorkflow.clone(snapshot.overlay||[]);
   FORMAL_AUTO_TUTOR=!!snapshot.formal_auto_tutor;TEACHER_PACKAGES={};pickSubj=null;
+  DIAGNOSTIC_DRAFT=!!snapshot.diagnostic_draft;
+  DIAGNOSTIC_MISSING=TeacherWorkflow.clone(snapshot.diagnostic_missing||[]);
   SCHEDULE_READY=snapshot.schedule_ready===true||Object.keys(snapshot.schedule||{}).length>0||(snapshot.overlay||[]).length>0;
   rebuildLim();editorResetHistory();renderAll();saveLS(snapshot.label||'雲端排課暫存');
 }
@@ -3374,6 +3464,7 @@ function getServerTeacherSubmission(){
 }
 async function exportTeacherPackage(){
   if(TEACHER_MODE)return;
+  if(DIAGNOSTIC_DRAFT)return alert('診斷草案尚有未排課程，不可交付導師調整；請先重新執行正式排課。');
   const code=document.getElementById('tutorSel').value,c=CODE2C[code];
   const accessCode=String(document.getElementById('teacherAdminCode').value||'').trim();
   if(accessCode.length<8)return alert('請先輸入或產生至少 8 個字元的班級調整碼。');
@@ -3451,6 +3542,8 @@ function restoreAdminSnapshot(){
   RULES=TeacherWorkflow.clone(snapshot.rules);
   SOL=TeacherWorkflow.clone(snapshot.sol);tutorPlaced=TeacherWorkflow.clone(snapshot.tp);OVL=TeacherWorkflow.clone(snapshot.ovl);
   TEACHER_PACKAGES=TeacherWorkflow.clone(snapshot.teacherPackages||{});FORMAL_AUTO_TUTOR=!!snapshot.formalAutoTutor;pickSubj=null;
+  DIAGNOSTIC_DRAFT=!!snapshot.diagnosticDraft;
+  DIAGNOSTIC_MISSING=TeacherWorkflow.clone(snapshot.diagnosticMissing||[]);
   SCHEDULE_READY=!!snapshot.scheduleReady;
   rebuildLim();renderAll();document.getElementById('tutorSel').disabled=false;
 }
@@ -3680,7 +3773,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.31');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.32');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -3778,7 +3871,7 @@ function initDerived(){
   DATA.rules=RULES.map(r=>[...r]);
   ENG_SUBJ=Object.keys(DATA.subjects).filter(s=>!DATA.subjects[s].self&&s!=='本土語文');
   TEACHERS=['',...Object.keys(DATA.roster)];
-  SOL=null;tutorPlaced={};pickSubj=null;SCHEDULE_READY=false;editorResetHistory();
+  SOL=null;tutorPlaced={};pickSubj=null;SCHEDULE_READY=false;DIAGNOSTIC_DRAFT=false;DIAGNOSTIC_MISSING=[];editorResetHistory();
   dl.innerHTML=[...Object.keys(DATA.roster),'1年級','2年級','3年級','4年級','5年級','6年級'].map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   rebuildLim();
 }
@@ -3818,7 +3911,8 @@ function saveLS(label){
     if(!storageKey)return;
     label=label||document.getElementById('dataSrc').textContent;
     progressStorage().setItem(storageKey,JSON.stringify({d:DATA,limits:LIMITS,rules:RULES,sol:SOL,tp:tutorPlaced,ovl:OVL,
-      teacherPackages:TEACHER_PACKAGES,formalAutoTutor:FORMAL_AUTO_TUTOR,scheduleReady:SCHEDULE_READY,label,t:Date.now()}));
+      teacherPackages:TEACHER_PACKAGES,formalAutoTutor:FORMAL_AUTO_TUTOR,scheduleReady:SCHEDULE_READY,
+      diagnosticDraft:DIAGNOSTIC_DRAFT,diagnosticMissing:DIAGNOSTIC_MISSING,label,t:Date.now()}));
     document.getElementById('lsMsg').textContent=APP_MODE==='demo'?
       `已自動保存於此瀏覽器（${new Date().toLocaleString('zh-TW')}），30 天內可回來繼續；也可下載工作進度檔。`:
       `已保存目前分頁進度（${new Date().toLocaleString('zh-TW')}）；關閉分頁或登出即清除，長期續作請使用雲端暫存。`;
@@ -3839,6 +3933,7 @@ function loadLS(){
     RULES=o.rules||RULES;
     SOL=o.sol||null;tutorPlaced=o.tp||{};OVL=o.ovl||[];TEACHER_PACKAGES=o.teacherPackages||{};
     FORMAL_AUTO_TUTOR=!!o.formalAutoTutor;
+    DIAGNOSTIC_DRAFT=!!o.diagnosticDraft;DIAGNOSTIC_MISSING=TeacherWorkflow.clone(o.diagnosticMissing||[]);
     SCHEDULE_READY=o.scheduleReady===true||!!(o.sol&&Object.keys(o.sol).length)||(o.ovl||[]).length>0;
     rebuildLim();renderAll();
     document.getElementById('lsMsg').textContent=`已載入瀏覽器存檔（${new Date(o.t).toLocaleString('zh-TW')}）`;
@@ -3927,6 +4022,7 @@ function importJSON(inp){
       OVL=TeacherWorkflow.clone(modern?(o.ovl||[]):(o.ovl||[]));
       TEACHER_PACKAGES=modern?TeacherWorkflow.clone(o.teacherPackages||{}):(o.teacherPackages||{});
       FORMAL_AUTO_TUTOR=!!o.formalAutoTutor;
+      DIAGNOSTIC_DRAFT=!!o.diagnosticDraft;DIAGNOSTIC_MISSING=TeacherWorkflow.clone(o.diagnosticMissing||[]);
       SCHEDULE_READY=o.scheduleReady===true||!!(o.sol&&Object.keys(o.sol).length)||(o.ovl||[]).length>0;
       rebuildLim();renderAll();
       saveLS('已載入工作進度');
@@ -4451,7 +4547,9 @@ ScheduleReadiness.initialize({
   },
   isScheduleReady:()=>SCHEDULE_READY,
   getScheduleValidation:()=>SCHEDULE_READY?validateSchedule():{hard:[],pending:[]},
-  getExportIssues:()=>SCHEDULE_READY?ScheduleExports.validateUpload(DATA,exportEntries(),EXPORT_TEACHER_IDS):[],
+  getExportIssues:()=>DIAGNOSTIC_DRAFT?['診斷草案不可產生正式上傳檔']:
+    (SCHEDULE_READY?ScheduleExports.validateUpload(DATA,exportEntries(),EXPORT_TEACHER_IDS):[]),
+  isDiagnosticDraft:()=>DIAGNOSTIC_DRAFT,
   getCloudState:()=>ScheduleAuth.getReadinessState(),
   navigate:(view,tab)=>{go(view);if(view==='build'&&tab)ScheduleSetup.show(tab)},
 });

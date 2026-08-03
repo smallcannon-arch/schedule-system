@@ -72,7 +72,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.31",
+    title="排課引擎 API", version="1.32",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -208,6 +208,7 @@ class SolveDataRequest(BaseModel):
     ai_goal: str = Field(default="", max_length=1200)
     auto_schedule_tutor: bool = False
     strict_complete: bool = False
+    diagnostic_draft: bool = False
 
 
 ROLE_ALIASES = {
@@ -400,11 +401,19 @@ def _normalize_schedule_snapshot(payload, require_schedule):
         "label": str(payload.get("label") or "排課暫存")[:120],
         "formal_auto_tutor": bool(payload.get("formal_auto_tutor", payload.get("formalAutoTutor", False))),
         "schedule_ready": bool(payload.get("schedule_ready", payload.get("scheduleReady", False))),
+        "diagnostic_draft": bool(payload.get(
+            "diagnostic_draft", payload.get("diagnosticDraft", False))),
+        "diagnostic_missing": payload.get(
+            "diagnostic_missing", payload.get("diagnosticMissing", [])) or [],
     }
     if snapshot["tutor_placements"] is None:
         snapshot["tutor_placements"] = {}
     if snapshot["overlay"] is None:
         snapshot["overlay"] = []
+    if not isinstance(snapshot["diagnostic_missing"], list):
+        raise ValueError("診斷草案缺額資料格式不正確")
+    if not snapshot["diagnostic_draft"]:
+        snapshot["diagnostic_missing"] = []
     if snapshot["schedule"] is None and not require_schedule:
         snapshot["schedule"] = {}
     if not isinstance(snapshot["data"], dict) or not isinstance(snapshot["schedule"], dict):
@@ -413,6 +422,8 @@ def _normalize_schedule_snapshot(payload, require_schedule):
         snapshot["schedule_ready"] = True
     if require_schedule and not snapshot["schedule_ready"]:
         raise ValueError("請先完成排課，再發布正式教師課表")
+    if require_schedule and snapshot["diagnostic_draft"]:
+        raise ValueError("診斷草案含有未排課程，不可發布；請調整條件後重新執行正式排課")
     if not (snapshot["data"].get("classes") and snapshot["data"].get("subjects")):
         raise ValueError("課表缺少班級或科目設定")
     policy_result = schedule_policy.validate_case(
@@ -545,9 +556,11 @@ def _validate_published_schedule(snapshot):
     if not schedule:
         raise ValueError("正式課表沒有任何可發布的課程，請先完成第一階段排課")
     for code, subject in tutor_owned_courses:
-        tasks[(code, subject)]["h"] = sum(
+        scheduled_hours = sum(
             1 for (class_code, _, _), (scheduled_subject, _, _) in schedule.items()
             if class_code == code and scheduled_subject == subject)
+        if scheduled_hours == 0:
+            tasks[(code, subject)]["h"] = 0
 
     overlay = []
     for index, item in enumerate(snapshot.get("overlay") or [], start=1):
@@ -660,7 +673,7 @@ def _validate_xlsx(data):
 
 
 def _solve_loaded_data(schedule_data, time_limit, use_openai=False, ai_goal="",
-                       auto_schedule_tutor=False):
+                       auto_schedule_tutor=False, diagnostic_draft=False):
     with tempfile.TemporaryDirectory() as td:
         dst = os.path.join(td, "課表輸出.xlsx")
         ai_status, ai_plan, ai_audit = "disabled", None, []
@@ -673,8 +686,19 @@ def _solve_loaded_data(schedule_data, time_limit, use_openai=False, ai_goal="",
                 LOGGER.exception("OpenAI soft-rule planning failed")
                 ai_status = "failed"
         sched, tasks, warn, meta, overlay = engine.solve(
-            schedule_data, time_limit=time_limit, auto_schedule_tutor=auto_schedule_tutor)
-        errs = engine.validate(schedule_data, sched, tasks, overlay)
+            schedule_data, time_limit=time_limit,
+            auto_schedule_tutor=auto_schedule_tutor,
+            diagnostic_draft=diagnostic_draft,
+        )
+        diagnostic_shortfalls = {
+            (item.get("class"), item.get("subject")): int(item.get("hours", 0))
+            for item in meta.get("missing_courses", [])
+            if item.get("reason_code") == "diagnostic_shortfall"
+        }
+        errs = engine.validate(
+            schedule_data, sched, tasks, overlay,
+            diagnostic_shortfalls=diagnostic_shortfalls if diagnostic_draft else None,
+        )
         if errs:
             detail = "；".join(errs[:5])
             raise ResultValidationError(f"排課結果未通過硬規則檢核（{len(errs)} 項）：{detail}")
@@ -710,6 +734,9 @@ PUBLIC_SOLVE_META_KEYS = (
     "diagnostic_shortfall_course_count", "unfinished_course_count",
     "missing_courses", "incomplete_totals", "completion",
     "quality_report", "quality_violation_total", "quality_penalty_total",
+    "diagnostic_draft", "diagnostic_shortfall_status",
+    "diagnostic_quality_optimized", "diagnostic_fallback_to_phase1",
+    "diagnostic_phase1_status", "diagnostic_phase1_wall", "diagnostic_phase2_wall",
     "weekly_cap_violations", "compliance_blocking_issues", "compliance_warnings",
     "policy", "auto_schedule_tutor",
 )
@@ -719,21 +746,26 @@ def _public_solve_meta(meta):
     return {key: meta.get(key) for key in PUBLIC_SOLVE_META_KEYS}
 
 
-def _run_solver(data, time_limit, use_openai=False, ai_goal="", auto_schedule_tutor=False):
+def _run_solver(data, time_limit, use_openai=False, ai_goal="", auto_schedule_tutor=False,
+                diagnostic_draft=False):
     with tempfile.TemporaryDirectory() as td:
         src = os.path.join(td, "in.xlsx")
         with open(src, "wb") as stream:
             stream.write(data)
-        schedule_data = engine.load_data(src)
+        schedule_data = engine.load_data(
+            src, allow_course_shortfall=diagnostic_draft)
     return _solve_loaded_data(
-        schedule_data, time_limit, use_openai, ai_goal, auto_schedule_tutor)
+        schedule_data, time_limit, use_openai, ai_goal, auto_schedule_tutor,
+        diagnostic_draft)
 
 
 def _run_solver_data(payload, limits, rules, time_limit, use_openai=False, ai_goal="",
-                     auto_schedule_tutor=False):
-    schedule_data = engine.load_frontend_data(payload, limits, rules)
+                     auto_schedule_tutor=False, diagnostic_draft=False):
+    schedule_data = engine.load_frontend_data(
+        payload, limits, rules, allow_course_shortfall=diagnostic_draft)
     return _solve_loaded_data(
-        schedule_data, time_limit, use_openai, ai_goal, auto_schedule_tutor)
+        schedule_data, time_limit, use_openai, ai_goal, auto_schedule_tutor,
+        diagnostic_draft)
 
 
 @app.get("/auth/config")
@@ -1084,12 +1116,14 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
         async with SOLVE_GATE:
             output, meta, ai_status, schedule_rows, overlay_rows = await run_in_threadpool(
                 _run_solver_data, request.data, request.limits, request.rules, seconds,
-                request.use_openai, request.ai_goal.strip(), request.auto_schedule_tutor)
+                request.use_openai, request.ai_goal.strip(), request.auto_schedule_tutor,
+                request.diagnostic_draft)
         compliance_issues = list(meta.get("compliance_blocking_issues", []))
         blocking_issues = compliance_issues + list(meta.get("weekly_cap_violations", []))
         if meta.get("completion") != "complete":
             blocking_issues.append(
-                f"尚有 {meta.get('remaining_total', 0)} 節未完成，其中未配教師 {meta.get('missing_total', 0)} 節、導師自排池 {meta.get('pool_total', 0)} 節")
+                f"尚有 {meta.get('remaining_total', 0)} 節未完成，其中未配教師 {meta.get('missing_total', 0)} 節、"
+                f"導師自排池 {meta.get('pool_total', 0)} 節、診斷草案缺額 {meta.get('diagnostic_shortfall_total', 0)} 節")
         if request.strict_complete and blocking_issues:
             _record_usage(solve_principal, "solve_failed")
             return JSONResponse(status_code=409, content={
@@ -1107,13 +1141,17 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
                 "compliance_warnings": meta.get("compliance_warnings", []),
                 "issues": blocking_issues[:10],
             })
-        filename = "schedule_output.xlsx" if meta.get("completion") == "complete" and not blocking_issues else "schedule_partial.xlsx"
+        filename = ("schedule_diagnostic_draft.xlsx" if meta.get("diagnostic_draft") else
+                    "schedule_output.xlsx" if meta.get("completion") == "complete" and not blocking_issues else
+                    "schedule_partial.xlsx")
         headers = {"Content-Disposition": f"attachment; filename={filename}",
                    "X-Solve-Status": meta["status"],
                    "X-Penalty": str(meta["penalty"]),
                    "X-Violations": "0",
                    "X-Schedule-Completeness": meta.get("completion", "partial"),
+                   "X-Diagnostic-Draft": "true" if meta.get("diagnostic_draft") else "false",
                    "X-Missing-Lessons": str(meta.get("missing_total", 0)),
+                   "X-Diagnostic-Shortfall": str(meta.get("diagnostic_shortfall_total", 0)),
                    "X-Tutor-Pool": str(meta.get("pool_total", 0)),
                    "X-Weekly-Cap-Issues": str(len(meta.get("weekly_cap_violations", []))),
                    "X-Compliance-Issues": str(len(compliance_issues)),
@@ -1128,7 +1166,8 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
             "schedule": schedule_rows,
             "overlay": overlay_rows,
         }, headers=headers)
-    except engine.InfeasibleScheduleError as exc:
+    except (engine.InfeasibleScheduleError,
+            engine.DiagnosticDraftEligibleError) as exc:
         _record_usage(solve_principal, "solve_failed")
         return _infeasible_response(exc)
     except (ValueError, RuntimeError) as exc:
@@ -1146,6 +1185,7 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
                 authorization: str = Header(""),
                 use_openai: bool = Form(False), ai_goal: str = Form(""),
                 auto_schedule_tutor: bool = Form(False), strict_complete: bool = Form(False),
+                diagnostic_draft: bool = Form(False),
                 return_json: bool = Form(False)):
     if not _check_solve_access(api_key, x_api_key, authorization):
         return JSONResponse(status_code=401, content={"error": "請使用排課管理員 Google 帳號登入"},
@@ -1172,12 +1212,14 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
         seconds = min(max(int(time_limit), 10), 600)
         async with SOLVE_GATE:
             output, meta, ai_status, schedule_rows, overlay_rows = await run_in_threadpool(
-                _run_solver, data, seconds, use_openai, ai_goal.strip(), auto_schedule_tutor)
+                _run_solver, data, seconds, use_openai, ai_goal.strip(), auto_schedule_tutor,
+                diagnostic_draft)
         compliance_issues = list(meta.get("compliance_blocking_issues", []))
         blocking_issues = compliance_issues + list(meta.get("weekly_cap_violations", []))
         if meta.get("completion") != "complete":
             blocking_issues.append(
-                f"尚有 {meta.get('remaining_total', 0)} 節未完成，其中未配教師 {meta.get('missing_total', 0)} 節、導師自排池 {meta.get('pool_total', 0)} 節")
+                f"尚有 {meta.get('remaining_total', 0)} 節未完成，其中未配教師 {meta.get('missing_total', 0)} 節、"
+                f"導師自排池 {meta.get('pool_total', 0)} 節、診斷草案缺額 {meta.get('diagnostic_shortfall_total', 0)} 節")
         if strict_complete and blocking_issues:
             _record_usage(solve_principal, "solve_failed")
             return JSONResponse(status_code=409, content={
@@ -1195,13 +1237,17 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
                 "compliance_warnings": meta.get("compliance_warnings", []),
                 "issues": blocking_issues[:10],
             })
-        filename = "schedule_output.xlsx" if meta.get("completion") == "complete" and not blocking_issues else "schedule_partial.xlsx"
+        filename = ("schedule_diagnostic_draft.xlsx" if meta.get("diagnostic_draft") else
+                    "schedule_output.xlsx" if meta.get("completion") == "complete" and not blocking_issues else
+                    "schedule_partial.xlsx")
         headers = {"Content-Disposition": f"attachment; filename={filename}",
                    "X-Solve-Status": meta["status"],
                    "X-Penalty": str(meta["penalty"]),
                    "X-Violations": "0",
                    "X-Schedule-Completeness": meta.get("completion", "partial"),
+                   "X-Diagnostic-Draft": "true" if meta.get("diagnostic_draft") else "false",
                    "X-Missing-Lessons": str(meta.get("missing_total", 0)),
+                   "X-Diagnostic-Shortfall": str(meta.get("diagnostic_shortfall_total", 0)),
                    "X-Tutor-Pool": str(meta.get("pool_total", 0)),
                    "X-Weekly-Cap-Issues": str(len(meta.get("weekly_cap_violations", []))),
                    "X-Compliance-Issues": str(len(compliance_issues)),
@@ -1219,7 +1265,8 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
             }, headers=headers)
         _record_usage(solve_principal, "solve_success")
         return Response(content=output, media_type=XLSX_MIME, headers=headers)
-    except engine.InfeasibleScheduleError as exc:
+    except (engine.InfeasibleScheduleError,
+            engine.DiagnosticDraftEligibleError) as exc:
         _record_usage(solve_principal, "solve_failed")
         return _infeasible_response(exc)
     except (ValueError, RuntimeError) as exc:

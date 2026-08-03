@@ -167,6 +167,37 @@ def test_server_publish_rejects_empty_or_incomplete_schedule_even_when_flag_is_t
         app._normalize_schedule_snapshot(payload, require_schedule=True)
 
 
+def test_server_publish_rejects_diagnostic_draft_and_rechecks_hidden_shortfall():
+    payload = complete_publish_payload()
+    payload["diagnostic_draft"] = True
+    payload["diagnostic_missing"] = [{
+        "class": "1甲", "subject": "領域課程", "hours": 1,
+        "reason_code": "diagnostic_shortfall",
+    }]
+
+    with pytest.raises(ValueError, match="診斷草案.*不可發布"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+    payload["diagnostic_draft"] = False
+    payload["schedule"].pop(next(iter(payload["schedule"])))
+    with pytest.raises(ValueError, match="節數不符.*排22/需23"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_diagnostic_draft_state_is_preserved_in_cloud_draft():
+    payload = complete_publish_payload()
+    payload["diagnosticDraft"] = True
+    payload["diagnosticMissing"] = [{
+        "class": "1甲", "subject": "領域課程", "hours": 1,
+        "reason_code": "diagnostic_shortfall",
+    }]
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=False)
+
+    assert snapshot["diagnostic_draft"] is True
+    assert snapshot["diagnostic_missing"][0]["hours"] == 1
+
+
 def test_server_publish_rechecks_fixed_courses():
     payload = complete_publish_payload()
     payload["data"]["locks"] = [{"c": "1甲", "d": "五", "p": 7, "s": "領域課程"}]
@@ -321,4 +352,35 @@ def test_server_publish_allows_first_stage_tutor_pool_but_complete_mode_requires
 
     payload["formal_auto_tutor"] = True
     with pytest.raises(ValueError, match="正式課表硬規則檢核未通過.*導師課.*排0/需22"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_server_publish_rejects_partially_scheduled_tutor_pool_without_diagnostic_flag():
+    payload = complete_publish_payload()
+    payload["data"]["subjects"] = {
+        "科任課": {
+            "hours": [1, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+        "導師課": {
+            "hours": [22, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": True,
+        },
+    }
+    payload["data"]["assign"] = {
+        "1甲": {"科任課": "王導師", "導師課": "王導師"}}
+    payload["schedule"] = {
+        "1甲|一|1": {"s": "科任課", "t": "王導師", "room": "R00"},
+        "1甲|一|2": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|一|3": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|一|4": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|一|5": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|二|1": {"s": "導師課", "t": "王導師", "room": "R00"},
+    }
+    payload["formal_auto_tutor"] = False
+    payload["diagnostic_draft"] = False
+    payload["diagnostic_missing"] = []
+
+    with pytest.raises(
+            ValueError, match="正式課表硬規則檢核未通過.*導師課.*排5/需22"):
         app._normalize_schedule_snapshot(payload, require_schedule=True)

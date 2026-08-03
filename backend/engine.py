@@ -11,6 +11,7 @@ v1.4：新增母版 v5 九分頁格式、強化獨立檢核與輸入資料驗證
 v1.5：新增 OpenAI 軟規則規劃介面，硬規則與最終驗證仍由 CP-SAT 負責
 v1.6：新增完整度指標、正式模式自動排導師課、週節數上限與求解品質資訊
 v1.7：新增逐條軟規則品質報告與統一的待完成課程原因格式
+v1.8：新增安全診斷草案，一般課程可回報缺額，所有衝堂與結構性硬規則維持不放寬
 """
 import os
 import re
@@ -50,9 +51,28 @@ class InfeasibleScheduleError(RuntimeError):
         self.status = status
 
 
+class DiagnosticDraftEligibleError(ValueError):
+    """A validation failure that diagnostic-draft mode can safely relax."""
+
+    def __init__(self, message, diagnostics=(), status="INFEASIBLE"):
+        super().__init__(message)
+        self.diagnostics = list(diagnostics)
+        self.status = status
+
+
 def _diagnostic(title, detail, action, view, confirmed=True):
     return {"title": title, "detail": detail, "action": action,
             "view": view, "confirmed": bool(confirmed)}
+
+
+def _course_capacity_shortfall(code, required, available):
+    message = f"{code} 每週課程 {required} 節，超過可排時段 {available} 節"
+    return DiagnosticDraftEligibleError(message, [_diagnostic(
+        f"{code} 的課程節數超過可排時段",
+        f"每週需要安排 {required} 節，但依目前年級作息只有 {available} 節可用。",
+        "可先產生診斷草案查看最少缺額，或回到資料建置調整科目節數與年級上課時段。",
+        "build",
+    )])
 
 
 def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEASIBLE"):
@@ -345,14 +365,14 @@ def excel_safe(value):
     return "'" + value if stripped.startswith(("=", "+", "-", "@")) else value
 
 
-def load_data(path):
+def load_data(path, allow_course_shortfall=False):
     wb = load_workbook(path, data_only=True)
     if V5_REQUIRED.issubset(set(wb.sheetnames)) or V6_REQUIRED.issubset(set(wb.sheetnames)):
-        return _load_data_v5(wb)
-    return _load_data_v4(wb)
+        return _load_data_v5(wb, allow_course_shortfall=allow_course_shortfall)
+    return _load_data_v4(wb, allow_course_shortfall=allow_course_shortfall)
 
 
-def load_frontend_data(payload, limits=(), rules=()):
+def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=False):
     """Convert the browser's cloud-draft schema into the CP-SAT engine schema."""
     if not isinstance(payload, dict):
         raise ValueError("系統案件資料格式不正確")
@@ -858,8 +878,8 @@ def load_frontend_data(payload, limits=(), rules=()):
         required = sum(info["hours"][item["grade"]] for info in subjects.values())
         available = sum(grade_slot[(item["grade"], day, period)]
                         for day in DAYS for period in PERIODS)
-        if required > available:
-            raise ValueError(f"{item['code']} 每週課程 {required} 節，超過可排時段 {available} 節")
+        if required > available and not allow_course_shortfall:
+            raise _course_capacity_shortfall(item["code"], required, available)
 
     policy_result = schedule_policy.validate_case(payload)
     teacher_caps = payload.get("tcap") or {}
@@ -916,7 +936,7 @@ def load_frontend_data(payload, limits=(), rules=()):
     }
 
 
-def _load_data_v5(wb):
+def _load_data_v5(wb, allow_course_shortfall=False):
     is_v6 = "教師與配課" in wb.sheetnames
     required = V6_REQUIRED if is_v6 else V5_REQUIRED
     missing = sorted(required - set(wb.sheetnames))
@@ -1446,8 +1466,8 @@ def _load_data_v5(wb):
     for c in classes:
         need = sum(info["hours"][c["grade"]] for info in subjects.values())
         available = sum(grade_slot[(c["grade"], day, p)] for day in DAYS for p in PERIODS)
-        if need > available:
-            raise ValueError(f"{c['code']} 每週課程 {need} 節，超過該年級可排時段 {available} 節")
+        if need > available and not allow_course_shortfall:
+            raise _course_capacity_shortfall(c["code"], need, available)
     d["policy"] = {"profileId": schedule_policy.PROFILE_ID}
     d["tcap"] = teacher_caps
     load = defaultdict(int)
@@ -1488,7 +1508,7 @@ def _load_data_v5(wb):
     return d
 
 
-def _load_data_v4(wb):
+def _load_data_v4(wb, allow_course_shortfall=False):
     d = {}
 
     ws = wb["設定_年段時段"]
@@ -1689,7 +1709,7 @@ def _load_data_v4(wb):
     return d
 
 
-def solve(d, time_limit=60, auto_schedule_tutor=False):
+def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
     m = cp_model.CpModel()
     classes, subjects, assign = d["classes"], d["subjects"], d["assign"]
     grade_slot = d["grade_slot"]
@@ -1791,9 +1811,12 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
     def active(code, s):
         return [(day, p, x[(code, s, day, p)]) for day, p in slots if x.get((code, s, day, p)) is not None]
 
+    diagnostic_missing = {}
+    scheduled_counts = {}
     for (code, s), tk in tasks.items():
         vs = [v for _, _, v in active(code, s)]
-        if len(vs) < tk["h"]:
+        allow_shortfall = bool(diagnostic_draft) and not tk["info"]["block"]
+        if len(vs) < tk["h"] and not allow_shortfall:
             primary = _diagnostic(
                 f"{code} {s} 可用時段不足",
                 f"需要 {tk['h']} 節，但依年段、班級、教師、科目及場地限制只剩 {len(vs)} 節可用。",
@@ -1802,7 +1825,15 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             raise InfeasibleScheduleError(
                 f"{code} {s} 可用時段不足（需 {tk['h']} 節，僅剩 {len(vs)} 節）",
                 diagnostics[:10])
-        m.Add(sum(vs) == tk["h"])
+        if allow_shortfall:
+            scheduled = m.NewIntVar(0, tk["h"], f"scheduled_{code}_{s}")
+            missing = m.NewIntVar(0, tk["h"], f"missing_{code}_{s}")
+            m.Add(scheduled == sum(vs))
+            m.Add(scheduled + missing == tk["h"])
+            scheduled_counts[(code, s)] = scheduled
+            diagnostic_missing[(code, s)] = missing
+        else:
+            m.Add(sum(vs) == tk["h"])
 
     # H02 班級不衝堂
     for c in classes:
@@ -1991,7 +2022,14 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
             for day, (b, vs) in day_has.items():
                 m.Add(sum(vs) <= per_day)
             if info["spread"]:
-                m.Add(sum(b for b, _ in day_has.values()) >= min(int(info["spread"]), h))
+                required_spread = min(int(info["spread"]), h)
+                if (code, s) in scheduled_counts:
+                    actual_spread = m.NewIntVar(0, required_spread, f"spread_{code}_{s}")
+                    m.AddMinEquality(
+                        actual_spread, [scheduled_counts[(code, s)], required_spread])
+                    m.Add(sum(b for b, _ in day_has.values()) >= actual_spread)
+                else:
+                    m.Add(sum(b for b, _ in day_has.values()) >= required_spread)
 
     # H03 場地容量約束（含 2+1 連堂占用）
     for (rid, day, p), vs in room_slot.items():
@@ -2137,18 +2175,80 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
                 "day": pf["day"], "period": pf["p"],
             })
 
-    m.Minimize(sum(pen))
-    solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_limit
-    solver.parameters.num_workers = min(8, max(1, int(os.getenv("SCHEDULE_SOLVER_WORKERS", "2"))))
-    solver.parameters.random_seed = int(os.getenv("SCHEDULE_RANDOM_SEED", "42"))
-    status = solver.Solve(m)
-    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        status_name = solver.StatusName(status)
-        message = ("求解時間內尚未找到可行解" if status_name == "UNKNOWN"
-                   else "無可行解，硬規則彼此衝突")
-        raise InfeasibleScheduleError(
-            message, diagnose_infeasibility(d, tasks, x, status=status_name), status_name)
+    def configured_solver(seconds):
+        configured = cp_model.CpSolver()
+        configured.parameters.max_time_in_seconds = max(0.1, float(seconds))
+        configured.parameters.num_workers = min(
+            8, max(1, int(os.getenv("SCHEDULE_SOLVER_WORKERS", "2"))))
+        configured.parameters.random_seed = int(os.getenv("SCHEDULE_RANDOM_SEED", "42"))
+        return configured
+
+    diagnostic_phase1_status = None
+    diagnostic_shortfall_status = None
+    diagnostic_quality_optimized = True
+    diagnostic_fallback_to_phase1 = False
+    diagnostic_phase1_wall = 0.0
+    diagnostic_phase2_wall = 0.0
+
+    if diagnostic_draft and diagnostic_missing:
+        try:
+            phase1_ratio = float(os.getenv("SCHEDULE_DIAGNOSTIC_PHASE1_RATIO", "0.4"))
+        except ValueError:
+            phase1_ratio = 0.4
+        phase1_ratio = min(0.75, max(0.25, phase1_ratio))
+        phase1_budget = min(float(time_limit), max(1.0, float(time_limit) * phase1_ratio))
+        total_shortfall = sum(diagnostic_missing.values())
+        m.Minimize(total_shortfall)
+        phase1_solver = configured_solver(phase1_budget)
+        phase1_status = phase1_solver.Solve(m)
+        diagnostic_phase1_wall = phase1_solver.WallTime()
+        diagnostic_phase1_status = phase1_solver.StatusName(phase1_status)
+        if phase1_status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            message = ("診斷草案求解逾時，尚未找到可調整的課表"
+                       if diagnostic_phase1_status == "UNKNOWN"
+                       else "診斷草案仍無可行解，硬規則彼此衝突")
+            raise InfeasibleScheduleError(
+                message,
+                diagnose_infeasibility(d, tasks, x, status=diagnostic_phase1_status),
+                diagnostic_phase1_status,
+            )
+
+        best_shortfall = sum(
+            phase1_solver.Value(value) for value in diagnostic_missing.values())
+        diagnostic_shortfall_status = (
+            "optimal" if phase1_status == cp_model.OPTIMAL else "best_found")
+        m.Add(total_shortfall == best_shortfall)
+        for value in x.values():
+            if value is not None:
+                m.AddHint(value, phase1_solver.Value(value))
+        for value in diagnostic_missing.values():
+            m.AddHint(value, phase1_solver.Value(value))
+
+        remaining = max(0.0, float(time_limit) - diagnostic_phase1_wall)
+        solver, status = phase1_solver, phase1_status
+        if remaining >= 0.1:
+            m.Minimize(sum(pen))
+            phase2_solver = configured_solver(remaining)
+            phase2_status = phase2_solver.Solve(m)
+            diagnostic_phase2_wall = phase2_solver.WallTime()
+            if phase2_status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                solver, status = phase2_solver, phase2_status
+            else:
+                diagnostic_quality_optimized = False
+                diagnostic_fallback_to_phase1 = True
+        else:
+            diagnostic_quality_optimized = False
+            diagnostic_fallback_to_phase1 = True
+    else:
+        m.Minimize(sum(pen))
+        solver = configured_solver(time_limit)
+        status = solver.Solve(m)
+        if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            status_name = solver.StatusName(status)
+            message = ("求解時間內尚未找到可行解" if status_name == "UNKNOWN"
+                       else "無可行解，硬規則彼此衝突")
+            raise InfeasibleScheduleError(
+                message, diagnose_infeasibility(d, tasks, x, status=status_name), status_name)
 
     sched = {}
     for (code, s, day, p), v in x.items():
@@ -2181,6 +2281,19 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         for code in _resource_sources(ov):
             ov_sched.append((ov.get("id") or f"resource-{i + 1}", ov["grp"], code,
                              ov["subj"], "早自修", ov["t"], ov["day"], 0))
+    for (code, subject), missing_var in diagnostic_missing.items():
+        hours = int(solver.Value(missing_var))
+        if hours <= 0:
+            continue
+        required = int(tasks[(code, subject)]["h"])
+        scheduled = required - hours
+        missing_courses.append({
+            "class": code, "subject": subject, "hours": hours,
+            "required": required, "scheduled": scheduled,
+            "reason_code": "diagnostic_shortfall", "reason": "診斷草案未排入",
+        })
+        warn.append(
+            f"診斷草案未排入：{code} {subject} {hours}節（已排 {scheduled}/{required} 節）")
     incomplete_totals = defaultdict(int)
     incomplete_counts = defaultdict(int)
     for item in missing_courses:
@@ -2191,9 +2304,6 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
     missing_total = incomplete_totals["missing_teacher"]
     diagnostic_shortfall_total = incomplete_totals["diagnostic_shortfall"]
     remaining_total = max(0, required_total - len(sched))
-    objective = solver.ObjectiveValue()
-    bound = solver.BestObjectiveBound()
-    gap = 0.0 if objective == bound else abs(objective - bound) / max(1.0, abs(objective))
     completion = "complete" if remaining_total == 0 else "partial"
     quality_report = []
     for rid, label in SOFT_RULE_LABELS.items():
@@ -2215,10 +2325,21 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         })
     quality_violation_total = sum(item["violations"] for item in quality_report)
     quality_penalty_total = sum(item["weighted_penalty"] for item in quality_report)
+    objective = quality_penalty_total
+    if diagnostic_draft and diagnostic_missing and not diagnostic_quality_optimized:
+        bound = None
+        gap = None
+    else:
+        bound = solver.BestObjectiveBound()
+        gap = (0.0 if objective == bound else
+               abs(objective - bound) / max(1.0, abs(objective)))
+    solve_wall = solver.WallTime()
+    if diagnostic_draft and diagnostic_missing:
+        solve_wall = diagnostic_phase1_wall + diagnostic_phase2_wall
     meta = {
         "status": solver.StatusName(status), "penalty": objective,
-        "best_bound": bound, "relative_gap": round(gap, 6),
-        "wall": round(solver.WallTime(), 1), "conflicts": solver.NumConflicts(),
+        "best_bound": bound, "relative_gap": None if gap is None else round(gap, 6),
+        "wall": round(solve_wall, 1), "conflicts": solver.NumConflicts(),
         "branches": solver.NumBranches(), "required_total": required_total,
         "scheduled_total": len(sched), "remaining_total": remaining_total,
         "pool_total": pool_total, "missing_total": missing_total,
@@ -2233,6 +2354,13 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
         "quality_report": quality_report,
         "quality_violation_total": quality_violation_total,
         "quality_penalty_total": quality_penalty_total,
+        "diagnostic_draft": bool(diagnostic_draft),
+        "diagnostic_shortfall_status": diagnostic_shortfall_status,
+        "diagnostic_quality_optimized": diagnostic_quality_optimized,
+        "diagnostic_fallback_to_phase1": diagnostic_fallback_to_phase1,
+        "diagnostic_phase1_status": diagnostic_phase1_status,
+        "diagnostic_phase1_wall": round(diagnostic_phase1_wall, 1),
+        "diagnostic_phase2_wall": round(diagnostic_phase2_wall, 1),
         "weekly_cap_violations": list(d.get("weekly_cap_violations", [])),
         "policy": d.get("policy_meta") or d.get("policy") or {},
         "compliance_blocking_issues": list(d.get("compliance_blocking_issues", [])),
@@ -2242,8 +2370,9 @@ def solve(d, time_limit=60, auto_schedule_tutor=False):
     return sched, tasks, warn, meta, ov_sched
 
 
-def validate(d, sched, tasks, ov_sched=()):
+def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
     errs = []
+    diagnostic_shortfalls = diagnostic_shortfalls or {}
     grade_of = {c["code"]: c["grade"] for c in d["classes"]}
     ovt = defaultdict(list)
     ovc = defaultdict(list)
@@ -2327,7 +2456,9 @@ def validate(d, sched, tasks, ov_sched=()):
             errs.append(f"H03違反：{room} 週{day}{p} {v}")
     for (code, s), tk in tasks.items():
         n = sum(1 for (cc, dd, pp), (ss, _, _) in sched.items() if cc == code and ss == s)
-        if n != tk["h"]:
+        allowed_missing = int(diagnostic_shortfalls.get((code, s), 0))
+        if n != tk["h"] and (
+                tk["info"]["block"] or n + allowed_missing != tk["h"]):
             errs.append(f"節數不符：{code} {s} 排{n}/需{tk['h']}")
     for lk in d["locks"]:
         got = sched.get((lk["class"], lk["day"], lk["p"]))
@@ -2370,12 +2501,25 @@ def write_output(path, d, sched, tasks, warn, meta, errs, ov_sched=()):
     completion_label = "完整" if meta.get("completion") == "complete" else "部分完成"
     resource_session_count = len({(group_id, teacher, day, period)
                                   for group_id, _, _, _, _, teacher, day, period in ov_sched})
+    quality_summary = (
+        "品質最佳化：未完成（已保留最少缺額草案）"
+        if meta.get("diagnostic_draft") and not meta.get("diagnostic_quality_optimized", True)
+        else f"最佳界：{meta.get('best_bound', 0)}　gap={meta.get('relative_gap', 0)}"
+    )
     lines = [f"求解狀態：{meta['status']}　完整度：{completion_label}　penalty={meta['penalty']}　耗時{meta['wall']}秒",
              f"需求：{meta.get('required_total', len(sched))}節　已排：{len(sched)}節　待完成：{meta.get('remaining_total', 0)}節　資源班：{resource_session_count}節",
              f"未配教師：{meta.get('missing_total', 0)}節　導師自排池：{meta.get('pool_total', 0)}節　週上限問題：{len(meta.get('weekly_cap_violations', []))}項",
-             f"獨立硬規則檢核：{'零違反 ✓' if not errs else f'{len(errs)} 項違反 ✗'}　最佳界：{meta.get('best_bound', 0)}　gap={meta.get('relative_gap', 0)}"]
+             f"獨立硬規則檢核：{'零違反 ✓' if not errs else f'{len(errs)} 項違反 ✗'}　{quality_summary}"]
+    if meta.get("diagnostic_draft"):
+        lines.insert(
+            0,
+            f"診斷草案｜不可發布或作為正式上傳檔｜一般課程尚缺 {meta.get('diagnostic_shortfall_total', 0)} 節",
+        )
     for i, t in enumerate(lines, 1):
         ws.cell(i, 1, excel_safe(t)).font = Font(name=F, size=11, bold=True)
+    if meta.get("diagnostic_draft"):
+        ws.cell(1, 1).fill = PatternFill("solid", start_color="F4CCCC")
+        ws.cell(1, 1).font = Font(name=F, size=12, bold=True, color="9C0006")
     ws.column_dimensions["A"].width = 80
 
     quality_ws = wb.create_sheet("排課品質")

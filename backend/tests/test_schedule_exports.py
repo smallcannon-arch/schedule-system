@@ -37,6 +37,7 @@ const ids={'導師':'A123456789','客語教師':'B123456789'};
 const upload=exp.uploadRows(data,entries,ids);
 const classSheet=exp.classSheets(data,entries)[0];
 const printable=exp.printDocument([classSheet],'班級課表');
+const diagnosticPrintable=exp.printDocument([classSheet],'診斷草案',{diagnosticDraft:true});
 process.stdout.write(JSON.stringify({
   classTitle:classSheet.rows[0][0],
   classSubtitle:classSheet.rows[1][0],
@@ -45,7 +46,8 @@ process.stdout.write(JSON.stringify({
   nativeRow:upload.find(row=>row[4]==='客語教師'),
   assistantUploaded:upload.some(row=>row[4]==='協同教師'),
   issues:exp.validateUpload(data,entries,ids),
-  printable
+  printable,
+  diagnosticPrintable
 }));
 """)
 
@@ -63,6 +65,8 @@ process.stdout.write(JSON.stringify({
     assert "A4 landscape" in output["printable"]
     assert "學校正式課表" in output["printable"]
     assert "本土語文（分組上課）" in output["printable"]
+    assert "診斷草案｜不可發布" in output["diagnosticPrintable"]
+    assert 'class="page diagnostic"' in output["diagnosticPrintable"]
 
 
 def test_special_language_group_does_not_replace_original_minnan_teacher():
