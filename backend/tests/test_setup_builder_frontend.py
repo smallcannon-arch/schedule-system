@@ -21,6 +21,9 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert "步驟 2　教師資料" in html
     assert "步驟 3　科目節數" in html
     assert "步驟 4　配課資料" in html
+    assert 'class="setup-pending-flow"' in html
+    assert "建立案件後，依序完成 4 個步驟" in html
+    assert "body.setup-pending:not(.platform-admin-mode) .setup-pending-flow{display:block}" in html
     assert 'data-setup-step="${step.view}"' in script
     assert 'step.done ? "完成" : "待完成"' in script
     assert 'button.setAttribute("aria-current", current ? "step" : "false")' in script
