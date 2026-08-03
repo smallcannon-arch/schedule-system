@@ -11,10 +11,25 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
-  function issueTarget(text) {
-    const value = String(text || "");
-    if (/本土語|語言分組|共同時段/.test(value)) return {group: "conditions", view: "native", label: "檢查語言分組"};
+  function issueText(issue) {
+    return String(issue && typeof issue === "object" ? issue.text || "" : issue || "");
+  }
+
+  function issueTarget(issue) {
+    const explicit = issue && typeof issue === "object" ? issue : null;
+    const value = issueText(issue);
+    if (explicit && explicit.view) {
+      const conditionViews = new Set(["fixed", "native", "res", "lim", "rules"]);
+      return {
+        group: explicit.group || (conditionViews.has(explicit.view) ? "conditions" : "foundation"),
+        view: explicit.view,
+        tab: explicit.tab,
+        label: explicit.label || "前往修正",
+      };
+    }
+    if (/本土語|語言分組|語言抽離|共同時段/.test(value)) return {group: "conditions", view: "native", label: "檢查語言分組"};
     if (/資源班|抽離組/.test(value)) return {group: "conditions", view: "res", label: "檢查資源班"};
+    if (/固定課|固定「|固定在|重複固定/.test(value)) return {group: "conditions", view: "fixed", label: "檢查固定課程"};
     if (/不排|禁排|可排時段|週.+第.+節/.test(value)) return {group: "conditions", view: "lim", label: "檢查時段"};
     if (/縣市|學年度|基準節數|每日硬上限|核定班級/.test(value)) return {group: "conditions", view: "build", label: "檢查學校規則"};
     if (/Google 帳號|教師名冊|可授|授課教師/.test(value)) return {group: "foundation", view: "build", tab: "teachers", label: "檢查教師"};
@@ -32,6 +47,7 @@
     if (!adapter) return {groups: [], checklist: [], counts: {blocker: 0, warning: 0, pass: 0}};
     const data = adapter.getData();
     const setup = adapter.getSetupValidation();
+    const setupHardItems = Array.isArray(setup.hardItems) ? setup.hardItems : (setup.hard || []);
     const cloud = adapter.getCloudState();
     const scheduleReady = adapter.isScheduleReady();
     const schedule = scheduleReady ? adapter.getScheduleValidation() : {hard: [], pending: []};
@@ -44,9 +60,9 @@
     ];
     const groupMap = Object.fromEntries(groups.map((group) => [group.id, group]));
 
-    for (const text of setup.hard || []) {
-      const target = issueTarget(text);
-      groupMap[target.group].items.push(makeItem("blocker", text, target));
+    for (const issue of setupHardItems) {
+      const target = issueTarget(issue);
+      groupMap[target.group].items.push(makeItem("blocker", issueText(issue), target));
     }
     const setupWarnings = setup.warnings || [];
     const missingGoogleAccounts = setupWarnings.filter((text) => /尚未填 Google 帳號/.test(text));
@@ -107,8 +123,8 @@
       if (!group.items.length) group.items.push(makeItem("pass", `${group.title}目前沒有發現問題`));
     }
 
-    const foundationalHard = (setup.hard || []).filter((text) => issueTarget(text).group === "foundation");
-    const conditionHard = (setup.hard || []).filter((text) => issueTarget(text).group === "conditions");
+    const foundationalHard = setupHardItems.filter((issue) => issueTarget(issue).group === "foundation").map(issueText);
+    const conditionHard = setupHardItems.filter((issue) => issueTarget(issue).group === "conditions").map(issueText);
     const counts = setup.counts || {};
     const projectStarted = Number(counts.classes || 0) > 0 || Number(counts.teachers || 0) > 0 || Number(counts.subjects || 0) > 0;
     const checklist = [

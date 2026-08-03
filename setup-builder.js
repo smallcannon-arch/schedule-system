@@ -179,7 +179,13 @@
   function validate() {
     const d = data();
     const hard = [];
+    const hardTargets = new Map();
     const warnings = [];
+    const markHardSince = (start, target) => {
+      for (const text of hard.slice(start)) {
+        if (!hardTargets.has(text)) hardTargets.set(text, target);
+      }
+    };
     const classCodes = new Set();
     const teacherNames = new Set(Object.keys(d.roster));
     const subjectNames = Object.keys(d.subjects);
@@ -263,6 +269,7 @@
       }
     }
 
+    const fixedHardStart = hard.length;
     const fixedCounts = new Map();
     const fixedClassSlots = new Map();
     const fixedTeacherSlots = new Map();
@@ -322,7 +329,11 @@
         hard.push(`${code} ${subject}每週 ${weeklyHours} 節，但設定了 ${count} 個固定時段`);
       }
     }
+    markHardSince(fixedHardStart, {
+      group: "conditions", view: "fixed", label: "檢查固定課程",
+    });
 
+    const resourceHardStart = hard.length;
     for (const group of (d.resGroups || [])) {
       const name = String(group.grp || "資源班抽離組").trim();
       const sources = resourceSources(group);
@@ -347,7 +358,11 @@
       else if (!teacherNames.has(group.t)) hard.push(`${name}的資源班教師不在名冊：${group.t}`);
       if (!Number.isInteger(+group.n) || +group.n < 1) hard.push(`${name}每週節數必須大於 0`);
     }
+    markHardSince(resourceHardStart, {
+      group: "conditions", view: "res", label: "檢查資源班",
+    });
 
+    const limitHardStart = hard.length;
     for (const row of (adapter.getLimits() || [])) {
       const target = String(row[0] || "").trim();
       const day = String(row[1] || "").trim();
@@ -361,7 +376,11 @@
         hard.push(`${target || "不排課時間"}的節次設定不正確：${period}`);
       }
     }
+    markHardSince(limitHardStart, {
+      group: "conditions", view: "lim", label: "檢查時段",
+    });
 
+    const nativeHardStart = hard.length;
     if (nativeLockEnabled && nativeArrangement === "distributed") {
       const nativeStaffSlots = new Set();
       const nativeRoomLoad = new Map();
@@ -549,6 +568,9 @@
     } else if (nativeLockEnabled) {
       hard.push("已設定本土語分組，但科目節數缺少「本土語文」");
     }
+    markHardSince(nativeHardStart, {
+      group: "conditions", view: "native", label: "檢查語言分組",
+    });
 
     for (const name of teacherNames) {
       const email = String(d.teacherAccounts[name] || "").trim();
@@ -562,8 +584,11 @@
       warnings.push(...policyResult.warnings);
     }
 
+    const uniqueHard = [...new Set(hard)];
     return {
-      hard: [...new Set(hard)], warnings: [...new Set(warnings)],
+      hard: uniqueHard,
+      hardItems: uniqueHard.map((text) => ({text, ...(hardTargets.get(text) || {})})),
+      warnings: [...new Set(warnings)],
       counts: {
         classes: d.classes.length,
         teachers: teacherNames.size,

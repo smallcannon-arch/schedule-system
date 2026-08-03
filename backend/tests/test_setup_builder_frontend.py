@@ -1034,6 +1034,45 @@ def test_untrusted_excel_files_use_patched_reader_only():
     assert b'0.20.3' in reader.read_bytes()
 
 
+def test_setup_validation_tags_fixed_resource_and_native_issue_sources():
+    script = r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+global.requestAnimationFrame=()=>0;
+require(process.argv[1]);
+const slots=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={
+  classes:[{g:1,code:'1甲',tutor:'王老師'}],roster:{王老師:'導師'},
+  teacherAccounts:{王老師:'teacher@example.edu.tw'},teacherNativeLangs:{},
+  teacherSubjects:{},tcap:{},subjects:{數學:{hours:[1,0,0,0,0,0],self:true}},
+  assign:{'1甲':{數學:'王老師'}},assignmentModes:{},override:{},
+  locks:[{c:'1甲',s:'數學',d:'三',p:8}],
+  resGroups:[{grp:'一年級A組',sources:[],subj:'數學',pullSubjects:['數學'],t:'',n:1}],
+  nativeLockEnabled:true,nativeArrangement:'distributed',nativeBands:[],
+  nativeGroups:[{g:1,grp:'客語組',lang:'客語',sources:[],pullSubjects:['數學'],
+    t:'',d:'',p:0,room:'R00'}],rooms:{R00:99},gslot:{1:slots}
+};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:(value)=>String(value),
+  commit:()=>{},startBlank:()=>false});
+const result=ScheduleSetup.validate();
+process.stdout.write(JSON.stringify(result.hardItems));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    items = json.loads(result.stdout)
+
+    assert {item.get("view") for item in items} >= {"fixed", "res", "native"}
+    assert next(
+        item for item in items if "固定時段不正確" in item["text"])["view"] == "fixed"
+    assert next(
+        item for item in items if "一年級A組尚未指定來源班級" in item["text"])["view"] == "res"
+    assert any(item.get("view") == "native" and "客語組" in item["text"] for item in items)
+
+
 def test_tutor_workflow_is_locked_until_first_stage_is_ready():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
