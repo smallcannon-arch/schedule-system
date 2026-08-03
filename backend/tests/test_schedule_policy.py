@@ -167,6 +167,37 @@ def test_server_publish_rejects_empty_or_incomplete_schedule_even_when_flag_is_t
         app._normalize_schedule_snapshot(payload, require_schedule=True)
 
 
+def test_server_publish_rejects_diagnostic_draft_and_rechecks_hidden_shortfall():
+    payload = complete_publish_payload()
+    payload["diagnostic_draft"] = True
+    payload["diagnostic_missing"] = [{
+        "class": "1甲", "subject": "領域課程", "hours": 1,
+        "reason_code": "diagnostic_shortfall",
+    }]
+
+    with pytest.raises(ValueError, match="診斷草案.*不可發布"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+    payload["diagnostic_draft"] = False
+    payload["schedule"].pop(next(iter(payload["schedule"])))
+    with pytest.raises(ValueError, match="節數不符.*排22/需23"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_diagnostic_draft_state_is_preserved_in_cloud_draft():
+    payload = complete_publish_payload()
+    payload["diagnosticDraft"] = True
+    payload["diagnosticMissing"] = [{
+        "class": "1甲", "subject": "領域課程", "hours": 1,
+        "reason_code": "diagnostic_shortfall",
+    }]
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=False)
+
+    assert snapshot["diagnostic_draft"] is True
+    assert snapshot["diagnostic_missing"][0]["hours"] == 1
+
+
 def test_server_publish_rechecks_fixed_courses():
     payload = complete_publish_payload()
     payload["data"]["locks"] = [{"c": "1甲", "d": "五", "p": 7, "s": "領域課程"}]

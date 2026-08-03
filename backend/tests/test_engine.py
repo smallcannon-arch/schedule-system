@@ -347,6 +347,97 @@ def test_missing_courses_is_canonical_for_tutor_pending_and_missing_teacher():
     assert meta["remaining_total"] == 2
 
 
+def _diagnostic_shortfall_payload(block=""):
+    closed = [0, 0, 0, 0, 0, 0, 0]
+    grade_slots = [[1, 0, 0, 0, 0, 0, 0], closed, closed, closed, closed]
+    return {
+        "classes": [{"g": 1, "i": 1, "code": "1甲", "tutor": "王老師"}],
+        "roster": {"王老師": "科任"}, "rooms": {"R00": 99},
+        "subjects": {"國語文": {
+            "hours": [2, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+            "block": block, "self": False, "pairMode": "",
+        }},
+        "gslot": {str(grade): grade_slots for grade in range(1, 7)},
+        "assign": {"1甲": {"國語文": "王老師"}},
+        "override": {}, "locks": [], "blocked": [], "resGroups": [],
+    }
+
+
+def test_diagnostic_draft_allows_only_ordinary_course_shortfall_and_reports_it(tmp_path):
+    data = engine.load_frontend_data(
+        _diagnostic_shortfall_payload(), allow_course_shortfall=True)
+    data["subjects"]["國語文"]["spread"] = 2
+
+    with pytest.raises(engine.InfeasibleScheduleError, match="可用時段不足"):
+        engine.solve(data, time_limit=5)
+
+    schedule, tasks, warnings, meta, overlay = engine.solve(
+        data, time_limit=5, diagnostic_draft=True)
+
+    assert len(schedule) == 1
+    assert engine.validate(
+        data, schedule, tasks, overlay,
+        diagnostic_shortfalls={("1甲", "國語文"): 1},
+    ) == []
+    assert meta["diagnostic_draft"] is True
+    assert meta["diagnostic_shortfall_total"] == 1
+    assert meta["completion"] == "partial"
+    assert meta["missing_courses"] == [{
+        "class": "1甲", "subject": "國語文", "hours": 1,
+        "required": 2, "scheduled": 1,
+        "reason_code": "diagnostic_shortfall", "reason": "診斷草案未排入",
+    }]
+    assert any("診斷草案未排入" in warning for warning in warnings)
+
+    output = tmp_path / "diagnostic-draft.xlsx"
+    engine.write_output(output, data, schedule, tasks, warnings, meta, [], overlay)
+    workbook = load_workbook(output)
+    assert "診斷草案｜不可發布或作為正式上傳檔" in workbook["摘要"]["A1"].value
+    assert workbook["摘要"]["A1"].fill.fgColor.rgb.endswith("F4CCCC")
+    unfinished = list(workbook["待完成課程"].values)
+    assert any(row[0] == "1甲" and row[1] == "國語文" and row[4] == 1 for row in unfinished[1:])
+
+
+@pytest.mark.parametrize("block", ["2+1", "2連堂"])
+def test_diagnostic_draft_keeps_block_courses_exact(block):
+    data = engine.load_frontend_data(
+        _diagnostic_shortfall_payload(block), allow_course_shortfall=True)
+
+    with pytest.raises(engine.InfeasibleScheduleError, match="可用時段不足"):
+        engine.solve(data, time_limit=5, diagnostic_draft=True)
+
+
+def test_diagnostic_draft_returns_phase1_solution_when_quality_phase_times_out(monkeypatch):
+    data = engine.load_frontend_data(
+        _diagnostic_shortfall_payload(), allow_course_shortfall=True)
+    real_solver = engine.cp_model.CpSolver
+    calls = []
+
+    class TimedOutSolver:
+        def __init__(self):
+            self.parameters = type("Parameters", (), {})()
+
+        def Solve(self, _model):
+            return engine.cp_model.UNKNOWN
+
+        def WallTime(self):
+            return 0.0
+
+    def solver_factory():
+        calls.append(True)
+        return real_solver() if len(calls) == 1 else TimedOutSolver()
+
+    monkeypatch.setattr(engine.cp_model, "CpSolver", solver_factory)
+
+    schedule, _, _, meta, _ = engine.solve(
+        data, time_limit=5, diagnostic_draft=True)
+
+    assert len(schedule) == 1
+    assert meta["diagnostic_shortfall_total"] == 1
+    assert meta["diagnostic_quality_optimized"] is False
+    assert meta["diagnostic_fallback_to_phase1"] is True
+
+
 def _resource_frontend_payload():
     slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
     return {

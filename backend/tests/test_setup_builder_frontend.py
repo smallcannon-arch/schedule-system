@@ -896,6 +896,23 @@ def test_publish_and_export_buttons_require_a_complete_schedule():
     assert "課表尚未完成：${result.hard} 項硬規則問題" in auth
 
 
+def test_diagnostic_draft_is_explicit_persisted_and_not_publishable():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")
+
+    assert 'id="formalDiagnosticAction" hidden' in html
+    assert 'onclick="runFormal(true)"' in html
+    assert "['INFEASIBLE','UNKNOWN'].includes(data.status)" in html
+    assert "diagnostic_draft:diagnosticDraft" in html
+    assert "DIAGNOSTIC_DRAFT=false" in html
+    assert "diagnosticDraft:DIAGNOSTIC_DRAFT" in html
+    assert "diagnosticMissing:TeacherWorkflow.clone(DIAGNOSTIC_MISSING)" in html
+    assert html.count("data-draft-preview data-schedule-export") == 4
+    assert "診斷草案不可產生人力資源網或校務系統上傳檔" in html
+    assert "診斷草案尚有未排課程，不可交付導師調整" in html
+    assert "publishability.message" in auth
+
+
 def test_native_language_lock_supports_original_class_and_optional_extraction_groups():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     script = (FORMAL / "setup-builder.js").read_text(encoding="utf-8")
