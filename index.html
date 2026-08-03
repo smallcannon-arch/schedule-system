@@ -1246,10 +1246,12 @@ function openSetupIssues(){
 }
 function printCurrentSchedule(){
   if(!SCHEDULE_READY)return alert('請先完成正式排課，再列印課表。');
+  if(DIAGNOSTIC_DRAFT)return alert('目前是診斷草案，不可直接列印成正式課表；請到「課表匯出」下載有草案標示的預覽。');
   window.print();
 }
 function printTutorWorksheet(){
   if(!SCHEDULE_READY)return alert('請先完成第一階段排課，再列印導師工作單。');
+  if(DIAGNOSTIC_DRAFT)return alert('診斷草案不可交付導師調整；請先調整條件並重新執行正式排課。');
   window.print();
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
@@ -2986,6 +2988,9 @@ function formalRunModeChanged(){
     '<b>目前模式：導師自行安排</b><span>CP-SAT 先排科任與鎖定課，完成後到「導師自排」交給老師接續處理。</span>';
   if(button)button.textContent=complete?'執行完整排課並下載':'執行第一階段排課並下載';
 }
+function formalDiagnosticEligibleSetupIssue(message){
+  return /需要\s*\d+\s*節，但該年級只有\s*\d+\s*個可排時段/.test(String(message||''));
+}
 async function runFormal(diagnosticDraft=false){
   diagnosticDraft=diagnosticDraft===true;
   const btn=document.getElementById(diagnosticDraft?'formalDiagnosticBtn':'formalBtn');
@@ -2993,9 +2998,18 @@ async function runFormal(diagnosticDraft=false){
   clearFormalQuality();
   setFormalDiagnosticAction(false);
   const setup=ScheduleSetup.validate();
-  if(setup.hard.length)return formalMessage('bad','排課資料尚未完整',setup.hard.slice(0,4).join('；'));
+  const eligibleSetupIssues=(setup.hard||[]).filter(formalDiagnosticEligibleSetupIssue);
+  const blockingSetupIssues=diagnosticDraft?
+    (setup.hard||[]).filter(issue=>!formalDiagnosticEligibleSetupIssue(issue)):(setup.hard||[]);
+  if(blockingSetupIssues.length){
+    if(diagnosticDraft||eligibleSetupIssues.length)setFormalDiagnosticAction(true);
+    return formalMessage('bad','排課資料尚未完整',blockingSetupIssues.slice(0,4).join('；'));
+  }
   const resourceIssues=resourceValidationIssues();
-  if(resourceIssues.length)return formalMessage('bad','資源班設定尚未完整',resourceIssues.slice(0,4).join('；'));
+  if(resourceIssues.length){
+    if(diagnosticDraft)setFormalDiagnosticAction(true);
+    return formalMessage('bad','資源班設定尚未完整',resourceIssues.slice(0,4).join('；'));
+  }
   const localData=TeacherWorkflow.clone(DATA);
   const completeMode=formalRunIsComplete();
   const payload={
@@ -3016,7 +3030,7 @@ async function runFormal(diagnosticDraft=false){
     if(!response.ok){
       let data={};try{data=await response.json()}catch(e){}
       const details=[data.error,...(data.issues||[])].filter(Boolean).join('；')||`HTTP ${response.status}`;
-      if(!diagnosticDraft&&['INFEASIBLE','UNKNOWN'].includes(data.status))setFormalDiagnosticAction(true);
+      if(diagnosticDraft||['INFEASIBLE','UNKNOWN'].includes(data.status))setFormalDiagnosticAction(true);
       if(Array.isArray(data.diagnostics)&&data.diagnostics.length){
         renderFormalDiagnosis(data.diagnostics,data.status);
         return formalMessage('bad',data.status==='UNKNOWN'?'本次尚未找到可行解':'排課無解，請依診斷調整',data.error||'請查看下方診斷結果。');
@@ -3056,6 +3070,7 @@ async function runFormal(diagnosticDraft=false){
       `未配教師 ${missing} 節；導師待排 ${pool} 節；應授節數問題 ${weekly} 項；自訂規則問題 ${compliance} 項`+
       (FORMAL_AUTO_TUTOR?'':'；科任與鎖定課已載入，可前往導師自排交給老師接續安排'));
   }catch(error){
+    if(diagnosticDraft)setFormalDiagnosticAction(true);
     formalMessage('bad','無法連線正式 API','請確認 API 網址、CORS 與服務是否已啟動。');
   }finally{btn.disabled=false}
 }
@@ -3152,6 +3167,19 @@ function writeWorkbook(workbook,filename){
   XLSX.writeFile(workbook,filename,{compression:true});
   const status=document.getElementById('exportStatus');if(status){status.className='export-status';status.textContent=`已產生 ${filename}`}
 }
+function diagnosticPreviewSheets(sheets){
+  if(!DIAGNOSTIC_DRAFT)return sheets;
+  const pending=schedulePublishability().pending;
+  return sheets.map(sheet=>{
+    const rows=(sheet.rows||[]).map(row=>Array.isArray(row)?[...row]:row);
+    if(rows[0])rows[0][0]=`【診斷草案｜不可發布】 ${rows[0][0]||sheet.name||''}`;
+    if(rows[1])rows[1][0]=`尚缺 ${pending} 節｜${rows[1][0]||''}`;
+    return {...sheet,rows};
+  });
+}
+function diagnosticPreviewFilename(kind){
+  return `${exportSchoolName()}_${DIAGNOSTIC_DRAFT?'診斷草案_':''}${kind}_${exportFileDate()}.xlsx`;
+}
 function diagnosticDraftStillMatches(){
   if(!DIAGNOSTIC_DRAFT)return true;
   const expected=new Map(DIAGNOSTIC_MISSING.map(item=>[`${item.class}|${item.subject}`,Math.max(0,Number(item.hours)||0)]));
@@ -3182,26 +3210,29 @@ function exportScheduleReady(allowDiagnosticPreview=false){
 }
 function exportClassTimetables(){
   if(!exportScheduleReady(true))return;
-  const wb=XLSX.utils.book_new(),sheets=ScheduleExports.classSheets(DATA,exportEntries());
+  const wb=XLSX.utils.book_new(),sheets=diagnosticPreviewSheets(ScheduleExports.classSheets(DATA,exportEntries()));
   if(!sheets.length)return alert('沒有可匯出的班級課表。');
-  appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_班級課表_${exportFileDate()}.xlsx`);
+  appendSheets(wb,sheets);writeWorkbook(wb,diagnosticPreviewFilename('班級課表'));
 }
 function exportTeacherTimetables(){
   if(!exportScheduleReady(true))return;
-  const wb=XLSX.utils.book_new(),sheets=ScheduleExports.teacherSheets(DATA,exportEntries());
+  const wb=XLSX.utils.book_new(),sheets=diagnosticPreviewSheets(ScheduleExports.teacherSheets(DATA,exportEntries()));
   if(!sheets.length)return alert('沒有可匯出的教師課表。');
-  appendSheets(wb,sheets);writeWorkbook(wb,`${exportSchoolName()}_教師課表_${exportFileDate()}.xlsx`);
+  appendSheets(wb,sheets);writeWorkbook(wb,diagnosticPreviewFilename('教師課表'));
 }
 function printTimetables(kind){
   if(!exportScheduleReady(true))return;
   const entries=exportEntries(),isTeacher=kind==='teacher';
-  const sheets=isTeacher?ScheduleExports.teacherSheets(DATA,entries):ScheduleExports.classSheets(DATA,entries);
+  const sheets=diagnosticPreviewSheets(isTeacher?ScheduleExports.teacherSheets(DATA,entries):ScheduleExports.classSheets(DATA,entries));
   if(!sheets.length)return alert(`沒有可列印的${isTeacher?'教師':'班級'}課表。`);
   const popup=window.open('','_blank');
   if(!popup)return alert('瀏覽器已封鎖列印視窗，請允許此網站開啟彈出式視窗。');
   popup.opener=null;
   popup.document.open();
-  popup.document.write(ScheduleExports.printDocument(sheets,`${exportSchoolName()}_${isTeacher?'教師':'班級'}課表`));
+  const draftLabel=DIAGNOSTIC_DRAFT?'_診斷草案':'';
+  popup.document.write(ScheduleExports.printDocument(
+    sheets,`${exportSchoolName()}${draftLabel}_${isTeacher?'教師':'班級'}課表`,
+    {diagnosticDraft:DIAGNOSTIC_DRAFT}));
   popup.document.close();
   const trigger=()=>{popup.focus();popup.print()};
   if(popup.document.readyState==='complete')setTimeout(trigger,350);else popup.addEventListener('load',()=>setTimeout(trigger,250),{once:true});

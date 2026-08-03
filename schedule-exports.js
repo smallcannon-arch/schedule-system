@@ -404,7 +404,9 @@
     return `<strong>${html(lines[0])}</strong>${lines.slice(1).map((line) => `<span>${html(line)}</span>`).join("")}`;
   }
 
-  function printDocument(sheets, documentTitle) {
+  function printDocument(sheets, documentTitle, options = {}) {
+    const diagnosticDraft = Boolean(options.diagnosticDraft);
+    const documentLabel = diagnosticDraft ? "診斷草案｜不可發布" : "學校正式課表";
     const pages = (sheets || []).map((sheet, index) => {
       const rows = sheet.rows || [];
       const headers = rows[2] || [];
@@ -413,15 +415,16 @@
           const value = row[column + 1] || "";
           return `<td class="${subjectClass(value)}">${printCell(value)}</td>`;
         }).join("")}</tr>`).join("");
-      return `<section class="page">
-        <header><p>學校正式課表</p><h1>${html((rows[0] || [sheet.name])[0])}</h1><div>${html((rows[1] || [""])[0])}</div></header>
+      return `<section class="page${diagnosticDraft ? " diagnostic" : ""}">
+        <header><p>${documentLabel}</p><h1>${html((rows[0] || [sheet.name])[0])}</h1><div>${html((rows[1] || [""])[0])}</div></header>
         <table><thead><tr>${headers.map((value) => `<th>${html(value)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
         <footer><span>排課輔助系統</span><span>${index + 1} / ${sheets.length}</span></footer>
       </section>`;
     }).join("");
-    return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${html(documentTitle || "正式課表")}</title><style>
+    return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${html(documentTitle || (diagnosticDraft ? "診斷草案" : "正式課表"))}</title><style>
       @page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}html,body{margin:0;background:#eef1ef;color:#24332f;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif}
       .page{width:279mm;min-height:192mm;margin:8mm auto;padding:8mm 9mm 6mm;background:#fff;display:flex;flex-direction:column;break-after:page;page-break-after:always;box-shadow:0 2mm 7mm rgba(24,48,41,.12)}
+      .page.diagnostic{border:1mm solid #b73155}.page.diagnostic header{border-bottom-color:#b73155}.page.diagnostic header p{color:#b73155}
       .page:last-child{break-after:auto;page-break-after:auto}header{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8mm;padding:0 0 4mm;border-bottom:1.2mm solid #2f7765}header p{grid-column:1;grid-row:1;margin:0 0 1mm;color:#2f7765;font-size:9pt;font-weight:700}
       h1{grid-column:1;grid-row:2;margin:0;font-size:20pt;line-height:1.25;letter-spacing:0}header div{grid-column:2;grid-row:1/3;align-self:end;max-width:95mm;color:#5d6b67;font-size:10pt;text-align:right}
       table{width:100%;height:140mm;margin-top:5mm;border-collapse:separate;border-spacing:0;table-layout:fixed;border:0.35mm solid #aebdb8}

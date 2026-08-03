@@ -363,6 +363,22 @@ def _diagnostic_shortfall_payload(block=""):
     }
 
 
+def test_capacity_shortfall_is_reported_as_diagnostic_draft_eligible():
+    with pytest.raises(engine.DiagnosticDraftEligibleError) as caught:
+        engine.load_frontend_data(_diagnostic_shortfall_payload())
+
+    assert caught.value.status == "INFEASIBLE"
+    assert caught.value.diagnostics == [{
+        "title": "1甲 的課程節數超過可排時段",
+        "detail": "每週需要安排 2 節，但依目前年級作息只有 1 節可用。",
+        "action": "可先產生診斷草案查看最少缺額，或回到資料建置調整科目節數與年級上課時段。",
+        "view": "build",
+        "confirmed": True,
+    }]
+    assert engine.load_frontend_data(
+        _diagnostic_shortfall_payload(), allow_course_shortfall=True)
+
+
 def test_diagnostic_draft_allows_only_ordinary_course_shortfall_and_reports_it(tmp_path):
     data = engine.load_frontend_data(
         _diagnostic_shortfall_payload(), allow_course_shortfall=True)

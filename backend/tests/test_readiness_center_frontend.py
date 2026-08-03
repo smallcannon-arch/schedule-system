@@ -87,6 +87,36 @@ process.stdout.write(JSON.stringify(
         "檢查固定課程", "檢查資源班", "檢查語言分組"]
 
 
+def test_readiness_center_never_marks_diagnostic_draft_as_formally_complete():
+    output = run_node(r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+require(process.argv[1]);
+ScheduleReadiness.initialize({
+  mode:'formal',
+  getData:()=>({classes:[{code:'1甲'}]}),
+  getSetupValidation:()=>({
+    hard:[],warnings:[],counts:{classes:1,teachers:1,subjects:1,
+      assignmentTotal:1,assignmentMissing:0}
+  }),
+  isScheduleReady:()=>true,
+  isDiagnosticDraft:()=>true,
+  getScheduleValidation:()=>({hard:[],pending:[]}),
+  getExportIssues:()=>[],
+  getCloudState:()=>({isAdmin:false,hasCloudDraft:true,draftConflict:false,activeRevision:''}),
+  navigate:()=>{}
+});
+const report=ScheduleReadiness.collect();
+process.stdout.write(JSON.stringify({
+  schedule:report.groups.find(x=>x.id==='schedule').items,
+  completed:report.checklist.find(x=>x.label==='完成正式排課').done
+}));
+""")
+
+    assert output["completed"] is False
+    assert any(item["level"] == "blocker" and "診斷草案" in item["text"]
+               for item in output["schedule"])
+
+
 def test_readiness_center_frontend_controls_and_backup_actions_are_wired():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
     auth = (FORMAL / "schedule-auth.js").read_text(encoding="utf-8")

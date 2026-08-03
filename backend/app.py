@@ -750,7 +750,8 @@ def _run_solver(data, time_limit, use_openai=False, ai_goal="", auto_schedule_tu
         src = os.path.join(td, "in.xlsx")
         with open(src, "wb") as stream:
             stream.write(data)
-        schedule_data = engine.load_data(src)
+        schedule_data = engine.load_data(
+            src, allow_course_shortfall=diagnostic_draft)
     return _solve_loaded_data(
         schedule_data, time_limit, use_openai, ai_goal, auto_schedule_tutor,
         diagnostic_draft)
@@ -1163,7 +1164,8 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
             "schedule": schedule_rows,
             "overlay": overlay_rows,
         }, headers=headers)
-    except engine.InfeasibleScheduleError as exc:
+    except (engine.InfeasibleScheduleError,
+            engine.DiagnosticDraftEligibleError) as exc:
         _record_usage(solve_principal, "solve_failed")
         return _infeasible_response(exc)
     except (ValueError, RuntimeError) as exc:
@@ -1261,7 +1263,8 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
             }, headers=headers)
         _record_usage(solve_principal, "solve_success")
         return Response(content=output, media_type=XLSX_MIME, headers=headers)
-    except engine.InfeasibleScheduleError as exc:
+    except (engine.InfeasibleScheduleError,
+            engine.DiagnosticDraftEligibleError) as exc:
         _record_usage(solve_principal, "solve_failed")
         return _infeasible_response(exc)
     except (ValueError, RuntimeError) as exc:

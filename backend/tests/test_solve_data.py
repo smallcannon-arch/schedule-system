@@ -137,3 +137,38 @@ def test_solve_data_returns_structured_cp_sat_diagnostics(monkeypatch):
     assert payload["diagnostic_engine"] == "cp-sat-rules"
     assert payload["diagnostics"][0]["view"] == "alloc"
     assert payload["diagnostics"][0]["confirmed"] is True
+
+
+def test_solve_data_exposes_diagnostic_action_for_capacity_shortfall(monkeypatch):
+    monkeypatch.setattr(app, "_check_solve_access", lambda *args: True)
+    monkeypatch.setattr(app, "_claim_rate_limit", lambda: True)
+
+    def fail(*args):
+        raise app.engine.DiagnosticDraftEligibleError(
+            "1甲 每週課程 23 節，超過可排時段 22 節",
+            [{"title": "1甲 的課程節數超過可排時段",
+              "detail": "每週需要安排 23 節，但只有 22 節可用。",
+              "action": "產生診斷草案或調整節數。", "view": "build",
+              "confirmed": True}],
+        )
+
+    monkeypatch.setattr(app, "_run_solver_data", fail)
+    response = CLIENT.post("/solve-data", json={"data": {}, "limits": [], "rules": []})
+
+    assert response.status_code == 422
+    assert response.json()["status"] == "INFEASIBLE"
+    assert response.json()["diagnostics"][0]["view"] == "build"
+
+
+def test_file_solver_passes_diagnostic_shortfall_mode_to_excel_loader(monkeypatch):
+    captured = {}
+
+    def fake_load_data(_path, allow_course_shortfall=False):
+        captured["allow_course_shortfall"] = allow_course_shortfall
+        return {}
+
+    monkeypatch.setattr(app.engine, "load_data", fake_load_data)
+    monkeypatch.setattr(app, "_solve_loaded_data", lambda *args: "result")
+
+    assert app._run_solver(b"xlsx", 10, diagnostic_draft=True) == "result"
+    assert captured["allow_course_shortfall"] is True

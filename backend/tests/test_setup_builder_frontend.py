@@ -907,10 +907,41 @@ def test_diagnostic_draft_is_explicit_persisted_and_not_publishable():
     assert "DIAGNOSTIC_DRAFT=false" in html
     assert "diagnosticDraft:DIAGNOSTIC_DRAFT" in html
     assert "diagnosticMissing:TeacherWorkflow.clone(DIAGNOSTIC_MISSING)" in html
+    assert "if(diagnosticDraft||['INFEASIBLE','UNKNOWN'].includes(data.status))" in html
     assert html.count("data-draft-preview data-schedule-export") == 4
     assert "診斷草案不可產生人力資源網或校務系統上傳檔" in html
     assert "診斷草案尚有未排課程，不可交付導師調整" in html
+    assert "function diagnosticPreviewSheets(sheets)" in html
+    assert "【診斷草案｜不可發布】" in html
+    assert "function diagnosticPreviewFilename(kind)" in html
+    assert "DIAGNOSTIC_DRAFT?'診斷草案_':''" in html
+    assert "function formalDiagnosticEligibleSetupIssue(message)" in html
+    assert "const blockingSetupIssues=diagnosticDraft?" in html
+    assert "目前是診斷草案，不可直接列印成正式課表" in html
+    assert "診斷草案不可交付導師調整" in html
     assert "publishability.message" in auth
+
+
+def test_diagnostic_setup_relaxes_only_course_capacity_issue():
+    script = r"""
+const fs=require('fs');
+const html=fs.readFileSync(process.argv[1],'utf8');
+const start=html.indexOf('function formalDiagnosticEligibleSetupIssue');
+const end=html.indexOf('async function runFormal',start);
+eval(html.slice(start,end));
+process.stdout.write(JSON.stringify({
+  capacity:formalDiagnosticEligibleSetupIssue('1甲需要 23 節，但該年級只有 22 個可排時段'),
+  missingTeacher:formalDiagnosticEligibleSetupIssue('1甲 國語文尚未配課'),
+  fixedConflict:formalDiagnosticEligibleSetupIssue('固定課發生教師衝堂')
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "index.html")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    assert json.loads(result.stdout) == {
+        "capacity": True, "missingTeacher": False, "fixedConflict": False,
+    }
 
 
 def test_native_language_lock_supports_original_class_and_optional_extraction_groups():

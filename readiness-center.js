@@ -50,6 +50,7 @@
     const setupHardItems = Array.isArray(setup.hardItems) ? setup.hardItems : (setup.hard || []);
     const cloud = adapter.getCloudState();
     const scheduleReady = adapter.isScheduleReady();
+    const diagnosticDraft = typeof adapter.isDiagnosticDraft === "function" && adapter.isDiagnosticDraft();
     const schedule = scheduleReady ? adapter.getScheduleValidation() : {hard: [], pending: []};
     const groups = [
       {id: "foundation", title: "基礎資料", description: "班級、教師、科目與配課", items: []},
@@ -90,6 +91,13 @@
     if (!scheduleReady) {
       groupMap.schedule.items.push(makeItem("blocker", "尚未執行正式排課", {view: "run", label: "前往執行排課"}));
     } else {
+      if (diagnosticDraft) {
+        groupMap.schedule.items.push(makeItem(
+          "blocker",
+          "目前為診斷草案，請重新執行正式排課後才能發布或匯出正式檔案",
+          {view: "run", label: "重新執行正式排課"},
+        ));
+      }
       for (const item of schedule.hard || []) {
         groupMap.schedule.items.push(makeItem("blocker", item.text || item, {view: "edit", label: "開啟課表編修"}));
       }
@@ -133,7 +141,7 @@
       {label: "完成科目節數", done: Number(counts.subjects || 0) > 0 && !foundationalHard.some((text) => /科目|節數/.test(text)), view: "build", tab: "subjects"},
       {label: "完成配課", done: Number(counts.assignmentTotal || 0) > 0 && Number(counts.assignmentMissing || 0) === 0, view: "build", tab: "assign"},
       {label: "確認排課條件", done: projectStarted && conditionHard.length === 0, view: "readiness"},
-      {label: "完成正式排課", done: scheduleReady && !(schedule.hard || []).length && !(schedule.pending || []).length, view: "run"},
+      {label: "完成正式排課", done: scheduleReady && !diagnosticDraft && !(schedule.hard || []).length && !(schedule.pending || []).length, view: "run"},
       {label: "儲存學校雲端", done: adapter.mode !== "formal" || !cloud.isAdmin || cloud.hasCloudDraft, view: "build"},
       {label: "發布教師課表", done: adapter.mode !== "formal" || !cloud.isAdmin || !!cloud.activeRevision, view: "tutor"},
     ];

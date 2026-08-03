@@ -51,9 +51,28 @@ class InfeasibleScheduleError(RuntimeError):
         self.status = status
 
 
+class DiagnosticDraftEligibleError(ValueError):
+    """A validation failure that diagnostic-draft mode can safely relax."""
+
+    def __init__(self, message, diagnostics=(), status="INFEASIBLE"):
+        super().__init__(message)
+        self.diagnostics = list(diagnostics)
+        self.status = status
+
+
 def _diagnostic(title, detail, action, view, confirmed=True):
     return {"title": title, "detail": detail, "action": action,
             "view": view, "confirmed": bool(confirmed)}
+
+
+def _course_capacity_shortfall(code, required, available):
+    message = f"{code} 每週課程 {required} 節，超過可排時段 {available} 節"
+    return DiagnosticDraftEligibleError(message, [_diagnostic(
+        f"{code} 的課程節數超過可排時段",
+        f"每週需要安排 {required} 節，但依目前年級作息只有 {available} 節可用。",
+        "可先產生診斷草案查看最少缺額，或回到資料建置調整科目節數與年級上課時段。",
+        "build",
+    )])
 
 
 def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEASIBLE"):
@@ -346,11 +365,11 @@ def excel_safe(value):
     return "'" + value if stripped.startswith(("=", "+", "-", "@")) else value
 
 
-def load_data(path):
+def load_data(path, allow_course_shortfall=False):
     wb = load_workbook(path, data_only=True)
     if V5_REQUIRED.issubset(set(wb.sheetnames)) or V6_REQUIRED.issubset(set(wb.sheetnames)):
-        return _load_data_v5(wb)
-    return _load_data_v4(wb)
+        return _load_data_v5(wb, allow_course_shortfall=allow_course_shortfall)
+    return _load_data_v4(wb, allow_course_shortfall=allow_course_shortfall)
 
 
 def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=False):
@@ -860,7 +879,7 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
         available = sum(grade_slot[(item["grade"], day, period)]
                         for day in DAYS for period in PERIODS)
         if required > available and not allow_course_shortfall:
-            raise ValueError(f"{item['code']} 每週課程 {required} 節，超過可排時段 {available} 節")
+            raise _course_capacity_shortfall(item["code"], required, available)
 
     policy_result = schedule_policy.validate_case(payload)
     teacher_caps = payload.get("tcap") or {}
@@ -917,7 +936,7 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
     }
 
 
-def _load_data_v5(wb):
+def _load_data_v5(wb, allow_course_shortfall=False):
     is_v6 = "教師與配課" in wb.sheetnames
     required = V6_REQUIRED if is_v6 else V5_REQUIRED
     missing = sorted(required - set(wb.sheetnames))
@@ -1447,8 +1466,8 @@ def _load_data_v5(wb):
     for c in classes:
         need = sum(info["hours"][c["grade"]] for info in subjects.values())
         available = sum(grade_slot[(c["grade"], day, p)] for day in DAYS for p in PERIODS)
-        if need > available:
-            raise ValueError(f"{c['code']} 每週課程 {need} 節，超過該年級可排時段 {available} 節")
+        if need > available and not allow_course_shortfall:
+            raise _course_capacity_shortfall(c["code"], need, available)
     d["policy"] = {"profileId": schedule_policy.PROFILE_ID}
     d["tcap"] = teacher_caps
     load = defaultdict(int)
@@ -1489,7 +1508,7 @@ def _load_data_v5(wb):
     return d
 
 
-def _load_data_v4(wb):
+def _load_data_v4(wb, allow_course_shortfall=False):
     d = {}
 
     ws = wb["設定_年段時段"]
