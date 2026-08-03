@@ -127,6 +127,7 @@ def test_readiness_center_frontend_controls_and_backup_actions_are_wired():
     assert 'id="readinessGroups"' in html
     assert 'id="backupHistoryDialog"' in html
     assert 'id="createBackupButton"' in html
+    assert "document.getElementById('appBrandMeta').textContent=`正式版 · v${appVersion}`" in html
     assert "resourceItems=resourceIssues.map" in html
     assert "hardItems:[...(result.hardItems||result.hard||[]),...resourceItems]" in html
     assert 'request("/admin/backups", {method: "POST"})' in auth

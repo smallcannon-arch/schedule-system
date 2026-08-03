@@ -3777,7 +3777,7 @@ function configureAppMode(){
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
-  document.getElementById('appBrandMeta').textContent='';
+  document.getElementById('appBrandMeta').textContent=`正式版 · v${appVersion}`;
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
   document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
