@@ -4438,7 +4438,17 @@ ScheduleAuth.initialize();
 ScheduleReadiness.initialize({
   mode:APP_MODE,
   getData:()=>DATA,
-  getSetupValidation:()=>{const result=ScheduleSetup.validate(),resourceIssues=resourceValidationIssues();return {...result,hard:[...(result.hard||[]),...resourceIssues]}},
+  getSetupValidation:()=>{
+    const result=ScheduleSetup.validate(),resourceIssues=resourceValidationIssues();
+    const resourceItems=resourceIssues.map(text=>({
+      text,group:'conditions',view:'res',label:'檢查資源班'
+    }));
+    return {
+      ...result,
+      hard:[...(result.hard||[]),...resourceIssues],
+      hardItems:[...(result.hardItems||result.hard||[]),...resourceItems]
+    };
+  },
   isScheduleReady:()=>SCHEDULE_READY,
   getScheduleValidation:()=>SCHEDULE_READY?validateSchedule():{hard:[],pending:[]},
   getExportIssues:()=>SCHEDULE_READY?ScheduleExports.validateUpload(DATA,exportEntries(),EXPORT_TEACHER_IDS):[],
