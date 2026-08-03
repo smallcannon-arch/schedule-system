@@ -353,3 +353,34 @@ def test_server_publish_allows_first_stage_tutor_pool_but_complete_mode_requires
     payload["formal_auto_tutor"] = True
     with pytest.raises(ValueError, match="正式課表硬規則檢核未通過.*導師課.*排0/需22"):
         app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_server_publish_rejects_partially_scheduled_tutor_pool_without_diagnostic_flag():
+    payload = complete_publish_payload()
+    payload["data"]["subjects"] = {
+        "科任課": {
+            "hours": [1, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": False,
+        },
+        "導師課": {
+            "hours": [22, 0, 0, 0, 0, 0],
+            "room": "R00", "banned": [], "block": "", "self": True,
+        },
+    }
+    payload["data"]["assign"] = {
+        "1甲": {"科任課": "王導師", "導師課": "王導師"}}
+    payload["schedule"] = {
+        "1甲|一|1": {"s": "科任課", "t": "王導師", "room": "R00"},
+        "1甲|一|2": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|一|3": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|一|4": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|一|5": {"s": "導師課", "t": "王導師", "room": "R00"},
+        "1甲|二|1": {"s": "導師課", "t": "王導師", "room": "R00"},
+    }
+    payload["formal_auto_tutor"] = False
+    payload["diagnostic_draft"] = False
+    payload["diagnostic_missing"] = []
+
+    with pytest.raises(
+            ValueError, match="正式課表硬規則檢核未通過.*導師課.*排5/需22"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)

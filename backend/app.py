@@ -556,9 +556,11 @@ def _validate_published_schedule(snapshot):
     if not schedule:
         raise ValueError("正式課表沒有任何可發布的課程，請先完成第一階段排課")
     for code, subject in tutor_owned_courses:
-        tasks[(code, subject)]["h"] = sum(
+        scheduled_hours = sum(
             1 for (class_code, _, _), (scheduled_subject, _, _) in schedule.items()
             if class_code == code and scheduled_subject == subject)
+        if scheduled_hours == 0:
+            tasks[(code, subject)]["h"] = 0
 
     overlay = []
     for index, item in enumerate(snapshot.get("overlay") or [], start=1):
