@@ -17,6 +17,13 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'id="setupTeachersTable"' in html
     assert 'id="setupSubjectsTable"' in html
     assert 'id="setupAssignmentsTable"' in html
+    assert "步驟 1　班級資料" in html
+    assert "步驟 2　教師資料" in html
+    assert "步驟 3　科目節數" in html
+    assert "步驟 4　配課資料" in html
+    assert 'data-setup-step="${step.view}"' in script
+    assert 'step.done ? "完成" : "待完成"' in script
+    assert 'button.setAttribute("aria-current", current ? "step" : "false")' in script
     assert 'id="formalFile"' not in html
     assert "ScheduleAuth.solveData(payload)" in html
     assert "ScheduleSetup.validate()" in html

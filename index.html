@@ -254,9 +254,11 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-tabs button.on{background:#fff;color:var(--pink-d);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .setup-pane{display:none}.setup-pane.on{display:block}
 .setup-stepbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
-.setup-step{min-height:62px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:9px 12px;cursor:pointer;text-align:left}
-.setup-step span{display:block;font-size:13px;font-weight:800}.setup-step b{display:block;font-size:22px;color:var(--ink);margin-top:2px}
-.setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done b{color:var(--mint-d)}
+.setup-step{position:relative;min-height:104px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:11px 12px;cursor:pointer;text-align:left}
+.setup-step:hover,.setup-step.current{border-color:#bba8c5;box-shadow:0 2px 7px rgba(70,50,72,.09)}
+.setup-step-index{display:block;color:var(--lav-d);font-size:12px;font-weight:900}.setup-step strong{display:block;margin-top:2px;color:var(--ink);font-size:16px}.setup-step small{display:block;min-height:32px;margin-top:3px;font-size:12px;line-height:1.35}
+.setup-step-value{display:flex;align-items:end;justify-content:space-between;gap:8px;margin-top:7px}.setup-step-value b{color:var(--ink);font-size:21px}.setup-step-value em{color:#9a6a12;font-size:12px;font-style:normal;font-weight:900;white-space:nowrap}
+.setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done .setup-step-value b,.setup-step.done .setup-step-value em{color:var(--mint-d)}
 .setup-health{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7;border-radius:4px;margin-bottom:14px}
 .setup-health.bad{border-color:var(--pink-d);background:#fff4f7}.setup-health span{font-size:14px;color:var(--muted);flex:1}
 .onboarding-checklist{margin:0 0 18px;border:1px solid var(--line);border-left:4px solid var(--sky-d);background:#fff}.onboarding-checklist summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;cursor:pointer;color:var(--ink);font-weight:900}.onboarding-checklist.complete{border-left-color:var(--mint-d)}.onboarding-checklist-body{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}.onboarding-step{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:9px;min-height:58px;padding:10px 12px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;color:var(--muted);font:inherit;text-align:left;cursor:pointer}.onboarding-step:nth-child(4n){border-right:0}.onboarding-step span{display:grid;place-items:center;width:34px;height:28px;border-radius:5px;background:#f3ecf4;color:var(--lav-d);font-size:11px;font-weight:900}.onboarding-step b{font-size:13px}.onboarding-step.done span{background:#dff3eb;color:var(--mint-d)}.onboarding-step.done b{color:var(--ink)}
@@ -561,10 +563,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <section class="panel policy-panel setup-ready-only" id="setupPolicyPanel"></section>
   <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
-    <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">班級</button>
-    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">教師</button>
-    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">科目節數</button>
-    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">配課</button>
+    <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">步驟 1　班級資料</button>
+    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">步驟 2　教師資料</button>
+    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">步驟 3　科目節數</button>
+    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">步驟 4　配課資料</button>
   </div>
 
   <section class="setup-pane on" id="setup-classes">
