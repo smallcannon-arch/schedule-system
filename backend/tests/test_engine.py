@@ -284,6 +284,66 @@ def test_loads_frontend_cloud_draft_schema_without_excel():
     assert meta["completion"] == "complete"
 
 
+def test_teacher_room_overrides_apply_after_assignment_and_before_class_override():
+    slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
+    classes = [
+        {"g": 1, "i": 1, "code": "1甲", "tutor": "甲導師"},
+        {"g": 1, "i": 2, "code": "1乙", "tutor": "乙導師"},
+        {"g": 1, "i": 3, "code": "1丙", "tutor": "丙導師"},
+    ]
+    payload = {
+        "classes": classes,
+        "roster": {"甲導師": "導師", "乙導師": "導師", "丙導師": "導師",
+                   "自然A": "科任", "自然B": "科任"},
+        "rooms": {"R00": 99, "自然1": 1, "自然2": 1, "自然3": 1},
+        "subjects": {"自然科學": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "自然1", "banned": [],
+            "block": "", "self": False, "pairMode": "",
+        }},
+        "gslot": {str(grade): slots for grade in range(1, 7)},
+        "assign": {
+            "1甲": {"自然科學": "自然A"},
+            "1乙": {"自然科學": "自然B"},
+            "1丙": {"自然科學": "自然B"},
+        },
+        "teacherRooms": {"自然科學": {"自然B": "自然2"}},
+        "override": {"1丙": {"自然科學": "自然3"}},
+        "locks": [], "blocked": [], "resGroups": [],
+    }
+
+    data = engine.load_frontend_data(payload)
+    _, tasks, *_ = engine.solve(data, time_limit=5, auto_schedule_tutor=True)
+
+    assert data["teacher_room_override"] == {("自然B", "自然科學"): "自然2"}
+    assert tasks[("1甲", "自然科學")]["room"] == "自然1"
+    assert tasks[("1乙", "自然科學")]["room"] == "自然2"
+    assert tasks[("1丙", "自然科學")]["room"] == "自然3"
+
+
+@pytest.mark.parametrize(("teacher_rooms", "message"), [
+    ({"不存在科目": {"自然A": "自然1"}}, "不存在的科目"),
+    ({"自然科學": {"不存在教師": "自然1"}}, "不存在的教師"),
+    ({"自然科學": {"自然A": "不存在教室"}}, "不存在的場地"),
+])
+def test_teacher_room_overrides_reject_stale_references(teacher_rooms, message):
+    payload = {
+        "classes": [{"g": 1, "code": "1甲", "tutor": "甲導師"}],
+        "roster": {"甲導師": "導師", "自然A": "科任"},
+        "rooms": {"R00": 99, "自然1": 1},
+        "subjects": {"自然科學": {
+            "hours": [1, 0, 0, 0, 0, 0], "room": "自然1", "banned": [],
+            "block": "", "self": False,
+        }},
+        "gslot": {str(grade): [[1] * 7 for _ in range(5)] for grade in range(1, 7)},
+        "assign": {"1甲": {"自然科學": "自然A"}},
+        "teacherRooms": teacher_rooms, "override": {}, "locks": [],
+        "blocked": [], "resGroups": [],
+    }
+
+    with pytest.raises(ValueError, match=message):
+        engine.load_frontend_data(payload)
+
+
 def test_soft_rule_quality_report_explains_weighted_penalty():
     closed = [0, 0, 0, 0, 0, 0, 0]
     grade_slots = [[0, 0, 0, 0, 1, 0, 0], closed, closed, closed, closed]

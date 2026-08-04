@@ -27,6 +27,8 @@
     value.assign = value.assign || {};
     value.assignmentModes = value.assignmentModes || {};
     value.override = value.override || {};
+    value.teacherRooms = value.teacherRooms && typeof value.teacherRooms === "object"
+      && !Array.isArray(value.teacherRooms) ? value.teacherRooms : {};
     value.locks = value.locks || [];
     value.resGroups = value.resGroups || [];
     value.nativeBands = Array.isArray(value.nativeBands) ? value.nativeBands : [];
@@ -231,6 +233,27 @@
       (d.subjects[subject].hours || []).some((value) => Number(value) > 0))) {
       hard.push("科目節數全部為 0");
     }
+
+    const teacherRoomHardStart = hard.length;
+    for (const [subject, row] of Object.entries(d.teacherRooms)) {
+      if (!d.subjects[subject]) {
+        hard.push(`專科教室安排引用不存在的科目：${subject}`);
+        continue;
+      }
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        hard.push(`${subject}的專科教室安排格式不正確`);
+        continue;
+      }
+      for (const [teacher, room] of Object.entries(row)) {
+        if (!teacherNames.has(teacher)) hard.push(`${subject}的專科教室安排引用不存在的教師：${teacher}`);
+        if (room && !Object.prototype.hasOwnProperty.call(d.rooms, room)) {
+          hard.push(`${teacher} ${subject}引用不存在的教室：${room}`);
+        }
+      }
+    }
+    markHardSince(teacherRoomHardStart, {
+      group: "setup", view: "assign", label: "檢查專科教室安排",
+    });
 
     for (const item of d.classes) {
       const code = String(item.code || "").trim();
@@ -751,6 +774,49 @@
       }).join("")}</tr>`).join("")}</tbody>`;
   }
 
+  function teacherRoomRows(d) {
+    const rows = new Map();
+    for (const item of d.classes) {
+      for (const [subject, info] of Object.entries(d.subjects)) {
+        if (!(Number((info.hours || [])[Number(item.g) - 1]) > 0)) continue;
+        if ((info.room || "R00") === "R00" && !Object.keys(d.teacherRooms[subject] || {}).length) continue;
+        const teacher = String((d.assign[item.code] || {})[subject] || "").trim();
+        if (!teacher) continue;
+        const key = `${subject}\u0000${teacher}`;
+        if (!rows.has(key)) rows.set(key, {subject, teacher, classes: []});
+        rows.get(key).classes.push(item.code);
+      }
+    }
+    return [...rows.values()].sort((left, right) =>
+      left.subject.localeCompare(right.subject, "zh-Hant")
+      || left.teacher.localeCompare(right.teacher, "zh-Hant"));
+  }
+
+  function renderTeacherRooms() {
+    const d = data();
+    const target = document.getElementById("setupTeacherRooms");
+    if (!target) return;
+    const rows = teacherRoomRows(d);
+    if (!rows.length) {
+      target.innerHTML = '<div class="teacher-room-empty">完成上方配課後，系統會自動列出可依授課教師調整的教室。</div>';
+      return;
+    }
+    const rooms = Object.keys(d.rooms || {R00: 99});
+    target.innerHTML = `<div class="tbl teacher-room-scroll"><table class="setup-table teacher-room-table">
+      <thead><tr><th>科目</th><th>授課教師</th><th>任教班級</th><th>使用教室</th></tr></thead>
+      <tbody>${rows.map(({subject, teacher, classes}) => {
+        const defaultRoom = d.subjects[subject]?.room || "R00";
+        const defaultLabel = defaultRoom === "R00" ? "原班教室" : defaultRoom;
+        const selected = String((d.teacherRooms[subject] || {})[teacher] || "");
+        const options = rooms.map((room) => `<option value="${esc(room)}" ${selected === room ? "selected" : ""}>${room === "R00" ? "原班教室" : esc(room)}</option>`).join("");
+        return `<tr><td><b>${esc(subjectLabel(subject))}</b></td><td>${esc(teacher)}</td>
+          <td><span class="teacher-room-classes">${classes.map(esc).join("、")}</span></td>
+          <td><select class="edit teacher-room-select" data-subject="${esc(subject)}" data-teacher="${esc(teacher)}" aria-label="${esc(teacher)} ${esc(subjectLabel(subject))}使用教室" onchange="ScheduleSetup.setTeacherRoom(this.dataset.subject,this.dataset.teacher,this.value)">
+            <option value="" ${!selected ? "selected" : ""}>沿用科目設定（${esc(defaultLabel)}）</option>${options}
+          </select></td></tr>`;
+      }).join("")}</tbody></table></div>`;
+  }
+
   function bindAssignmentScroll() {
     if (assignmentScrollCleanup) assignmentScrollCleanup();
     const scroller = document.getElementById("setupAssignmentsScroll");
@@ -812,6 +878,7 @@
     renderTeachers();
     renderSubjects();
     renderAssignments();
+    renderTeacherRooms();
     bindAssignmentScroll();
     show(activeTab);
   }
@@ -1032,6 +1099,12 @@
     d.teacherAccounts[next] = d.teacherAccounts[old] || ""; delete d.teacherAccounts[old];
     d.teacherNativeLangs[next] = nativeValues(d.teacherNativeLangs[old]); delete d.teacherNativeLangs[old];
     d.teacherSubjects[next] = subjectValues(d.teacherSubjects[old]); delete d.teacherSubjects[old];
+    for (const row of Object.values(d.teacherRooms)) {
+      if (Object.prototype.hasOwnProperty.call(row, old)) {
+        row[next] = row[old];
+        delete row[old];
+      }
+    }
     d.classes.forEach((item) => { if (item.tutor === old) item.tutor = next; });
     Object.values(d.assign).forEach((row) => Object.keys(row).forEach((subject) => { if (row[subject] === old) row[subject] = next; }));
     d.resGroups.forEach((group) => { if (group.t === old) group.t = next; });
@@ -1049,6 +1122,7 @@
     const name = Object.keys(d.roster)[index];
     if (!name || !confirm(`確定刪除教師 ${name}？相關導師與配課欄位會改為未指定。`)) return;
     delete d.roster[name]; delete d.tcap[name]; delete d.teacherAccounts[name]; delete d.teacherNativeLangs[name]; delete d.teacherSubjects[name];
+    Object.values(d.teacherRooms).forEach((row) => delete row[name]);
     d.classes.forEach((item) => { if (item.tutor === name) item.tutor = ""; });
     Object.values(d.assign).forEach((row) => Object.keys(row).forEach((subject) => { if (row[subject] === name) row[subject] = ""; }));
     d.resGroups.forEach((group) => { if (group.t === name) group.t = ""; });
@@ -1158,6 +1232,7 @@
     if (!next) return alert("科目名稱不可空白。");
     if (Object.prototype.hasOwnProperty.call(d.subjects, next)) return alert(`科目「${next}」已存在。`);
     d.subjects[next] = d.subjects[old]; delete d.subjects[old];
+    if (d.teacherRooms[old]) { d.teacherRooms[next] = d.teacherRooms[old]; delete d.teacherRooms[old]; }
     if (d.exportMappings[old]) { d.exportMappings[next] = d.exportMappings[old]; delete d.exportMappings[old]; }
     Object.values(d.assign).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
     Object.values(d.assignmentModes).forEach((row) => { if (Object.prototype.hasOwnProperty.call(row, old)) { row[next] = row[old]; delete row[old]; } });
@@ -1180,6 +1255,7 @@
     const name = Object.keys(d.subjects)[index];
     if (!name || !confirm(`確定刪除科目 ${name}？相關配課、固定課及資源班設定也會移除。`)) return;
     delete d.subjects[name];
+    delete d.teacherRooms[name];
     delete d.exportMappings[name];
     Object.values(d.assign).forEach((row) => delete row[name]);
     Object.values(d.assignmentModes).forEach((row) => delete row[name]);
@@ -1220,6 +1296,18 @@
     d.assignmentModes[code] = d.assignmentModes[code] || {};
     d.assignmentModes[code][subject] = tutorArrangeable ? "tutor" : "engine";
     commit(`${code} ${subject}已改為${tutorArrangeable ? "導師自排" : "系統排課"}。`);
+  }
+
+  function setTeacherRoom(subject, teacher, room) {
+    const d = data();
+    if (!d.subjects[subject] || !d.roster[teacher]) return alert("找不到這筆教師配課，請重新整理後再試。");
+    if (room && !Object.prototype.hasOwnProperty.call(d.rooms, room)) return alert(`找不到教室「${room}」。`);
+    d.teacherRooms[subject] = d.teacherRooms[subject] || {};
+    if (room) d.teacherRooms[subject][teacher] = room;
+    else delete d.teacherRooms[subject][teacher];
+    if (!Object.keys(d.teacherRooms[subject]).length) delete d.teacherRooms[subject];
+    const label = room ? (room === "R00" ? "原班教室" : room) : "科目預設教室";
+    commit(`${teacher}的${subject}已使用${label}。`);
   }
 
   function autofillTutors() {
@@ -1263,6 +1351,6 @@
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
     addTeacher, setTeacher, renameTeacher, removeTeacher, applyTeacherLoginRecords, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,
-    setAssignment, setAssignmentMode, autofillTutors,
+    setAssignment, setAssignmentMode, setTeacherRoom, autofillTutors,
   };
 }(typeof globalThis !== "undefined" ? globalThis : window));

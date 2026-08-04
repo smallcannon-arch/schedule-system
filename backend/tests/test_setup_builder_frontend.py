@@ -17,6 +17,9 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'id="setupTeachersTable"' in html
     assert 'id="setupSubjectsTable"' in html
     assert 'id="setupAssignmentsTable"' in html
+    assert 'id="setupTeacherRooms"' in html
+    assert "專科教室安排" in html
+    assert "只列出步驟 3 已指定專科教室的科目" in html
     assert "步驟 1　班級資料" in html
     assert "步驟 2　教師資料" in html
     assert "步驟 3　科目節數" in html
@@ -494,6 +497,28 @@ process.stdout.write(JSON.stringify({subjects:data.teacherSubjects['王老師'],
         "subjects": ["自然科學", "音樂"], "tutorMode": "tutor",
         "releasedMode": "engine",
     }
+
+
+def test_teacher_room_override_follows_teacher_and_subject_renames():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const data={classes:[{g:3,i:1,code:'3甲',tutor:'王老師',res:false}],
+  roster:{'王老師':'導師','自然A':'科任'},teacherAccounts:{},teacherNativeLangs:{},
+  teacherSubjects:{},tcap:{},subjects:{'自然科學':{room:'自然1',self:false,hours:[0,0,3,0,0,0]}},
+  assign:{'3甲':{'自然科學':'自然A'}},assignmentModes:{},override:{},teacherRooms:{},locks:[],
+  resGroups:[],nativeBands:[],nativeGroups:[],rooms:{R00:99,'自然1':1,'自然2':1}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.setTeacherRoom('自然科學','自然A','自然2');
+ScheduleSetup.renameTeacher(1,'自然B');
+ScheduleSetup.renameSubject(0,'自然領域');
+process.stdout.write(JSON.stringify(data.teacherRooms));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    assert json.loads(result.stdout) == {"自然領域": {"自然B": "自然2"}}
 
 
 def test_formal_workflow_pages_have_collapsed_help():

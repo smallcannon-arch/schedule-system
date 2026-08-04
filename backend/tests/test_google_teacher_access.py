@@ -83,6 +83,71 @@ def test_subject_teacher_sees_only_personal_timetable_and_cannot_edit():
     assert workspace["editable_classes"] == []
 
 
+def test_teacher_workspace_uses_teacher_specific_room_for_tutor_course():
+    teacher_state = state()
+    teacher_state["snapshot"]["data"]["rooms"]["語文教室"] = 1
+    teacher_state["snapshot"]["data"]["roster"]["無關教師"] = "科任"
+    teacher_state["snapshot"]["data"]["teacherRooms"] = {
+        "國語文": {"王導師": "語文教室"},
+        "英語文": {"無關教師": "語文教室"},
+    }
+
+    workspace = teacher_portal.build_teacher_workspace(
+        teacher_state, principal("王導師", "homeroom_teacher", ("3甲",)))
+
+    tutor_course = next(
+        row for row in workspace["personal_schedule"]
+        if row["code"] == "3甲" and row["subject"] == "國語文")
+    assert tutor_course["room"] == "語文教室"
+    assert workspace["editable_classes"][0]["data"]["teacherRooms"] == {
+        "國語文": {"王導師": "語文教室"},
+    }
+
+
+def test_teacher_placement_rejects_blocked_teacher_specific_room():
+    teacher_state = state()
+    data = teacher_state["snapshot"]["data"]
+    data["rooms"]["語文教室"] = 1
+    data["teacherRooms"] = {"國語文": {"王導師": "語文教室"}}
+    data["blocked"] = [["語文教室", "一", 2]]
+
+    with pytest.raises(teacher_portal.TeacherChangeError, match="語文教室 週一第2節已封鎖"):
+        teacher_portal.validate_teacher_placements(
+            teacher_state, principal("王導師", "homeroom_teacher", ("3甲",)),
+            "3甲", {"一|2": "國語文"})
+
+
+def test_teacher_placement_rejects_full_teacher_specific_room():
+    teacher_state = state()
+    snapshot = teacher_state["snapshot"]
+    data = snapshot["data"]
+    data["rooms"]["語文教室"] = 1
+    data["teacherRooms"] = {"國語文": {"王導師": "語文教室"}}
+    snapshot["schedule"]["3乙|一|2"] = {
+        "s": "英語文", "t": "陳科任", "room": "語文教室",
+    }
+
+    with pytest.raises(teacher_portal.TeacherChangeError, match="語文教室 週一第2節已達容量上限 1"):
+        teacher_portal.validate_teacher_placements(
+            teacher_state, principal("王導師", "homeroom_teacher", ("3甲",)),
+            "3甲", {"一|2": "國語文"})
+
+
+def test_teacher_placement_allows_shared_room_with_remaining_capacity():
+    teacher_state = state()
+    snapshot = teacher_state["snapshot"]
+    data = snapshot["data"]
+    data["rooms"]["語文教室"] = 2
+    data["teacherRooms"] = {"國語文": {"王導師": "語文教室"}}
+    snapshot["schedule"]["3乙|一|2"] = {
+        "s": "英語文", "t": "陳科任", "room": "語文教室",
+    }
+
+    assert teacher_portal.validate_teacher_placements(
+        teacher_state, principal("王導師", "homeroom_teacher", ("3甲",)),
+        "3甲", {"一|2": "國語文"}) == {"一|2": "國語文"}
+
+
 def test_resource_teacher_personal_timetable_includes_overlay():
     workspace = teacher_portal.build_teacher_workspace(
         state(), principal("資源教師", "resource_teacher"))

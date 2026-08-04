@@ -4,6 +4,7 @@ from collections import Counter
 from copy import deepcopy
 import re
 import course_ownership
+import course_rooms
 import schedule_policy
 
 
@@ -69,7 +70,7 @@ def _schedule_entries(snapshot, include_overlay=True):
             entries.append({
                 "code": str(code), "day": day, "period": int(period),
                 "subject": subject, "teacher": classroom.get("tutor") or "",
-                "room": _room_of(data, str(code), subject), "source": "tutor",
+                "room": _room_of(data, str(code), subject, classroom.get("tutor") or ""), "source": "tutor",
             })
     if include_overlay:
         for item in snapshot.get("overlay") or []:
@@ -106,9 +107,17 @@ def _schedule_entries(snapshot, include_overlay=True):
     return entries
 
 
-def _room_of(data, code, subject):
-    override = (data.get("override") or {}).get(code) or {}
-    return override.get(subject) or ((data.get("subjects") or {}).get(subject) or {}).get("room") or "R00"
+def _room_of(data, code, subject, teacher=""):
+    return course_rooms.frontend_course_room(data, code, subject, teacher)
+
+
+def _rule_enabled(snapshot, rule_id):
+    data = snapshot.get("data") or {}
+    for row in snapshot.get("rules") or data.get("rules") or []:
+        if not isinstance(row, (list, tuple)) or not row or str(row[0]).strip() != rule_id:
+            continue
+        return len(row) < 6 or str(row[5]).strip() == "是"
+    return True
 
 
 def _is_resource_bound(data, code, subject):
@@ -157,6 +166,13 @@ def _class_package(snapshot, class_code, teacher_name, revision, pending=None):
     relevant_names = {teacher_name}
     relevant_names.update(str(value.get("t") or value.get("teacher") or "") for value in fixed.values())
     relevant_names.update(str(item.get("t") or item.get("teacher") or "") for item in overlay)
+    teacher_rooms = {}
+    for subject, row in (data.get("teacherRooms") or {}).items():
+        if not isinstance(row, dict):
+            continue
+        filtered = {name: room for name, room in row.items() if name in relevant_names}
+        if filtered:
+            teacher_rooms[subject] = filtered
     limits = [deepcopy(row) for row in snapshot.get("limits") or data.get("limits") or []
               if row and row[0] in {teacher_name, class_code, f"{classroom.get('g')}年級"}]
     class_data = {
@@ -166,6 +182,7 @@ def _class_package(snapshot, class_code, teacher_name, revision, pending=None):
         "assignmentModes": {class_code: deepcopy(
             (data.get("assignmentModes") or {}).get(class_code) or {})},
         "override": {class_code: deepcopy((data.get("override") or {}).get(class_code) or {})},
+        "teacherRooms": deepcopy(teacher_rooms),
         "locks": [deepcopy(item) for item in data.get("locks") or [] if str(item.get("c")) == class_code],
         "limits": limits,
         "derived": [], "rules": deepcopy(snapshot.get("rules") or data.get("rules") or []),
@@ -267,6 +284,19 @@ def validate_teacher_placements(state, principal, class_code, placements):
     other_entries = [entry for entry in _schedule_entries(snapshot)
                      if not (entry["source"] == "tutor" and entry["code"] == class_code)]
     daily_counts = Counter((entry["teacher"], entry["day"]) for entry in other_entries if entry["teacher"])
+    room_counts = Counter(
+        (entry["room"], entry["day"], entry["period"])
+        for entry in other_entries if entry["room"] and entry["room"] != "R00")
+    blocked_rooms = set()
+    for row in data.get("blocked") or []:
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            continue
+        try:
+            blocked_rooms.add((str(row[0]).strip(), str(row[1]).strip(), int(row[2])))
+        except (TypeError, ValueError):
+            continue
+    check_room_capacity = _rule_enabled(snapshot, "H03")
+    check_room_blocked = _rule_enabled(snapshot, "H15")
     daily_cap = schedule_policy.daily_hard_cap(data)
 
     for slot, subject in placements.items():
@@ -295,6 +325,13 @@ def validate_teacher_placements(state, principal, class_code, placements):
         if any(entry["teacher"] == teacher_name and entry["day"] == day and entry["period"] == period
                for entry in other_entries):
             raise TeacherChangeError(f"{teacher_name} 週{day}第{period}節已有其他課程")
+        room = course_rooms.frontend_course_room(data, class_code, subject, teacher_name)
+        if check_room_blocked and room != "R00" and (room, day, period) in blocked_rooms:
+            raise TeacherChangeError(f"{room} 週{day}第{period}節已封鎖")
+        if check_room_capacity and room != "R00":
+            capacity = int((data.get("rooms") or {}).get(room, 1) or 1)
+            if room_counts[(room, day, period)] >= capacity:
+                raise TeacherChangeError(f"{room} 週{day}第{period}節已達容量上限 {capacity}")
         if daily_counts[(teacher_name, day)] + sum(1 for key in normalized if key.startswith(f"{day}|")) >= daily_cap:
             raise TeacherChangeError(f"{teacher_name} 週{day}已達每日 {daily_cap} 節上限")
         normalized[f"{day}|{period}"] = subject
