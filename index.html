@@ -249,14 +249,20 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .platform-school-list th{color:var(--muted);font-size:12px}
 .setup-actions{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;margin:14px 0 18px}.setup-actions .btn{white-space:nowrap}
 .setup-import-hint{margin:12px 0 -4px;color:var(--muted);font-size:14px;font-weight:800}.setup-import-hint b{color:var(--ink)}
+.setup-pending-flow{display:none;margin:20px 0 16px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+body.setup-pending:not(.platform-admin-mode) .setup-pending-flow{display:block}
+.setup-pending-flow-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}.setup-pending-flow-head h2{margin:0;font-size:19px}.setup-pending-flow-head p{margin:0;color:var(--muted);font-size:13px}
+.setup-pending-flow ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;margin:0;padding:0;list-style:none}.setup-pending-flow li{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:10px;min-height:68px;padding:10px 12px;border-left:4px solid var(--lav);background:#faf7fb}.setup-pending-flow li:not(:last-child)::after{content:"→";position:absolute;right:-21px;top:50%;translate:0 -50%;color:var(--lav-d);font-size:20px;font-weight:900}.setup-pending-flow-number{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--lav);color:var(--lav-d);font-size:16px;font-weight:900}.setup-pending-flow strong,.setup-pending-flow small{display:block}.setup-pending-flow strong{color:var(--ink);font-size:15px}.setup-pending-flow small{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.4}
 .setup-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#f3ecf4;border-radius:8px;margin-bottom:14px}
 .setup-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:16px;font-weight:900;padding:10px 18px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .setup-tabs button.on{background:#fff;color:var(--pink-d);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .setup-pane{display:none}.setup-pane.on{display:block}
 .setup-stepbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
-.setup-step{min-height:62px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:9px 12px;cursor:pointer;text-align:left}
-.setup-step span{display:block;font-size:13px;font-weight:800}.setup-step b{display:block;font-size:22px;color:var(--ink);margin-top:2px}
-.setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done b{color:var(--mint-d)}
+.setup-step{position:relative;min-height:104px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:11px 12px;cursor:pointer;text-align:left}
+.setup-step:hover,.setup-step.current{border-color:#bba8c5;box-shadow:0 2px 7px rgba(70,50,72,.09)}
+.setup-step-index{display:block;color:var(--lav-d);font-size:12px;font-weight:900}.setup-step strong{display:block;margin-top:2px;color:var(--ink);font-size:16px}.setup-step small{display:block;min-height:32px;margin-top:3px;font-size:12px;line-height:1.35}
+.setup-step-value{display:flex;align-items:end;justify-content:space-between;gap:8px;margin-top:7px}.setup-step-value b{color:var(--ink);font-size:21px}.setup-step-value em{color:#9a6a12;font-size:12px;font-style:normal;font-weight:900;white-space:nowrap}
+.setup-step.done{border-color:#8ccdb8;background:#f2fbf7}.setup-step.done .setup-step-value b,.setup-step.done .setup-step-value em{color:var(--mint-d)}
 .setup-health{display:flex;align-items:center;gap:12px;padding:11px 13px;border-left:4px solid var(--mint-d);background:#f2fbf7;border-radius:4px;margin-bottom:14px}
 .setup-health.bad{border-color:var(--pink-d);background:#fff4f7}.setup-health span{font-size:14px;color:var(--muted);flex:1}
 .onboarding-checklist{margin:0 0 18px;border:1px solid var(--line);border-left:4px solid var(--sky-d);background:#fff}.onboarding-checklist summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;cursor:pointer;color:var(--ink);font-weight:900}.onboarding-checklist.complete{border-left-color:var(--mint-d)}.onboarding-checklist-body{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}.onboarding-step{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:9px;min-height:58px;padding:10px 12px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;color:var(--muted);font:inherit;text-align:left;cursor:pointer}.onboarding-step:nth-child(4n){border-right:0}.onboarding-step span{display:grid;place-items:center;width:34px;height:28px;border-radius:5px;background:#f3ecf4;color:var(--lav-d);font-size:11px;font-weight:900}.onboarding-step b{font-size:13px}.onboarding-step.done span{background:#dff3eb;color:var(--mint-d)}.onboarding-step.done b{color:var(--ink)}
@@ -320,6 +326,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .editor-table{min-width:620px}.editor-toolbar input,.editor-toolbar select{width:min(100%,260px)}
   .tt{min-width:650px}.panel:has(.tt){overflow-x:auto}.btn{padding:11px 18px}
   .setup-actions{flex-wrap:wrap}.setup-tabs{flex-wrap:wrap}.admin-dock{position:relative;top:auto;width:100%;margin-bottom:16px}.admin-dock summary{align-items:start}.admin-dock-copy{grid-template-columns:1fr}.admin-dock-copy strong{padding:0;border:0}.admin-dock-copy .auth-status{grid-column:auto}.admin-dock-toolbar{align-items:flex-start;flex-direction:column}.admin-dock .auth-admin-actions{align-items:stretch}.admin-dock .auth-admin-actions .btn{flex:1 1 140px;text-align:center}
+  .setup-pending-flow-head{align-items:flex-start;flex-direction:column;gap:4px}.setup-pending-flow ol{grid-template-columns:1fr;gap:8px}.setup-pending-flow li:not(:last-child)::after{display:none}
   .setup-source-strip{align-items:stretch;flex-direction:column}.setup-source-actions{justify-content:flex-start}.setup-overview-panel #statLine{white-space:normal;overflow:visible}
   .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-usage-summary div:last-child:nth-child(odd){grid-column:1/-1}.platform-school-actions{overflow-x:auto}.platform-usage-head{align-items:flex-start;flex-direction:column}.platform-usage-actions{justify-content:flex-start}.usage-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-detail-summary div:nth-child(2){border-right:0}.usage-detail-summary div:nth-child(-n+2){border-bottom:1px solid var(--line)}.usage-timeline-row{grid-template-columns:1fr auto}.usage-timeline-row time{grid-column:1/-1}.resource-settings-body{grid-template-columns:1fr}.resource-pull-head{align-items:stretch;flex-direction:column}.resource-pull-head .btn{align-self:flex-start}
@@ -369,7 +376,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.32</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.33</b></span></div>
   </div>
 </section>
 
@@ -463,8 +470,8 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div id="googleSignInButton" hidden></div>
     <div class="auth-admin-actions" id="googleAdminActions" hidden>
-      <button class="btn soft sm always-available" type="button" onclick="ScheduleAuth.downloadTeacherCsvTemplate()">下載教師帳號 CSV 範本</button>
-      <label class="btn soft sm" id="teacherCsvImportButton" style="cursor:pointer">匯入教師帳號 CSV<input id="teacherCsvImportInput" type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
+      <button class="btn soft sm always-available" id="teacherCsvDownloadButton" type="button" onclick="ScheduleAuth.downloadTeacherCsvTemplate()">下載教師帳號 CSV 範本</button>
+      <label class="btn soft sm" id="teacherCsvImportButton" style="cursor:pointer">匯入教師登入名冊<input id="teacherCsvImportInput" type="file" accept=".csv,text/csv" hidden onchange="ScheduleAuth.importTeacherCsv(this)"></label>
       <button class="btn mint sm" id="publishScheduleButton" type="button" onclick="ScheduleAuth.publishCurrent()">發布正式教師課表</button>
       <button class="btn mint sm" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
       <button class="btn soft sm cloud-draft-resolution" id="cloudContinueButton" type="button" onclick="ScheduleAuth.loadDraft()" hidden>繼續上次雲端案件</button>
@@ -477,7 +484,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
     <div class="admin-dock-notes">
       <div class="cloud-draft-guide"><b>學校共用暫存</b><span>同校主任與組長讀取同一案件，換電腦登入後也能繼續。</span><small>停止操作 10 秒後自動存檔；若其他管理員已有較新版本，系統會阻擋覆蓋並要求先載入。</small></div>
-      <span id="teacherCsvImportHint">請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。</span>
+      <span id="teacherCsvImportHint">尚未建立案件時可使用通用範本；建立或載入案件後，系統會改為下載依配課預填的名冊。</span>
       <span id="cloudDraftStatus">雲端暫存尚未啟動。</span>
       <span id="teacherSyncStatus">發布課表後，按「讀取導師存檔」取得導師送出的更新。</span>
       <span id="versionHistoryStatus">每次發布與版本還原都會保留紀錄。</span>
@@ -509,6 +516,18 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <label class="btn soft sm" style="cursor:pointer">上傳填妥的 Excel<input type="file" accept=".xlsx" hidden onchange="importXlsx(this)"></label>
     <button class="btn mint sm formal-only" type="button" data-cloud-save onclick="ScheduleAuth.saveDraft(true)">儲存至學校雲端</button>
   </div>
+  <section class="setup-pending-flow" aria-labelledby="setupPendingFlowTitle">
+    <div class="setup-pending-flow-head">
+      <h2 id="setupPendingFlowTitle">建立案件後，依序完成 4 個步驟</h2>
+      <p>可在系統逐步填寫；使用 Excel 匯入時也會自動帶入。</p>
+    </div>
+    <ol>
+      <li><span class="setup-pending-flow-number">1</span><span><strong>班級資料</strong><small>建立班級並指定導師</small></span></li>
+      <li><span class="setup-pending-flow-number">2</span><span><strong>教師資料</strong><small>填寫身分、帳號與節數</small></span></li>
+      <li><span class="setup-pending-flow-number">3</span><span><strong>科目節數</strong><small>設定各年級每週節數</small></span></li>
+      <li><span class="setup-pending-flow-number">4</span><span><strong>配課資料</strong><small>指定教師、科目與班級</small></span></li>
+    </ol>
+  </section>
   <details class="onboarding-checklist setup-ready-only" id="onboardingChecklist" open>
     <summary><span>新手操作檢查表</span><span class="chip warn" id="onboardingChecklistProgress">0/8</span></summary>
     <div class="onboarding-checklist-body" id="onboardingChecklistBody"></div>
@@ -561,10 +580,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <section class="panel policy-panel setup-ready-only" id="setupPolicyPanel"></section>
   <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
-    <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">班級</button>
-    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">教師</button>
-    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">科目節數</button>
-    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">配課</button>
+    <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">步驟 1　班級資料</button>
+    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">步驟 2　教師資料</button>
+    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">步驟 3　科目節數</button>
+    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">步驟 4　配課資料</button>
   </div>
 
   <section class="setup-pane on" id="setup-classes">
@@ -603,7 +622,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 
   <section class="setup-pane" id="setup-teachers">
     <div class="panel tbl">
-      <div class="sub" style="margin-bottom:12px"><b>學校 Google 帳號用途：</b>發布課表後，導師可調整負責班級；科任與資源班教師可查看個人課表。只填帳號，不需提供密碼。</div>
+      <div class="sub" style="margin-bottom:12px"><b>學校 Google 帳號用途：</b>發布課表後，導師可調整負責班級；科任與資源班教師可查看個人課表。只填帳號，不需提供密碼。批次補帳號時，可從上方「排課管理」下載依配課預填的教師名冊；角色與班級會自動帶入。</div>
       <table class="setup-table" id="setupTeachersTable"></table>
       <div class="setup-actions">
         <button class="btn soft sm" type="button" onclick="ScheduleSetup.addTeacher()">新增教師</button>
@@ -1198,7 +1217,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.32</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.33</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -3773,7 +3792,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.32');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.33');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';

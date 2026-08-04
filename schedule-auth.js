@@ -316,19 +316,37 @@
     if (!file) return;
     if (teacherCsvImportLocked()) {
       input.value = "";
-      alert("案件已開始編輯，無法再批次匯入教師帳號。請到「教師與配課」修改後，按「同步教師登入名冊」。");
+      alert("目前無法匯入教師登入名冊，請先處理雲端版本衝突或重新登入。");
       return;
     }
     if (state.importingTeacherCsv) { input.value = ""; return; }
+    const caseData = currentCaseData();
+    const hasCase = !!caseData;
     const body = new FormData();
     body.append("file", file);
-    body.append("replace", "true");
+    body.append("replace", hasCase ? "false" : "true");
+    if (hasCase) body.append("case_teacher_names", JSON.stringify(
+      teacherCsvRowsFromCurrentCase(caseData).slice(1).map((row) => row[0])));
     state.importingTeacherCsv = true;
     updateTeacherCsvImportState();
     try {
       status("正在匯入教師帳號表…", "working");
       const result = await request("/admin/teachers/import-csv", {method: "POST", body});
-      status(`已匯入 ${result.imported} 位教師帳號。`, "ok");
+      const setupResult = root.ScheduleSetup && root.ScheduleSetup.applyTeacherLoginRecords ?
+        root.ScheduleSetup.applyTeacherLoginRecords(result.teachers || []) : null;
+      if (setupResult && setupResult.updated) {
+        const syncResult = await root.ScheduleSetup.syncTeachers();
+        const skipped = setupResult.unknown.length ? `；另有 ${setupResult.unknown.length} 位不在目前配課名冊，未帶入案件` : "";
+        status(syncResult && syncResult.ok === false ? syncResult.message :
+          `已依配課資料帶入並同步 ${setupResult.updated} 位教師帳號${skipped}。`,
+        syncResult && syncResult.ok === false ? "error" : "ok");
+        if (syncResult && syncResult.ok === false && root.ScheduleSetup.show) {
+          if (typeof root.go === "function") root.go("build");
+          root.ScheduleSetup.show("teachers");
+        }
+      } else {
+        status(`已匯入 ${result.imported} 位教師帳號。`, "ok");
+      }
     } catch (error) {
       status(error.message, "error");
     } finally {
@@ -354,7 +372,7 @@
     const rows = [["教師姓名", "學校Google帳號", "角色", "負責班級"],
       ...records.map((record) => [record.name, record.email, record.role,
         (record.class_codes || []).join("、")])];
-    const csv = "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+    const csv = "\ufeff" + rows.map((row) => row.map(csvExportCell).join(",")).join("\r\n");
     const body = new FormData();
     body.append("file", new Blob([csv], {type: "text/csv;charset=utf-8"}), "teachers.csv");
     body.append("replace", "true");
@@ -658,38 +676,79 @@
   }
 
   function teacherCsvImportLocked() {
-    const setupStarted = !document.body.classList.contains("setup-pending");
-    return !state.draftReady || state.hasCloudDraft || state.draftConflict ||
-      state.sessionExpired || state.importingTeacherCsv || setupStarted;
+    return !state.draftReady || state.draftConflict || state.sessionExpired || state.importingTeacherCsv;
+  }
+
+  function currentCaseData() {
+    const snapshot = typeof root.getScheduleAuthSnapshot === "function" ? root.getScheduleAuthSnapshot() : null;
+    const value = snapshot && snapshot.data;
+    return value && value.roster && Object.keys(value.roster).length ? value : null;
+  }
+
+  function teacherCsvRole(data, name) {
+    if ((data.classes || []).some((item) => String(item.tutor || "").trim() === name)) return "導師";
+    const role = String((data.roster || {})[name] || "");
+    if (role === "教支人員") return "教支人員";
+    return role.includes("資源班") ? "資源班教師" : "科任";
+  }
+
+  function teacherCsvRowsFromCurrentCase(data = currentCaseData()) {
+    const header = ["教師姓名", "學校Google帳號", "角色", "負責班級", "配課班級（參考）", "配課科目（參考）"];
+    if (!data) return [header];
+    const names = new Set(Object.keys(data.roster || {}));
+    for (const item of data.classes || []) if (String(item.tutor || "").trim()) names.add(String(item.tutor).trim());
+    for (const assignments of Object.values(data.assign || {})) {
+      for (const teacher of Object.values(assignments || {})) if (String(teacher || "").trim()) names.add(String(teacher).trim());
+    }
+    return [header, ...[...names].map((name) => {
+      const tutorClasses = (data.classes || []).filter((item) => String(item.tutor || "").trim() === name)
+        .map((item) => String(item.code || "").trim()).filter(Boolean);
+      const assignedClasses = [];
+      const assignedSubjects = [];
+      for (const [code, assignments] of Object.entries(data.assign || {})) {
+        for (const [subject, teacher] of Object.entries(assignments || {})) {
+          if (String(teacher || "").trim() !== name) continue;
+          if (!assignedClasses.includes(code)) assignedClasses.push(code);
+          if (!assignedSubjects.includes(subject)) assignedSubjects.push(subject);
+        }
+      }
+      return [name, String((data.teacherAccounts || {})[name] || "").trim().toLowerCase(),
+        teacherCsvRole(data, name), tutorClasses.join("、"), assignedClasses.join("、"), assignedSubjects.join("、")];
+    })];
   }
 
   function updateTeacherCsvImportState() {
     const button = document.getElementById("teacherCsvImportButton");
+    const downloadButton = document.getElementById("teacherCsvDownloadButton");
     const input = document.getElementById("teacherCsvImportInput");
     const hint = document.getElementById("teacherCsvImportHint");
     if (!button || !input) return;
     const locked = teacherCsvImportLocked();
+    const hasCase = !!currentCaseData();
+    if (downloadButton) downloadButton.textContent = hasCase ? "下載依配課預填的教師名冊" : "下載教師帳號 CSV 範本";
     button.classList.toggle("csv-import-locked", locked);
     button.setAttribute("aria-disabled", locked ? "true" : "false");
     button.title = state.importingTeacherCsv ? "正在匯入教師帳號" :
-      (locked ? "案件開始後請到教師與配課頁修改並同步登入名冊" : "匯入教師帳號 CSV");
+      (locked ? "請先處理雲端版本衝突或重新登入" : "匯入教師登入名冊 CSV");
     input.disabled = locked;
     if (hint) hint.textContent = state.importingTeacherCsv ? "正在匯入教師帳號，完成前請勿關閉頁面。" : (locked ?
-      "案件已開始編輯，批次匯入已鎖定；請到「教師與配課」修改帳號，再按「同步教師登入名冊」。" :
-      "請在建立或載入案件前匯入。CSV 欄位：教師姓名、學校Google帳號、角色、負責班級。");
+      "目前無法匯入；請先處理雲端版本衝突或重新登入。" : (hasCase ?
+      "名冊會依目前「教師與配課」自動帶入角色、導師班級、任教班級與科目；下載後只需補 Google 帳號再匯入。" :
+      "尚未建立案件時可使用通用範本；建立或載入案件後，系統會改為下載依配課預填的名冊。"));
   }
 
   function downloadTeacherCsvTemplate() {
-    const rows = [
-      ["教師姓名", "學校Google帳號", "角色", "負責班級"],
-      ["王小明", "teacher1@school.edu.tw", "導師", "1甲"],
-      ["李小華", "teacher2@school.edu.tw", "科任", ""],
+    const caseData = currentCaseData();
+    const rows = caseData ? teacherCsvRowsFromCurrentCase(caseData) : [
+      ["教師姓名", "學校Google帳號", "角色", "負責班級", "配課班級（參考）", "配課科目（參考）"],
+      ["王小明", "teacher1@school.edu.tw", "導師", "1甲", "1甲", "國語文、數學"],
+      ["李小華", "teacher2@school.edu.tw", "科任", "", "1甲、1乙", "自然科學"],
     ];
-    const csv = "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+    const csv = "\ufeff" + rows.map((row) => row.map(csvExportCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "教師帳號匯入範本.csv";
+    link.download = caseData ? "教師登入名冊_依配課預填.csv" : "教師帳號匯入範本.csv";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -1441,7 +1500,7 @@
     location.reload();
   }
 
-  root.ScheduleAuth = {initialize, reloadLatest, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, updateTeacherCsvImportState, updateActionButtons, getReadinessState,
+  root.ScheduleAuth = {initialize, reloadLatest, solveData, importTeacherCsv, importTeacherRecords, downloadTeacherCsvTemplate, teacherCsvRowsFromCurrentCase, updateTeacherCsvImportState, updateActionButtons, getReadinessState,
     publishCurrent, saveDraft, loadDraft, useLocalBackup, queueDraftSave,
     openDeleteDraftDialog, closeDeleteDraftDialog, toggleDeleteDraftConfirm, deleteDraft,
     openBackups, closeBackups, loadBackups, createBackup, restoreBackup,

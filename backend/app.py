@@ -72,7 +72,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.32",
+    title="排課引擎 API", version="1.33",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -370,6 +370,8 @@ def _normalize_teacher_rows(rows):
         class_codes = [value for value in re.split(r"[\s,，、;；]+", class_text) if value]
         active_text = _csv_value(row, "啟用", "active").lower()
         active = active_text not in {"否", "停用", "false", "0", "no"}
+        if name and not email and role_text == "教支人員":
+            continue
         if not name or not email or "@" not in email:
             raise ValueError(f"第 {index} 列缺少有效的教師姓名或 Google 帳號")
         if role is None:
@@ -857,6 +859,7 @@ def upsert_school(school_id: str, payload: SchoolUpsert,
 
 @app.post("/admin/teachers/import-csv")
 async def import_teacher_csv(file: UploadFile = File(...), replace: bool = Form(True),
+                             case_teacher_names: str = Form(""),
                              authorization: str = Header("")):
     principal, store = _require_admin(authorization)
     data = await file.read(1024 * 1024 + 1)
@@ -866,6 +869,16 @@ async def import_teacher_csv(file: UploadFile = File(...), replace: bool = Form(
     try:
         text = data.decode("utf-8-sig")
         records = _normalize_teacher_rows(csv.DictReader(io.StringIO(text)))
+        if not records:
+            raise ValueError("教師帳號表沒有可匯入的資料")
+        if case_teacher_names:
+            expected = json.loads(case_teacher_names)
+            if not isinstance(expected, list) or len(expected) > 1000:
+                raise ValueError("目前案件的教師名冊格式不正確")
+            expected_names = {str(name).strip() for name in expected if str(name).strip()}
+            unknown_names = [record["name"] for record in records if record["name"] not in expected_names]
+            if unknown_names:
+                raise ValueError(f"CSV 教師不在目前「教師與配課」名冊：{unknown_names[0]}")
         school = TENANT_DIRECTORY.get_school(principal.school_id) or {}
         allowed_domains = set(school.get("domains") or ())
         invalid_emails = [record["email"] for record in records
@@ -875,10 +888,13 @@ async def import_teacher_csv(file: UploadFile = File(...), replace: bool = Form(
         count = store.import_teachers(records, replace=replace)
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=422, detail="CSV 請使用 UTF-8 編碼") from exc
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="目前案件的教師名冊格式不正確") from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     _record_usage(principal, "teacher_import")
-    return {"imported": count, "replace": replace, "imported_by": principal.email}
+    return {"imported": count, "replace": replace, "imported_by": principal.email,
+            "teachers": records}
 
 
 @app.post("/admin/publish")

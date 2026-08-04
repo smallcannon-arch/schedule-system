@@ -606,15 +606,19 @@
     const result = validate();
     const c = result.counts;
     const steps = [
-      ["班級", c.classes, c.classes > 0],
-      ["教師", c.teachers, c.teachers > 0],
-      ["科目", c.subjects, c.subjects > 0],
-      ["配課", `${c.assignments}/${c.assignmentTotal}`, c.assignmentTotal > 0 && !c.assignmentMissing],
+      {number: 1, label: "班級資料", help: "建立班級並指定導師", value: c.classes, done: c.classes > 0, view: "classes"},
+      {number: 2, label: "教師資料", help: "填寫身分、帳號與節數", value: c.teachers, done: c.teachers > 0, view: "teachers"},
+      {number: 3, label: "科目節數", help: "設定各年級每週節數", value: c.subjects, done: c.subjects > 0, view: "subjects"},
+      {number: 4, label: "配課資料", help: "指定教師、科目與班級", value: `${c.assignments}/${c.assignmentTotal}`,
+        done: c.assignmentTotal > 0 && !c.assignmentMissing, view: "assign"},
     ];
     const issues = [...result.hard.map((text) => ({text, kind: "bad"})),
       ...result.warnings.map((text) => ({text, kind: "warn"}))];
-    target.innerHTML = `<div class="setup-stepbar">${steps.map(([label, value, done]) =>
-      `<button type="button" class="setup-step ${done ? "done" : ""}" onclick="ScheduleSetup.show('${label === "班級" ? "classes" : label === "教師" ? "teachers" : label === "科目" ? "subjects" : "assign"}')"><span>${esc(label)}</span><b>${esc(value)}</b></button>`).join("")}</div>
+    target.innerHTML = `<div class="setup-stepbar" aria-label="資料建置流程">${steps.map((step) =>
+      `<button type="button" class="setup-step ${step.done ? "done" : ""} ${activeTab === step.view ? "current" : ""}" data-setup-step="${step.view}" onclick="ScheduleSetup.show('${step.view}')" aria-current="${activeTab === step.view ? "step" : "false"}">
+        <span class="setup-step-index">步驟 ${step.number}</span><strong>${esc(step.label)}</strong><small>${esc(step.help)}</small>
+        <span class="setup-step-value"><b>${esc(step.value)}</b><em>${step.done ? "完成" : "待完成"}</em></span>
+      </button>`).join("")}</div>
       <div class="setup-health ${result.hard.length ? "bad" : "ok"}">
         <b>${result.hard.length ? `尚有 ${result.hard.length} 項必填資料` : "基礎資料完整，可以執行排課"}</b>
         <span>${result.hard[0] ? esc(result.hard[0]) : (result.warnings[0] ? esc(result.warnings[0]) : esc(lastMessage || "資料變更會自動保存。"))}</span>
@@ -833,6 +837,11 @@
 
   function show(name) {
     activeTab = name;
+    document.querySelectorAll("[data-setup-step]").forEach((button) => {
+      const current = button.dataset.setupStep === name;
+      button.classList.toggle("current", current);
+      button.setAttribute("aria-current", current ? "step" : "false");
+    });
     document.querySelectorAll("[data-setup-tab]").forEach((button) =>
       button.classList.toggle("on", button.dataset.setupTab === name));
     document.querySelectorAll(".setup-pane").forEach((pane) =>
@@ -1058,8 +1067,28 @@
     return "科任";
   }
 
+  function applyTeacherLoginRecords(records) {
+    const d = data();
+    const unknown = [];
+    let updated = 0;
+    for (const record of Array.isArray(records) ? records : []) {
+      const name = String(record && record.name || "").trim();
+      const email = String(record && record.email || "").trim().toLowerCase();
+      if (!name || !email) continue;
+      if (!Object.prototype.hasOwnProperty.call(d.roster, name)) {
+        unknown.push(name);
+        continue;
+      }
+      d.teacherAccounts[name] = email;
+      updated += 1;
+    }
+    if (updated) commit(`已從教師登入名冊帶入 ${updated} 位 Google 帳號；角色與班級維持由配課資料自動判定。`);
+    else renderTeachers();
+    return {updated, unknown};
+  }
+
   async function syncTeachers() {
-    if (syncingTeachers) return;
+    if (syncingTeachers) return {ok: false, message: "教師登入名冊正在同步中。"};
     const d = data();
     const allRecords = Object.keys(d.roster).map((name) => {
       const classCodes = d.classes.filter((item) => item.tutor === name).map((item) => item.code);
@@ -1078,15 +1107,17 @@
     if (invalid) {
       syncMessage = `${invalid.name}尚未填寫有效的 Google 帳號。`;
       renderTeachers();
-      return;
+      return {ok: false, message: syncMessage};
     }
     syncingTeachers = true;
     try {
       syncMessage = "正在同步教師登入名冊…"; renderTeachers();
       const result = await adapter.syncTeachers(records);
       syncMessage = `已同步 ${result.imported} 位教師，可使用學校 Google 帳號登入。${skipped ? `另有 ${skipped} 位未填帳號的教支人員未建立登入權限。` : ""}`;
+      return {ok: true, result, message: syncMessage};
     } catch (error) {
       syncMessage = `同步失敗：${error.message}`;
+      return {ok: false, message: syncMessage};
     } finally {
       syncingTeachers = false;
       renderTeachers();
@@ -1230,7 +1261,7 @@
     init, render, validate, show, showIssues, startBlank,
     setPolicy, setWeeklyTarget,
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
-    addTeacher, setTeacher, renameTeacher, removeTeacher, syncTeachers,
+    addTeacher, setTeacher, renameTeacher, removeTeacher, applyTeacherLoginRecords, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,
     setAssignment, setAssignmentMode, autofillTutors,
   };

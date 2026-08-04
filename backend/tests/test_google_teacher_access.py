@@ -459,7 +459,48 @@ def test_admin_can_import_information_office_csv(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["imported"] == 2
+    assert response.json()["teachers"] == [
+        {"email": "homeroom@school.test", "name": "王導師", "role": "homeroom_teacher",
+         "class_codes": ["3甲"], "active": True},
+        {"email": "subject@school.test", "name": "陳科任", "role": "subject_teacher",
+         "class_codes": [], "active": True},
+    ]
     assert store.get_teacher("homeroom@school.test")["class_codes"] == ["3甲"]
+
+
+def test_case_teacher_csv_skips_blank_support_staff_and_rejects_unknown_names(monkeypatch):
+    store = MemoryScheduleStore()
+    monkeypatch.setattr(app, "STORE", store)
+    monkeypatch.setattr(app, "GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setattr(app, "ADMIN_EMAILS", ("admin@school.test",))
+    monkeypatch.setattr(app.auth_service, "verify_google_token", lambda *args: auth_service.GoogleIdentity(
+        "admin-sub", "admin@school.test", "排課管理員", "school.test"))
+    csv_data = (
+        "教師姓名,學校Google帳號,角色,負責班級\n"
+        "王導師,homeroom@school.test,導師,3甲\n"
+        "本土語教支,,教支人員,\n"
+    ).encode("utf-8-sig")
+
+    response = CLIENT.post(
+        "/admin/teachers/import-csv",
+        headers={"Authorization": "Bearer admin-token"},
+        files={"file": ("teachers.csv", csv_data, "text/csv")},
+        data={"replace": "false", "case_teacher_names": '["王導師","本土語教支"]'},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["imported"] == 1
+    assert [record["name"] for record in response.json()["teachers"]] == ["王導師"]
+
+    rejected = CLIENT.post(
+        "/admin/teachers/import-csv",
+        headers={"Authorization": "Bearer admin-token"},
+        files={"file": ("teachers.csv", csv_data, "text/csv")},
+        data={"replace": "false", "case_teacher_names": '["其他教師"]'},
+    )
+
+    assert rejected.status_code == 422
+    assert "不在目前「教師與配課」名冊" in rejected.json()["detail"]
 
 
 def test_homeroom_teacher_submission_waits_for_admin_approval(monkeypatch):
