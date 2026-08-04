@@ -111,6 +111,15 @@ def _room_of(data, code, subject, teacher=""):
     return course_rooms.frontend_course_room(data, code, subject, teacher)
 
 
+def _rule_enabled(snapshot, rule_id):
+    data = snapshot.get("data") or {}
+    for row in snapshot.get("rules") or data.get("rules") or []:
+        if not isinstance(row, (list, tuple)) or not row or str(row[0]).strip() != rule_id:
+            continue
+        return len(row) < 6 or str(row[5]).strip() == "是"
+    return True
+
+
 def _is_resource_bound(data, code, subject):
     return any(code in _resource_sources(group) and subject in _resource_pull_subjects(group)
                for group in data.get("resGroups") or [])
@@ -275,6 +284,19 @@ def validate_teacher_placements(state, principal, class_code, placements):
     other_entries = [entry for entry in _schedule_entries(snapshot)
                      if not (entry["source"] == "tutor" and entry["code"] == class_code)]
     daily_counts = Counter((entry["teacher"], entry["day"]) for entry in other_entries if entry["teacher"])
+    room_counts = Counter(
+        (entry["room"], entry["day"], entry["period"])
+        for entry in other_entries if entry["room"] and entry["room"] != "R00")
+    blocked_rooms = set()
+    for row in data.get("blocked") or []:
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            continue
+        try:
+            blocked_rooms.add((str(row[0]).strip(), str(row[1]).strip(), int(row[2])))
+        except (TypeError, ValueError):
+            continue
+    check_room_capacity = _rule_enabled(snapshot, "H03")
+    check_room_blocked = _rule_enabled(snapshot, "H15")
     daily_cap = schedule_policy.daily_hard_cap(data)
 
     for slot, subject in placements.items():
@@ -303,6 +325,13 @@ def validate_teacher_placements(state, principal, class_code, placements):
         if any(entry["teacher"] == teacher_name and entry["day"] == day and entry["period"] == period
                for entry in other_entries):
             raise TeacherChangeError(f"{teacher_name} 週{day}第{period}節已有其他課程")
+        room = course_rooms.frontend_course_room(data, class_code, subject, teacher_name)
+        if check_room_blocked and room != "R00" and (room, day, period) in blocked_rooms:
+            raise TeacherChangeError(f"{room} 週{day}第{period}節已封鎖")
+        if check_room_capacity and room != "R00":
+            capacity = int((data.get("rooms") or {}).get(room, 1) or 1)
+            if room_counts[(room, day, period)] >= capacity:
+                raise TeacherChangeError(f"{room} 週{day}第{period}節已達容量上限 {capacity}")
         if daily_counts[(teacher_name, day)] + sum(1 for key in normalized if key.startswith(f"{day}|")) >= daily_cap:
             raise TeacherChangeError(f"{teacher_name} 週{day}已達每日 {daily_cap} 節上限")
         normalized[f"{day}|{period}"] = subject
