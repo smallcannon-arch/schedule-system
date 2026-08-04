@@ -20,6 +20,7 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'id="setupTeacherRooms"' in html
     assert "專科教室安排" in html
     assert "只列出步驟 3 已指定專科教室的科目" in html
+    assert "此設定不在 Excel 母版中，重新匯入 Excel 後需回到此處重設" in html
     assert "步驟 1　班級資料" in html
     assert "步驟 2　教師資料" in html
     assert "步驟 3　科目節數" in html
