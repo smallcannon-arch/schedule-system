@@ -167,6 +167,51 @@ def test_server_publish_rejects_empty_or_incomplete_schedule_even_when_flag_is_t
         app._normalize_schedule_snapshot(payload, require_schedule=True)
 
 
+def test_server_publish_rejects_teacher_that_differs_from_assignment():
+    payload = complete_publish_payload()
+    payload["data"]["roster"]["李教師"] = "科任"
+    next(iter(payload["schedule"].values()))["t"] = "李教師"
+
+    with pytest.raises(
+            ValueError, match="授課教師與配課設定不一致.*應為王導師.*實際為李教師"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_server_publish_rejects_room_that_differs_from_resolved_setting():
+    payload = complete_publish_payload()
+    payload["data"]["rooms"]["專科教室"] = 1
+    next(iter(payload["schedule"].values()))["room"] = "專科教室"
+
+    with pytest.raises(ValueError, match="教室與設定不一致.*應為R00.*實際為專科教室"):
+        app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+
+def test_server_publish_accepts_teacher_room_override_when_all_rows_match():
+    payload = complete_publish_payload()
+    payload["data"]["rooms"]["專科教室"] = 1
+    payload["data"]["teacherRooms"] = {"領域課程": {"王導師": "專科教室"}}
+    for row in payload["schedule"].values():
+        row["room"] = "專科教室"
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+    assert snapshot["schedule_ready"] is True
+
+
+def test_server_publish_uses_fixed_course_teacher_as_expected_assignment():
+    payload = complete_publish_payload()
+    payload["data"]["roster"]["李教師"] = "科任"
+    payload["data"]["locks"] = [{
+        "c": "1甲", "d": "一", "p": 1, "s": "領域課程", "teacher": "李教師",
+    }]
+    for row in payload["schedule"].values():
+        row["t"] = "李教師"
+
+    snapshot = app._normalize_schedule_snapshot(payload, require_schedule=True)
+
+    assert snapshot["schedule_ready"] is True
+
+
 def test_server_publish_rejects_diagnostic_draft_and_rechecks_hidden_shortfall():
     payload = complete_publish_payload()
     payload["diagnostic_draft"] = True

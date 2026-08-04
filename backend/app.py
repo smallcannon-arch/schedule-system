@@ -459,6 +459,15 @@ def _validate_published_schedule(snapshot):
     native_external_sources = set(data.get("native_external_sources") or [])
     locked_courses = {
         (item["class"], item["subj"]) for item in data.get("locks") or []}
+    lock_teachers = {
+        (item["class"], item["subj"]): str(item.get("teacher") or "").strip()
+        for item in data.get("locks") or []
+        if str(item.get("teacher") or "").strip()
+    }
+    native_enabled = data.get("native_lock_enabled")
+    if native_enabled is None:
+        native_enabled = any(
+            item.get("subj") == "本土語文" for item in data.get("locks") or [])
     resource_bound_courses = {
         (code, subject)
         for item in data.get("overlay") or []
@@ -476,13 +485,16 @@ def _validate_published_schedule(snapshot):
                 continue
             if subject == "本土語文" and code in native_external_sources:
                 continue
-            native_group_owned = (
-                data.get("native_lock_enabled")
+            native_lock = (
+                bool(native_enabled)
                 and subject == "本土語文"
-                and code in native_group_sources
+                and (code, subject) in locked_courses
             )
-            teacher = "" if native_group_owned else data["assign"].get((code, subject), "")
-            room = ("R00" if native_group_owned else
+            native_group_owned = native_lock and code in native_group_sources
+            teacher = ("" if native_group_owned else
+                       lock_teachers.get((code, subject)) or
+                       data["assign"].get((code, subject), ""))
+            room = ("R00" if native_lock else
                     course_rooms.normalized_course_room(data, code, subject, teacher))
             mode = data.get("assignment_modes", {}).get((code, subject))
             self_arrange = mode == "tutor" if mode else info["self_arrange"]
@@ -525,6 +537,17 @@ def _validate_published_schedule(snapshot):
             raise ValueError(f"{source}引用不在名冊的授課教師：{teacher}")
         if room not in data["rooms"]:
             raise ValueError(f"{source}引用不存在的場地：{room}")
+        expected = tasks[(code, subject)]
+        if teacher != expected["t"]:
+            expected_teacher = expected["t"] or "未指定"
+            actual_teacher = teacher or "未指定"
+            raise ValueError(
+                f"{source}授課教師與配課設定不一致：{code} {subject} "
+                f"應為{expected_teacher}，實際為{actual_teacher}")
+        if room != expected["room"]:
+            raise ValueError(
+                f"{source}教室與設定不一致：{code} {subject} "
+                f"應為{expected['room']}，實際為{room}")
         key = (code, day, period)
         if key in schedule:
             raise ValueError(f"{source}與既有課程重複：{code} 週{day}第{period}節")
