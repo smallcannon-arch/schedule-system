@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 import auth_service
 import course_ownership
+import course_rooms
 import engine
 import openai_advisor
 import schedule_store
@@ -72,7 +73,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.33",
+    title="排課引擎 API", version="1.34",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -482,7 +483,7 @@ def _validate_published_schedule(snapshot):
             )
             teacher = "" if native_group_owned else data["assign"].get((code, subject), "")
             room = ("R00" if native_group_owned else
-                    data["room_override"].get((code, subject), info["room"]))
+                    course_rooms.normalized_course_room(data, code, subject, teacher))
             mode = data.get("assignment_modes", {}).get((code, subject))
             self_arrange = mode == "tutor" if mode else info["self_arrange"]
             if (

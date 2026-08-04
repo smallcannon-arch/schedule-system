@@ -83,6 +83,27 @@ def test_subject_teacher_sees_only_personal_timetable_and_cannot_edit():
     assert workspace["editable_classes"] == []
 
 
+def test_teacher_workspace_uses_teacher_specific_room_for_tutor_course():
+    teacher_state = state()
+    teacher_state["snapshot"]["data"]["rooms"]["語文教室"] = 1
+    teacher_state["snapshot"]["data"]["roster"]["無關教師"] = "科任"
+    teacher_state["snapshot"]["data"]["teacherRooms"] = {
+        "國語文": {"王導師": "語文教室"},
+        "英語文": {"無關教師": "語文教室"},
+    }
+
+    workspace = teacher_portal.build_teacher_workspace(
+        teacher_state, principal("王導師", "homeroom_teacher", ("3甲",)))
+
+    tutor_course = next(
+        row for row in workspace["personal_schedule"]
+        if row["code"] == "3甲" and row["subject"] == "國語文")
+    assert tutor_course["room"] == "語文教室"
+    assert workspace["editable_classes"][0]["data"]["teacherRooms"] == {
+        "國語文": {"王導師": "語文教室"},
+    }
+
+
 def test_resource_teacher_personal_timetable_includes_overlay():
     workspace = teacher_portal.build_teacher_workspace(
         state(), principal("資源教師", "resource_teacher"))

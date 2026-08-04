@@ -20,6 +20,7 @@ from collections import defaultdict
 from openpyxl import load_workbook
 from ortools.sat.python import cp_model
 import course_ownership
+import course_rooms
 import schedule_policy
 
 DAYS = ["一", "二", "三", "四", "五"]
@@ -531,6 +532,22 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
                     raise ValueError(f"{code} {subject}引用不存在的場地：{room}")
                 room_override[(code, subject)] = _text(room)
 
+    teacher_room_override = {}
+    for subject, row in (payload.get("teacherRooms") or {}).items():
+        if subject not in subjects:
+            raise ValueError(f"教師教室設定引用不存在的科目：{subject}")
+        if not isinstance(row, dict):
+            raise ValueError(f"{subject}的教師教室設定格式不正確")
+        for teacher, room in row.items():
+            teacher, room = _text(teacher), _text(room)
+            if not teacher or not room:
+                continue
+            if teacher not in roster:
+                raise ValueError(f"{subject}的教室設定引用不存在的教師：{teacher}")
+            if room not in rooms:
+                raise ValueError(f"{teacher} {subject}引用不存在的場地：{room}")
+            teacher_room_override[(teacher, subject)] = room
+
     locks = []
     fixed_counts, fixed_class_slots, fixed_teacher_slots = defaultdict(int), {}, {}
     class_by_code_for_locks = {item["code"]: item for item in classes}
@@ -918,7 +935,7 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
         "subjects": subjects, "grade_slot": grade_slot, "rules": rule_map,
         "teacher_limit": teacher_limit, "grade_limit": grade_limit,
         "class_limit": class_limit, "assign": assign, "assignment_modes": assignment_modes,
-        "room_override": room_override,
+        "room_override": room_override, "teacher_room_override": teacher_room_override,
         "locks": locks, "prefs": [], "overlay": overlay, "room_blocked": blocked,
         "native_bands": [{"g": grade, "d": slot[0], "p": slot[1],
                           "sources": list(native_band_sources.get(grade, []))}
@@ -1380,7 +1397,7 @@ def _load_data_v5(wb, allow_course_shortfall=False):
             explicit_assignments[key] = {"teacher": teacher, "row": row_number}
             assign[(code, subject)] = teacher
     d["assign"] = assign
-    d["room_override"], d["prefs"] = {}, []
+    d["room_override"], d["teacher_room_override"], d["prefs"] = {}, {}, []
 
     # v6 選用分頁：與瀏覽器匯入使用相同語意，避免 Excel 直傳漏掉硬規則。
     teacher_limit = set(d.get("teacher_limit") or set())
@@ -1639,6 +1656,7 @@ def _load_data_v4(wb, allow_course_shortfall=False):
         if code and s and rid:
             override[(str(code), s)] = rid
     d["room_override"] = override
+    d["teacher_room_override"] = {}
 
     ws = wb["固定課鎖定"]
     locks, prefs = [], []
@@ -1783,7 +1801,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
                 continue
             if not t and not native_group_owned:
                 warn.append(f"鎖定課未配教師，仍依鎖定排入：{code} {s}（H10>H12，請補配）")
-            room = "R00" if native_lock else d["room_override"].get((code, s), info["room"])
+            room = "R00" if native_lock else course_rooms.normalized_course_room(d, code, s, t)
             tasks[(code, s)] = {"h": h, "t": t, "room": room, "grade": g, "info": info}
     d["pool"] = pool
     d["missing_courses"] = missing_courses

@@ -4,6 +4,7 @@ from collections import Counter
 from copy import deepcopy
 import re
 import course_ownership
+import course_rooms
 import schedule_policy
 
 
@@ -69,7 +70,7 @@ def _schedule_entries(snapshot, include_overlay=True):
             entries.append({
                 "code": str(code), "day": day, "period": int(period),
                 "subject": subject, "teacher": classroom.get("tutor") or "",
-                "room": _room_of(data, str(code), subject), "source": "tutor",
+                "room": _room_of(data, str(code), subject, classroom.get("tutor") or ""), "source": "tutor",
             })
     if include_overlay:
         for item in snapshot.get("overlay") or []:
@@ -106,9 +107,8 @@ def _schedule_entries(snapshot, include_overlay=True):
     return entries
 
 
-def _room_of(data, code, subject):
-    override = (data.get("override") or {}).get(code) or {}
-    return override.get(subject) or ((data.get("subjects") or {}).get(subject) or {}).get("room") or "R00"
+def _room_of(data, code, subject, teacher=""):
+    return course_rooms.frontend_course_room(data, code, subject, teacher)
 
 
 def _is_resource_bound(data, code, subject):
@@ -157,6 +157,13 @@ def _class_package(snapshot, class_code, teacher_name, revision, pending=None):
     relevant_names = {teacher_name}
     relevant_names.update(str(value.get("t") or value.get("teacher") or "") for value in fixed.values())
     relevant_names.update(str(item.get("t") or item.get("teacher") or "") for item in overlay)
+    teacher_rooms = {}
+    for subject, row in (data.get("teacherRooms") or {}).items():
+        if not isinstance(row, dict):
+            continue
+        filtered = {name: room for name, room in row.items() if name in relevant_names}
+        if filtered:
+            teacher_rooms[subject] = filtered
     limits = [deepcopy(row) for row in snapshot.get("limits") or data.get("limits") or []
               if row and row[0] in {teacher_name, class_code, f"{classroom.get('g')}年級"}]
     class_data = {
@@ -166,6 +173,7 @@ def _class_package(snapshot, class_code, teacher_name, revision, pending=None):
         "assignmentModes": {class_code: deepcopy(
             (data.get("assignmentModes") or {}).get(class_code) or {})},
         "override": {class_code: deepcopy((data.get("override") or {}).get(class_code) or {})},
+        "teacherRooms": deepcopy(teacher_rooms),
         "locks": [deepcopy(item) for item in data.get("locks") or [] if str(item.get("c")) == class_code],
         "limits": limits,
         "derived": [], "rules": deepcopy(snapshot.get("rules") or data.get("rules") or []),
