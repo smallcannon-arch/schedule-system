@@ -205,14 +205,41 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
     for teacher, rows in teacher_tasks.items():
         demand = sum(task["h"] for _, task in rows)
         available = candidate_slots(key for key, _ in rows)
-        daily_capacity = sum(min(
-            sum(1 for slot in available if slot[0] == day),
-            max(0, hard_cap - native_daily[(teacher, day)])) for day in DAYS)
+        daily_details = []
+        daily_capacity = 0
+        native_total = 0
+        hard_cap_applied = False
+        for day in DAYS:
+            candidate_count = sum(1 for slot in available if slot[0] == day)
+            native_count = native_daily[(teacher, day)]
+            usable_count = min(candidate_count, max(0, hard_cap - native_count))
+            daily_capacity += usable_count
+            native_total += native_count
+            hard_cap_applied = hard_cap_applied or usable_count < candidate_count
+            if candidate_count or native_count:
+                native_note = f"（本土語占 {native_count} 節）" if native_count else ""
+                daily_details.append(f"週{day} {usable_count} 節{native_note}")
         if demand > daily_capacity:
+            applied_limits = ["年段／班級、教師、科目與場地限制"]
+            if native_total:
+                applied_limits.append(f"本土語固定課 {native_total} 節")
+            if hard_cap_applied:
+                applied_limits.append(f"每日 {hard_cap} 節上限")
+            detail = (
+                f"需由引擎安排 {demand} 節；套用{'、'.join(applied_limits)}後，"
+                f"每日可用容量為{'、'.join(daily_details) or '0 節'}，"
+                f"合計最多可排 {daily_capacity} 節。"
+                "教師快速設定的可排時段，仍須與各授課班級的年段作息取交集。"
+            )
+            action = (
+                "檢查教師可排時段是否與授課班級的年段作息重疊，並確認科目與場地限制；"
+                "必要時增加可排日或調整配課。"
+            )
+            if native_total:
+                action += "另請檢查本土語分組是否確實由該教師授課或協同。"
             diagnostics.append(_diagnostic(
                 f"{teacher}的授課容量不足",
-                f"需由引擎安排 {demand} 節；扣除不排課、本土語固定課及每日 {hard_cap} 節上限後，最多可排 {daily_capacity} 節。",
-                "檢查教師配課節數與不排課時間，必要時更換授課教師。", "alloc"))
+                detail, action, "alloc"))
 
     for room, rows in room_tasks.items():
         demand = sum(task["h"] for _, task in rows)
@@ -240,10 +267,25 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
 
     if not diagnostics:
         if status == "UNKNOWN":
+            auto_resource_sessions = [
+                item for item in d.get("overlay", [])
+                if not item.get("day") and not item.get("p")
+            ]
+            if auto_resource_sessions:
+                group_count = len({
+                    item.get("grp") or item.get("id")
+                    for item in auto_resource_sessions
+                })
+                diagnostics.append(_diagnostic(
+                    "資源班系統尋找需要較大的搜尋空間",
+                    f"目前有 {group_count} 組、{len(auto_resource_sessions)} 節資源班課程"
+                    "由系統同時尋找原班共同科目與時段；求解逾時不代表規則一定矛盾。",
+                    "新版引擎會排除同組節次的等價排列；若仍逾時，可先固定少數資源班時段，"
+                    "或增加求解時間後重試。", "res", False))
             diagnostics.append(_diagnostic(
                 "求解時間內尚未找到可行解",
                 "目前不能判定為規則矛盾；案件規模或硬規則組合可能需要更多搜尋時間。",
-                "先檢查固定課與教師不排課時間，再重新執行排課。", "rules", False))
+                "先檢查資源班系統尋找與年段可用時段，再重新執行排課。", "rules", False))
         else:
             diagnostics.extend([
                 _diagnostic(
@@ -1910,6 +1952,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
 
     # H13 資源班 overlay
     ov_z = {}
+    ov_selected_slot = {}
     ov_by_teacher = defaultdict(list)
     ov_by_source = defaultdict(list)
     early_overlay_indexes = []
@@ -1964,6 +2007,14 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
                 f"資源班分組沒有共同同科可抽離時段：{ov['grp']}（{source_label}）",
                 [{"rule": "H13", "message": "請檢查各來源班級能否在同一節排入相同的可抽離科目、固定時段及資源班教師限制"}])
         m.Add(sum(z for _, _, z in cand) == 1)
+        if not ov.get("day") and not ov.get("p"):
+            selected_slot = m.NewIntVar(
+                1, len(DAYS) * len(PERIODS), f"ov_slot_{i}")
+            m.Add(selected_slot == sum(
+                (DAYS.index(day) * len(PERIODS) + p) * z
+                for day, p, z in cand
+            ))
+            ov_selected_slot[i] = selected_slot
         for day, p, z in cand:
             ov_z[(i, day, p)] = z
             ov_by_teacher[(ov["t"], day, p)].append(z)
@@ -1980,6 +2031,10 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
         grp_rows[group_id].append(i)
     for ids in grp_rows.values():
         if len(ids) > 1:
+            auto_ids = [i for i in ids if i in ov_selected_slot]
+            for earlier, later in zip(auto_ids, auto_ids[1:]):
+                # 同組的自動節次內容完全相同；固定其時間順序可消除 n! 個等價解。
+                m.Add(ov_selected_slot[earlier] < ov_selected_slot[later])
             slotmap = defaultdict(list)
             for (ii, day, p), z in ov_z.items():
                 if ii in ids:
