@@ -1953,6 +1953,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
     # H13 資源班 overlay
     ov_z = {}
     ov_selected_slot = {}
+    ov_symmetry_rows = defaultdict(list)
     ov_by_teacher = defaultdict(list)
     ov_by_source = defaultdict(list)
     early_overlay_indexes = []
@@ -2015,6 +2016,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
                 for day, p, z in cand
             ))
             ov_selected_slot[i] = selected_slot
+            symmetry_key = (
+                ov["grp"], tuple(sources), ov["subj"],
+                tuple(pull_subjects), ov["t"],
+            )
+            ov_symmetry_rows[symmetry_key].append(i)
         for day, p, z in cand:
             ov_z[(i, day, p)] = z
             ov_by_teacher[(ov["t"], day, p)].append(z)
@@ -2031,10 +2037,6 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
         grp_rows[group_id].append(i)
     for ids in grp_rows.values():
         if len(ids) > 1:
-            auto_ids = [i for i in ids if i in ov_selected_slot]
-            for earlier, later in zip(auto_ids, auto_ids[1:]):
-                # 同組的自動節次內容完全相同；固定其時間順序可消除 n! 個等價解。
-                m.Add(ov_selected_slot[earlier] < ov_selected_slot[later])
             slotmap = defaultdict(list)
             for (ii, day, p), z in ov_z.items():
                 if ii in ids:
@@ -2042,6 +2044,10 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
             for zs in slotmap.values():
                 if len(zs) > 1:
                     m.Add(sum(zs) <= 1)
+    for identical_rows in ov_symmetry_rows.values():
+        for earlier, later in zip(identical_rows, identical_rows[1:]):
+            # 只有內容完全相同的自動節次才可固定時間順序，避免排除合法解。
+            m.Add(ov_selected_slot[earlier] < ov_selected_slot[later])
 
     # 連堂與分散（H08 自然2+1、H09 視藝2連堂）
     for (code, s), tk in tasks.items():

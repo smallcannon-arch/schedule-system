@@ -615,6 +615,56 @@ def test_auto_resource_sessions_are_ordered_to_remove_equivalent_solutions():
     assert engine.validate(data, schedule, tasks, overlay) == []
 
 
+def test_resource_symmetry_order_does_not_constrain_different_auto_sessions():
+    open_slots = [[1, 1, 1, 1, 1, 1, 1] for _ in engine.DAYS]
+    payload = {
+        "classes": [
+            {"g": 1, "i": 1, "code": "1甲", "tutor": "甲導師"},
+            {"g": 1, "i": 2, "code": "1乙", "tutor": "乙導師"},
+        ],
+        "roster": {
+            "甲國教師": "科任", "甲數教師": "科任",
+            "乙國教師": "科任", "乙數教師": "科任",
+            "資源一": "資源班教師", "資源二": "資源班教師",
+        },
+        "rooms": {"R00": 99},
+        "subjects": {
+            subject: {
+                "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+                "block": "", "self": False, "pairMode": "",
+            }
+            for subject in ("國語文", "數學")
+        },
+        "gslot": {str(grade): open_slots for grade in range(1, 7)},
+        "assign": {
+            "1甲": {"國語文": "甲國教師", "數學": "甲數教師"},
+            "1乙": {"國語文": "乙國教師", "數學": "乙數教師"},
+        },
+        "override": {}, "blocked": [],
+        "locks": [
+            {"c": "1甲", "d": "五", "p": 1, "s": "國語文"},
+            {"c": "1乙", "d": "一", "p": 1, "s": "數學"},
+        ],
+        "resGroups": [
+            {"id": "resource-a", "grp": "同名組", "sources": ["1甲"],
+             "subj": "國語文", "pullSubjects": ["國語文"], "t": "資源一",
+             "n": 1, "scheduleMode": "auto", "slots": []},
+            {"id": "resource-b", "grp": "同名組", "sources": ["1乙"],
+             "subj": "數學", "pullSubjects": ["數學"], "t": "資源二",
+             "n": 1, "scheduleMode": "auto", "slots": []},
+        ],
+    }
+    data = engine.load_frontend_data(payload)
+    for item in data["overlay"]:
+        item.pop("id", None)  # 模擬沒有穩定 id、但顯示名稱相同的舊資料。
+
+    schedule, tasks, _, _, overlay = engine.solve(data, time_limit=5)
+
+    assert {(row[5], row[6], row[7]) for row in overlay} == {
+        ("資源一", "五", 1), ("資源二", "一", 1)}
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
 def test_timeout_diagnosis_identifies_auto_resource_search_without_claiming_conflict():
     data = {
         "locks": [], "rooms": {"R00": 999}, "room_names": {},
