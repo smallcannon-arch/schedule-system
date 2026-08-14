@@ -17,16 +17,18 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert 'id="setupTeachersTable"' in html
     assert 'id="setupSubjectsTable"' in html
     assert 'id="setupAssignmentsTable"' in html
+    assert 'id="setupGradeSchedulePanel"' in html
     assert 'id="setupTeacherRooms"' in html
     assert "專科教室安排" in html
-    assert "只列出步驟 3 已指定專科教室的科目" in html
+    assert "只列出步驟 4 已指定專科教室的科目" in html
     assert "此設定不在 Excel 母版中，重新匯入 Excel 後需回到此處重設" in html
     assert "步驟 1　班級資料" in html
-    assert "步驟 2　教師資料" in html
-    assert "步驟 3　科目節數" in html
-    assert "步驟 4　配課資料" in html
+    assert "步驟 2　學校作息" in html
+    assert "步驟 3　教師資料" in html
+    assert "步驟 4　科目節數" in html
+    assert "步驟 5　配課資料" in html
     assert 'class="setup-pending-flow"' in html
-    assert "建立案件後，依序完成 4 個步驟" in html
+    assert "建立案件後，依序完成 5 個步驟" in html
     assert "body.setup-pending:not(.platform-admin-mode) .setup-pending-flow{display:block}" in html
     assert 'data-setup-step="${step.view}"' in script
     assert 'step.done ? "完成" : "待完成"' in script
@@ -77,6 +79,97 @@ def test_setup_builder_javascript_has_valid_syntax():
         text=True,
         encoding="utf-8",
     )
+
+
+def test_grade_schedule_presets_support_thursday_as_low_grade_full_day():
+    script = r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+global.requestAnimationFrame=()=>0;
+require(process.argv[1]);
+const messages=[];
+const data={classes:[{g:1,code:'1甲'},{g:2,code:'2甲'},{g:3,code:'3甲'},{g:5,code:'5甲'}],
+  roster:{},subjects:{},assign:{},rooms:{R00:99},gslot:{}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,
+  commit:(message)=>messages.push(message),startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.setPrimaryFullDay('四');
+ScheduleSetup.applyGradeSchedulePreset('low');
+ScheduleSetup.applyGradeSchedulePreset('middle');
+ScheduleSetup.applyGradeSchedulePreset('high');
+const count=(grade)=>data.gslot[grade].flat().filter(Boolean).length;
+process.stdout.write(JSON.stringify({
+  counts:[count(1),count(2),count(3),count(4),count(5),count(6)],
+  tuesdayAfternoon:data.gslot[1][1].slice(4),
+  thursdayAfternoon:data.gslot[1][3].slice(4),messages
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["counts"] == [23, 23, 29, 29, 32, 32]
+    assert output["tuesdayAfternoon"] == [0, 0, 0]
+    assert output["thursdayAfternoon"] == [1, 1, 1]
+    assert "週四全天" in output["messages"][0]
+
+
+def test_grade_schedule_warns_before_closing_a_fixed_course_slot():
+    script = r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+global.requestAnimationFrame=()=>0;
+const confirms=[],messages=[];
+global.confirm=(message)=>{confirms.push(message);return true;};
+require(process.argv[1]);
+const open=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={classes:[{g:1,i:1,code:'1甲',tutor:'王老師'}],roster:{王老師:'導師'},
+  teacherAccounts:{王老師:'wang@school.edu.tw'},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{國語文:{hours:[1,0,0,0,0,0],room:'R00',self:false}},
+  assign:{'1甲':{國語文:'王老師'}},assignmentModes:{},override:{},
+  locks:[{c:'1甲',d:'四',p:5,s:'國語文'}],resGroups:[],nativeBands:[],nativeGroups:[],
+  rooms:{R00:99},gslot:{1:open}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,
+  commit:(message)=>messages.push(message),startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.toggleGradeScheduleSlot(1,'四',5);
+const validation=ScheduleSetup.validate();
+process.stdout.write(JSON.stringify({closed:data.gslot[1][3][4],confirms,messages,hard:validation.hard,
+  target:validation.hardItems.find(item=>item.text.includes('固定在週四第5節'))}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["closed"] == 0
+    assert "固定課：1甲 國語文" in output["confirms"][0]
+    assert any("固定在週四第5節" in issue for issue in output["hard"])
+    assert output["target"]["view"] == "fixed"
+    assert "既有時段需重新確認" in output["messages"][0]
+
+
+def test_grade_schedule_warning_includes_native_and_fixed_resource_slots():
+    script = r"""
+global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+global.requestAnimationFrame=()=>0;
+const confirms=[];
+global.confirm=(message)=>{confirms.push(message);return false;};
+require(process.argv[1]);
+const open=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={classes:[{g:1,code:'1甲'}],roster:{},subjects:{},assign:{},rooms:{R00:99},gslot:{1:open},
+  locks:[],nativeBands:[{g:1,d:'四',p:5}],nativeGroups:[],
+  resGroups:[{grp:'一年級A組',sources:['1甲'],slots:[{d:'四',p:5}],scheduleMode:'fixed'}]};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,
+  commit:()=>{},startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.toggleGradeScheduleSlot(1,'四',5);
+process.stdout.write(JSON.stringify({slot:data.gslot[1][3][4],confirms}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["slot"] == 1
+    assert "本土語：1年級共同時段" in output["confirms"][0]
+    assert "資源班：一年級A組" in output["confirms"][0]
 
 
 def test_pages_workflow_copies_every_local_frontend_script():

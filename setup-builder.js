@@ -7,13 +7,29 @@
     "特教教師節數規定", "協助行政工作", "其他核定"];
   const CLASS_SEQUENCE = "甲乙丙丁戊己庚辛壬癸";
   const DAYS = ["一", "二", "三", "四", "五"];
+  const PERIODS = [1, 2, 3, 4, 5, 6, 7];
+  const DEFAULT_FULL_DAYS = {1: ["二"], 2: ["二"], 3: ["一", "二", "四"],
+    4: ["一", "二", "四"], 5: ["一", "二", "四", "五"], 6: ["一", "二", "四", "五"]};
   let adapter = null;
   let activeTab = "classes";
+  let activeScheduleGrade = 1;
+  let primaryFullDay = "二";
   let lastMessage = "";
   let syncMessage = "";
   let syncingTeachers = false;
   let assignmentScrollCleanup = null;
   let updateAssignmentScrollDock = () => {};
+
+  function buildGradeSchedule(fullDays) {
+    const selected = new Set(fullDays || []);
+    return DAYS.map((day) => PERIODS.map((period) => period <= 4 || selected.has(day) ? 1 : 0));
+  }
+
+  function normalizeGradeSchedule(value, grade) {
+    if (!Array.isArray(value)) return buildGradeSchedule(DEFAULT_FULL_DAYS[grade] || []);
+    return DAYS.map((day, dayIndex) => PERIODS.map((period, periodIndex) =>
+      value[dayIndex] && value[dayIndex][periodIndex] ? 1 : 0));
+  }
 
   function data() {
     const value = adapter.getData();
@@ -37,6 +53,11 @@
     value.exportMappings = value.exportMappings && typeof value.exportMappings === "object" ? value.exportMappings : {};
     value.rooms = value.rooms || {};
     if (!Object.prototype.hasOwnProperty.call(value.rooms, "R00")) value.rooms.R00 = 99;
+    value.gslot = value.gslot && typeof value.gslot === "object" && !Array.isArray(value.gslot)
+      ? value.gslot : {};
+    for (let grade = 1; grade <= 6; grade += 1) {
+      value.gslot[grade] = normalizeGradeSchedule(value.gslot[grade], grade);
+    }
     if (root.SchedulePolicy) root.SchedulePolicy.normalize(value);
     return value;
   }
@@ -165,6 +186,144 @@
     return `${base}${number}`;
   }
 
+  function gradeScheduleDependencies(d, updates) {
+    const closing = new Set();
+    for (const [rawGrade, next] of Object.entries(updates)) {
+      const grade = Number(rawGrade);
+      const current = normalizeGradeSchedule(d.gslot[grade], grade);
+      for (let dayIndex = 0; dayIndex < DAYS.length; dayIndex += 1) {
+        for (let periodIndex = 0; periodIndex < PERIODS.length; periodIndex += 1) {
+          if (current[dayIndex][periodIndex] && !next[dayIndex][periodIndex]) {
+            closing.add(`${grade}|${DAYS[dayIndex]}|${PERIODS[periodIndex]}`);
+          }
+        }
+      }
+    }
+    if (!closing.size) return [];
+    const classGrades = new Map((d.classes || []).map((item) => [item.code, Number(item.g) || 0]));
+    const affected = new Set();
+    const isClosing = (grade, day, period) => closing.has(`${Number(grade) || 0}|${day}|${Number(period) || 0}`);
+    for (const lock of (d.locks || [])) {
+      const grade = classGrades.get(lock.c);
+      if (isClosing(grade, lock.d, lock.p)) affected.add(`固定課：${lock.c} ${lock.s}（週${lock.d}第${lock.p}節）`);
+    }
+    for (const band of (d.nativeBands || [])) {
+      if (isClosing(band.g, band.d, band.p)) affected.add(`本土語：${band.g}年級共同時段（週${band.d}第${band.p}節）`);
+    }
+    for (const group of (d.nativeGroups || [])) {
+      if (isClosing(group.g, group.d, group.p)) {
+        affected.add(`本土語：${group.grp || `${group.g}年級分組`}（週${group.d}第${group.p}節）`);
+      }
+    }
+    for (const group of (d.resGroups || [])) {
+      const source = resourceSources(group)[0];
+      const grade = classGrades.get(source);
+      for (const slot of (Array.isArray(group.slots) ? group.slots : [])) {
+        if (Number(slot.p) > 0 && isClosing(grade, slot.d, slot.p)) {
+          affected.add(`資源班：${group.grp || "抽離分組"}（週${slot.d}第${slot.p}節）`);
+        }
+      }
+    }
+    return [...affected];
+  }
+
+  function applyGradeScheduleUpdates(updates, message) {
+    const d = data();
+    const dependencies = gradeScheduleDependencies(d, updates);
+    if (dependencies.length && typeof root.confirm === "function") {
+      const preview = dependencies.slice(0, 6).join("\n");
+      const more = dependencies.length > 6 ? `\n另有 ${dependencies.length - 6} 項` : "";
+      if (!root.confirm(`這次調整會關閉已有設定使用的時段：\n${preview}${more}\n\n仍要套用嗎？套用後請依檢核清單修正。`)) return false;
+    }
+    for (const [grade, schedule] of Object.entries(updates)) {
+      d.gslot[grade] = normalizeGradeSchedule(schedule, Number(grade));
+    }
+    commit(`${message}${dependencies.length ? `；有 ${dependencies.length} 項既有時段需重新確認。` : ""}`);
+    return true;
+  }
+
+  function setPrimaryFullDay(day) {
+    if (!DAYS.includes(day)) return;
+    primaryFullDay = day;
+    renderGradeSchedule();
+  }
+
+  function selectGradeSchedule(grade) {
+    activeScheduleGrade = Math.min(6, Math.max(1, Number(grade) || 1));
+    renderGradeSchedule();
+  }
+
+  function toggleGradeScheduleSlot(grade, day, period) {
+    const d = data();
+    grade = Math.min(6, Math.max(1, Number(grade) || 1));
+    const dayIndex = DAYS.indexOf(day);
+    const periodIndex = PERIODS.indexOf(Number(period));
+    if (dayIndex < 0 || periodIndex < 0) return;
+    const next = normalizeGradeSchedule(d.gslot[grade], grade);
+    next[dayIndex][periodIndex] = next[dayIndex][periodIndex] ? 0 : 1;
+    if (!next.flat().some(Boolean)) {
+      if (typeof root.alert === "function") root.alert(`${grade}年級至少要保留一個可排時段。`);
+      return;
+    }
+    applyGradeScheduleUpdates({[grade]: next}, `${grade}年級週${day}第${period}節已${next[dayIndex][periodIndex] ? "開放" : "關閉"}`);
+  }
+
+  function setGradeDayMode(grade, day) {
+    const d = data();
+    grade = Math.min(6, Math.max(1, Number(grade) || 1));
+    const dayIndex = DAYS.indexOf(day);
+    if (dayIndex < 0) return;
+    const next = normalizeGradeSchedule(d.gslot[grade], grade);
+    const isFullDay = next[dayIndex].every(Boolean);
+    next[dayIndex] = PERIODS.map((period) => !isFullDay || period <= 4 ? 1 : 0);
+    applyGradeScheduleUpdates({[grade]: next}, `${grade}年級週${day}已設為${isFullDay ? "上午課" : "全天課"}`);
+  }
+
+  function applyGradeSchedulePreset(name) {
+    const presets = {
+      low: {grades: [1, 2], fullDays: [primaryFullDay], label: `低年級 23 節（週${primaryFullDay}全天）`},
+      middle: {grades: [3, 4], fullDays: ["一", "二", "四"], label: "中年級 29 節"},
+      high: {grades: [5, 6], fullDays: ["一", "二", "四", "五"], label: "高年級 32 節"},
+      morning: {grades: [activeScheduleGrade], fullDays: [], label: `${activeScheduleGrade}年級每日上午`},
+    };
+    const preset = presets[name];
+    if (!preset) return;
+    const updates = Object.fromEntries(preset.grades.map((grade) => [grade, buildGradeSchedule(preset.fullDays)]));
+    applyGradeScheduleUpdates(updates, `已套用${preset.label}範本`);
+  }
+
+  function renderGradeSchedule() {
+    const target = document.getElementById("setupGradeSchedulePanel");
+    if (!target) return;
+    const d = data();
+    const grade = activeScheduleGrade;
+    const schedule = normalizeGradeSchedule(d.gslot[grade], grade);
+    const count = schedule.flat().filter(Boolean).length;
+    const fullDays = DAYS.filter((day, dayIndex) => schedule[dayIndex].every(Boolean));
+    const classCounts = Object.fromEntries([1, 2, 3, 4, 5, 6].map((value) =>
+      [value, d.classes.filter((item) => Number(item.g) === value).length]));
+    const rows = PERIODS.map((period, periodIndex) =>
+      `${period === 5 ? '<tr class="grade-schedule-lunch"><td colspan="6">午休</td></tr>' : ""}<tr><th>${period}</th>${DAYS.map((day, dayIndex) => {
+        const open = !!schedule[dayIndex][periodIndex];
+        return `<td><button type="button" class="grade-schedule-slot ${open ? "on" : ""}" aria-pressed="${open}" aria-label="${grade}年級週${day}第${period}節${open ? "可排" : "不可排"}" onclick="ScheduleSetup.toggleGradeScheduleSlot(${grade},'${day}',${period})">${open ? "上課" : "—"}</button></td>`;
+      }).join("")}</tr>`).join("");
+    target.innerHTML = `<div class="grade-schedule-tabs" role="tablist" aria-label="選擇年級">${[1, 2, 3, 4, 5, 6].map((value) =>
+      `<button type="button" class="${value === grade ? "on" : ""}" aria-selected="${value === grade}" onclick="ScheduleSetup.selectGradeSchedule(${value})">${value}年級${classCounts[value] ? `<small>${classCounts[value]}班</small>` : ""}</button>`).join("")}</div>
+      <div class="grade-schedule-presets">
+        <label>低年級 23 節的全天日<select aria-label="低年級全天日" onchange="ScheduleSetup.setPrimaryFullDay(this.value)">${DAYS.map((day) => `<option value="${day}" ${day === primaryFullDay ? "selected" : ""}>星期${day}</option>`).join("")}</select></label>
+        <button class="btn soft sm" type="button" onclick="ScheduleSetup.applyGradeSchedulePreset('low')">套用 1–2 年級 23 節</button>
+        <button class="btn soft sm" type="button" onclick="ScheduleSetup.applyGradeSchedulePreset('middle')">套用 3–4 年級 29 節</button>
+        <button class="btn soft sm" type="button" onclick="ScheduleSetup.applyGradeSchedulePreset('high')">套用 5–6 年級 32 節</button>
+        <button class="btn soft sm" type="button" onclick="ScheduleSetup.applyGradeSchedulePreset('morning')">本年級先設為每日半天</button>
+      </div>
+      <div class="grade-schedule-status"><b>${grade}年級目前可排 ${count} 節</b><span>${fullDays.length ? `全天：星期${fullDays.join("、星期")}` : "目前沒有全天上課日"}；可逐格調整，星期標題可快速切換整天／上午。</span></div>
+      <div class="tbl"><table class="grade-schedule-grid"><thead><tr><th>節次</th>${DAYS.map((day, dayIndex) => {
+        const full = schedule[dayIndex].every(Boolean);
+        return `<th>星期${day}<button type="button" onclick="ScheduleSetup.setGradeDayMode(${grade},'${day}')">${full ? "改為上午" : "設為整天"}</button></th>`;
+      }).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="grade-schedule-note">關閉已有固定課、本土語或資源班使用的時段時，系統會先提示；保存後舊排課結果會失效，並在資料總檢查列出需修正項目。</div>`;
+  }
+
   function teacherOptions(selected, includeBlank, subject) {
     const d = data();
     const names = Object.keys(d.roster);
@@ -226,6 +385,19 @@
     let assignmentTotal = 0;
     let assignmentMissing = 0;
 
+    const activeGrades = [...new Set(d.classes.map((item) => Number(item.g))
+      .filter((grade) => Number.isInteger(grade) && grade >= 1 && grade <= 6))].sort();
+    let scheduleGrades = 0;
+    for (const grade of activeGrades) {
+      const slots = normalizeGradeSchedule(d.gslot[grade], grade).flat().filter(Boolean).length;
+      if (slots) scheduleGrades += 1;
+      else {
+        const message = `${grade}年級沒有任何可排時段`;
+        hard.push(message);
+        hardTargets.set(message, {group: "setup", view: "schedule", label: "檢查學校作息"});
+      }
+    }
+
     if (!d.classes.length) hard.push("尚未建立班級");
     if (!teacherNames.size) hard.push("尚未建立教師");
     if (!subjectNames.length) hard.push("尚未建立科目");
@@ -267,7 +439,11 @@
       const slots = ((d.gslot || {})[item.g] || []).flat().filter(Boolean).length;
       const required = subjectNames.reduce((sum, subject) =>
         sum + Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0), 0);
-      if (required > slots) hard.push(`${code}需要 ${required} 節，但該年級只有 ${slots} 個可排時段`);
+      if (required > slots) {
+        const message = `${code}需要 ${required} 節，但該年級只有 ${slots} 個可排時段`;
+        hard.push(message);
+        hardTargets.set(message, {group: "setup", view: "schedule", label: "調整學校作息"});
+      }
 
       for (const subject of subjectNames) {
         const hours = Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0);
@@ -619,6 +795,8 @@
         assignments: assignmentTotal - assignmentMissing,
         assignmentTotal,
         assignmentMissing,
+        scheduleGrades,
+        scheduleTotal: activeGrades.length,
       },
     };
   }
@@ -630,9 +808,11 @@
     const c = result.counts;
     const steps = [
       {number: 1, label: "班級資料", help: "建立班級並指定導師", value: c.classes, done: c.classes > 0, view: "classes"},
-      {number: 2, label: "教師資料", help: "填寫身分、帳號與節數", value: c.teachers, done: c.teachers > 0, view: "teachers"},
-      {number: 3, label: "科目節數", help: "設定各年級每週節數", value: c.subjects, done: c.subjects > 0, view: "subjects"},
-      {number: 4, label: "配課資料", help: "指定教師、科目與班級", value: `${c.assignments}/${c.assignmentTotal}`,
+      {number: 2, label: "學校作息", help: "設定各年級可排時段", value: c.scheduleTotal ? `${c.scheduleGrades}/${c.scheduleTotal}` : "待建立班級",
+        done: c.scheduleTotal > 0 && c.scheduleGrades === c.scheduleTotal, view: "schedule"},
+      {number: 3, label: "教師資料", help: "填寫身分、帳號與節數", value: c.teachers, done: c.teachers > 0, view: "teachers"},
+      {number: 4, label: "科目節數", help: "設定各年級每週節數", value: c.subjects, done: c.subjects > 0, view: "subjects"},
+      {number: 5, label: "配課資料", help: "指定教師、科目與班級", value: `${c.assignments}/${c.assignmentTotal}`,
         done: c.assignmentTotal > 0 && !c.assignmentMissing, view: "assign"},
     ];
     const issues = [...result.hard.map((text) => ({text, kind: "bad"})),
@@ -875,6 +1055,7 @@
     renderSummary();
     renderPolicy();
     renderClasses();
+    renderGradeSchedule();
     renderTeachers();
     renderSubjects();
     renderAssignments();
@@ -1349,6 +1530,8 @@
     init, render, validate, show, showIssues, startBlank,
     setPolicy, setWeeklyTarget,
     addClass, setClass, renameClass, removeClass, applyGradeCounts,
+    setPrimaryFullDay, selectGradeSchedule, toggleGradeScheduleSlot, setGradeDayMode,
+    applyGradeSchedulePreset,
     addTeacher, setTeacher, renameTeacher, removeTeacher, applyTeacherLoginRecords, syncTeachers,
     addSubject, setSubject, renameSubject, removeSubject,
     setAssignment, setAssignmentMode, setTeacherRoom, autofillTutors,
