@@ -1,4 +1,5 @@
 desktop.ini
+.venv/
 .wrangler/
 backend/.env
 backend/.env.*

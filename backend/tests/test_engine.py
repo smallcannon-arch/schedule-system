@@ -597,6 +597,94 @@ def test_resource_group_uses_the_same_pull_subject_for_every_source_class():
     assert engine.validate(data, schedule, tasks, overlay) == []
 
 
+def test_auto_resource_sessions_are_ordered_to_remove_equivalent_solutions():
+    payload = _resource_frontend_payload()
+    payload["resGroups"][0]["scheduleMode"] = "auto"
+    payload["resGroups"][0]["slots"] = []
+
+    data = engine.load_frontend_data(payload)
+    schedule, tasks, _, _, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=False)
+
+    session_slots = {
+        row[0]: (engine.DAYS.index(row[6]), row[7])
+        for row in overlay
+    }
+    assert session_slots["grade-1-a-1"] < session_slots["grade-1-a-2"]
+    assert session_slots["grade-1-a-2"] < session_slots["grade-1-a-3"]
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_resource_symmetry_order_does_not_constrain_different_auto_sessions():
+    open_slots = [[1, 1, 1, 1, 1, 1, 1] for _ in engine.DAYS]
+    payload = {
+        "classes": [
+            {"g": 1, "i": 1, "code": "1甲", "tutor": "甲導師"},
+            {"g": 1, "i": 2, "code": "1乙", "tutor": "乙導師"},
+        ],
+        "roster": {
+            "甲國教師": "科任", "甲數教師": "科任",
+            "乙國教師": "科任", "乙數教師": "科任",
+            "資源一": "資源班教師", "資源二": "資源班教師",
+        },
+        "rooms": {"R00": 99},
+        "subjects": {
+            subject: {
+                "hours": [1, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+                "block": "", "self": False, "pairMode": "",
+            }
+            for subject in ("國語文", "數學")
+        },
+        "gslot": {str(grade): open_slots for grade in range(1, 7)},
+        "assign": {
+            "1甲": {"國語文": "甲國教師", "數學": "甲數教師"},
+            "1乙": {"國語文": "乙國教師", "數學": "乙數教師"},
+        },
+        "override": {}, "blocked": [],
+        "locks": [
+            {"c": "1甲", "d": "五", "p": 1, "s": "國語文"},
+            {"c": "1乙", "d": "一", "p": 1, "s": "數學"},
+        ],
+        "resGroups": [
+            {"id": "resource-a", "grp": "同名組", "sources": ["1甲"],
+             "subj": "國語文", "pullSubjects": ["國語文"], "t": "資源一",
+             "n": 1, "scheduleMode": "auto", "slots": []},
+            {"id": "resource-b", "grp": "同名組", "sources": ["1乙"],
+             "subj": "數學", "pullSubjects": ["數學"], "t": "資源二",
+             "n": 1, "scheduleMode": "auto", "slots": []},
+        ],
+    }
+    data = engine.load_frontend_data(payload)
+    for item in data["overlay"]:
+        item.pop("id", None)  # 模擬沒有穩定 id、但顯示名稱相同的舊資料。
+
+    schedule, tasks, _, _, overlay = engine.solve(data, time_limit=5)
+
+    assert {(row[5], row[6], row[7]) for row in overlay} == {
+        ("資源一", "五", 1), ("資源二", "一", 1)}
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
+def test_timeout_diagnosis_identifies_auto_resource_search_without_claiming_conflict():
+    data = {
+        "locks": [], "rooms": {"R00": 999}, "room_names": {},
+        "room_blocked": set(), "native_groups": [], "roster": {},
+        "overlay": [
+            {"id": "resource-a-1", "grp": "二年級A組", "day": None, "p": None},
+            {"id": "resource-a-2", "grp": "二年級A組", "day": None, "p": None},
+            {"id": "resource-b-1", "grp": "四年級A組", "day": None, "p": None},
+        ],
+    }
+
+    diagnostics = engine.diagnose_infeasibility(
+        data, {}, {}, status="UNKNOWN")
+
+    assert diagnostics[0]["title"] == "資源班系統尋找需要較大的搜尋空間"
+    assert "2 組、3 節" in diagnostics[0]["detail"]
+    assert "不代表規則一定矛盾" in diagnostics[0]["detail"]
+    assert diagnostics[0]["confirmed"] is False
+
+
 def test_resource_group_rejects_fixed_slot_with_different_locked_pull_subjects():
     payload = _resource_frontend_payload()
     payload["resGroups"][0].update({
@@ -1331,3 +1419,54 @@ def test_infeasibility_diagnosis_finds_class_and_teacher_capacity():
     assert any(item["title"] == "1甲 可排節次不足" for item in diagnostics)
     assert any(item["title"] == "王老師的授課容量不足" for item in diagnostics)
     assert all(item["confirmed"] is True for item in diagnostics)
+
+
+def test_teacher_capacity_diagnosis_does_not_blame_native_course_when_none_exists():
+    task = {"h": 6, "t": "王老師", "room": "R00",
+            "info": {"block": "", "banned": set()}}
+    data = {
+        "locks": [], "rooms": {"R00": 999}, "room_names": {},
+        "room_blocked": set(), "native_groups": [], "roster": {"王老師": "科任"},
+    }
+    tasks = {("1甲", "韻律"): task}
+    candidates = {
+        ("1甲", "韻律", "二", period): object()
+        for period in range(1, 5)
+    }
+
+    diagnostics = engine.diagnose_infeasibility(data, tasks, candidates)
+    teacher_issue = next(
+        item for item in diagnostics if item["title"] == "王老師的授課容量不足")
+
+    assert "本土語" not in teacher_issue["detail"]
+    assert "週二 4 節" in teacher_issue["detail"]
+    assert "合計最多可排 4 節" in teacher_issue["detail"]
+    assert "年段作息取交集" in teacher_issue["detail"]
+
+
+def test_teacher_capacity_diagnosis_reports_native_course_only_when_it_uses_capacity():
+    task = {"h": 6, "t": "王老師", "room": "R00",
+            "info": {"block": "", "banned": set()}}
+    data = {
+        "locks": [], "rooms": {"R00": 999}, "room_names": {},
+        "room_blocked": set(),
+        "native_groups": [
+            {"grp": "本土語一組", "t": "王老師", "assistant": "", "d": "二"},
+            {"grp": "本土語二組", "t": "王老師", "assistant": "", "d": "二"},
+        ],
+        "roster": {"王老師": "科任"},
+    }
+    tasks = {("1甲", "韻律"): task}
+    candidates = {
+        ("1甲", "韻律", "二", period): object()
+        for period in range(1, 7)
+    }
+
+    diagnostics = engine.diagnose_infeasibility(data, tasks, candidates)
+    teacher_issue = next(
+        item for item in diagnostics if item["title"] == "王老師的授課容量不足")
+
+    assert "本土語固定課 2 節" in teacher_issue["detail"]
+    assert "週二 4 節（本土語占 2 節）" in teacher_issue["detail"]
+    assert "合計最多可排 4 節" in teacher_issue["detail"]
+    assert "本土語分組" in teacher_issue["action"]
