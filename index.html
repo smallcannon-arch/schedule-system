@@ -252,12 +252,12 @@ body.setup-pending:not(.platform-admin-mode) #setupSummary,body.setup-pending:no
 .setup-pending-flow{display:none;margin:20px 0 16px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 body.setup-pending:not(.platform-admin-mode) .setup-pending-flow{display:block}
 .setup-pending-flow-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}.setup-pending-flow-head h2{margin:0;font-size:19px}.setup-pending-flow-head p{margin:0;color:var(--muted);font-size:13px}
-.setup-pending-flow ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;margin:0;padding:0;list-style:none}.setup-pending-flow li{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:10px;min-height:68px;padding:10px 12px;border-left:4px solid var(--lav);background:#faf7fb}.setup-pending-flow li:not(:last-child)::after{content:"→";position:absolute;right:-21px;top:50%;translate:0 -50%;color:var(--lav-d);font-size:20px;font-weight:900}.setup-pending-flow-number{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--lav);color:var(--lav-d);font-size:16px;font-weight:900}.setup-pending-flow strong,.setup-pending-flow small{display:block}.setup-pending-flow strong{color:var(--ink);font-size:15px}.setup-pending-flow small{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.4}
+.setup-pending-flow ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:28px;margin:0;padding:0;list-style:none}.setup-pending-flow li{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:10px;min-height:68px;padding:10px 12px;border-left:4px solid var(--lav);background:#faf7fb}.setup-pending-flow li:not(:last-child)::after{content:"→";position:absolute;right:-21px;top:50%;translate:0 -50%;color:var(--lav-d);font-size:20px;font-weight:900}.setup-pending-flow-number{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--lav);color:var(--lav-d);font-size:16px;font-weight:900}.setup-pending-flow strong,.setup-pending-flow small{display:block}.setup-pending-flow strong{color:var(--ink);font-size:15px}.setup-pending-flow small{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.4}
 .setup-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:4px;background:#f3ecf4;border-radius:8px;margin-bottom:14px}
 .setup-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:16px;font-weight:900;padding:10px 18px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .setup-tabs button.on{background:#fff;color:var(--pink-d);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .setup-pane{display:none}.setup-pane.on{display:block}
-.setup-stepbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.setup-stepbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:10px}
 .setup-step{position:relative;min-height:104px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;padding:11px 12px;cursor:pointer;text-align:left}
 .setup-step:hover,.setup-step.current{border-color:#bba8c5;box-shadow:0 2px 7px rgba(70,50,72,.09)}
 .setup-step-index{display:block;color:var(--lav-d);font-size:12px;font-weight:900}.setup-step strong{display:block;margin-top:2px;color:var(--ink);font-size:16px}.setup-step small{display:block;min-height:32px;margin-top:3px;font-size:12px;line-height:1.35}
@@ -274,6 +274,14 @@ body.setup-pending:not(.platform-admin-mode) .setup-pending-flow{display:block}
 .setup-grade-counts{display:grid;grid-template-columns:repeat(6,minmax(82px,1fr));gap:8px;max-width:760px}
 .setup-grade-counts label{display:grid;gap:4px;color:var(--muted);font-size:13px;font-weight:900}
 .setup-grade-counts input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.grade-schedule-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}.grade-schedule-tabs button{display:grid;gap:2px;min-width:84px;padding:9px 13px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);font:inherit;font-weight:900;cursor:pointer}.grade-schedule-tabs button.on{border-color:#78bda7;background:#edf8f4;color:var(--mint-d)}.grade-schedule-tabs small{font-size:11px}
+.grade-schedule-presets{display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:12px;border-left:4px solid var(--sky-d);background:#f4f9fc}.grade-schedule-presets label{display:grid;gap:4px;color:var(--muted);font-size:12px;font-weight:900}.grade-schedule-presets select{min-width:130px;padding:8px 30px 8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font:inherit;font-weight:800}
+.grade-schedule-status{display:flex;align-items:center;gap:12px;margin-bottom:10px}.grade-schedule-status b{font-size:17px}.grade-schedule-status span{color:var(--muted);font-size:13px;line-height:1.5}
+.grade-schedule-grid{width:min(100%,780px);min-width:620px;table-layout:fixed}.grade-schedule-grid th{font-size:14px}.grade-schedule-grid thead th{vertical-align:top}.grade-schedule-grid thead button{display:block;margin:5px auto 0;padding:4px 7px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--sky-d);font:inherit;font-size:11px;font-weight:900;cursor:pointer}
+.grade-schedule-slot{width:100%;height:42px;border:0;background:#f1eeec;color:#aaa;font:inherit;font-size:13px;font-weight:900;cursor:pointer}.grade-schedule-slot.on{background:var(--mint);color:var(--mint-d)}
+.grade-schedule-lunch td{padding:5px!important;background:repeating-linear-gradient(45deg,#faf7f3,#faf7f3 8px,#f4eee8 8px,#f4eee8 16px);color:#aa9b8d;font-size:12px;font-weight:900;text-align:center}
+.grade-schedule-note{margin-top:10px;padding:9px 11px;border-left:3px solid var(--lemon-d);background:#fffaf0;color:#6f5318;font-size:12.5px;line-height:1.6}
+@media(max-width:800px){.grade-schedule-status{align-items:flex-start;flex-direction:column;gap:4px}.grade-schedule-presets{align-items:stretch;flex-direction:column}.grade-schedule-presets .btn,.grade-schedule-presets label,.grade-schedule-presets select{width:100%}}
 .policy-panel{margin-bottom:18px;border-left:4px solid var(--mint-d)}.policy-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.policy-heading h2{margin-bottom:4px}.policy-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:14px}.policy-context-grid{grid-template-columns:minmax(190px,1.3fr) repeat(3,minmax(140px,1fr))}.policy-grid label{display:grid;gap:4px;font-size:13px;font-weight:900;color:var(--ink)}.policy-grid small{font-size:11px;font-weight:500;color:var(--muted)}.policy-grid input{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}.policy-actions{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:13px}.policy-status{display:flex;gap:12px;margin-top:12px;padding:9px 11px;border-left:3px solid var(--mint-d);background:#f2fbf7}.policy-status.bad{border-color:var(--pink-d);background:#fff4f7}.policy-status span{color:var(--muted);font-size:13px}
 .setup-table{min-width:760px}.setup-table .setup-wide-select{max-width:150px}.setup-table input[type=email]{min-width:220px;text-align:left}.setup-subject-skills{min-width:190px;text-align:left}.teaching-load{display:grid;gap:3px;min-width:165px}.teaching-load b{white-space:nowrap}.teaching-load small{color:var(--muted);font-size:11px;white-space:nowrap}
 .assignment-table-scroll{padding-bottom:2px}.assignment-scroll-dock{position:fixed;bottom:0;z-index:80;height:20px;box-sizing:border-box;overflow-x:scroll;overflow-y:hidden;border:1px solid var(--line);border-bottom:0;background:#f8f5f7;box-shadow:0 -4px 12px rgba(65,43,58,.13);scrollbar-color:var(--lav-d) #eee7f0}.assignment-scroll-dock[hidden]{display:none}.assignment-scroll-dock>div{height:1px}.assignment-scroll-dock::-webkit-scrollbar{height:18px}.assignment-scroll-dock::-webkit-scrollbar-track{background:#eee7f0}.assignment-scroll-dock::-webkit-scrollbar-thumb{min-width:52px;border:4px solid #eee7f0;border-radius:10px;background:var(--lav-d)}
@@ -377,7 +385,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.35</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.36</b></span></div>
   </div>
 </section>
 
@@ -506,7 +514,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>選擇來源：</b>建立空白案件，或先下載 Excel 母版，填妥後再匯入。</li>
-      <li><b>依序建置：</b>完成班級、教師、科目節數與配課，並確認資料概況。</li>
+      <li><b>依序建置：</b>完成班級、學校作息、教師、科目節數與配課，並確認資料概況。</li>
       <li><b>保存案件：</b>按「儲存至學校雲端」；換電腦登入後可按「繼續上次雲端案件」。</li>
     </ol><div class="step-help-note">Excel 匯入會取代目前案件資料；匯入前請先確認雲端暫存已更新。</div></div>
   </details>
@@ -519,14 +527,15 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <section class="setup-pending-flow" aria-labelledby="setupPendingFlowTitle">
     <div class="setup-pending-flow-head">
-      <h2 id="setupPendingFlowTitle">建立案件後，依序完成 4 個步驟</h2>
+      <h2 id="setupPendingFlowTitle">建立案件後，依序完成 5 個步驟</h2>
       <p>可在系統逐步填寫；使用 Excel 匯入時也會自動帶入。</p>
     </div>
     <ol>
       <li><span class="setup-pending-flow-number">1</span><span><strong>班級資料</strong><small>建立班級並指定導師</small></span></li>
-      <li><span class="setup-pending-flow-number">2</span><span><strong>教師資料</strong><small>填寫身分、帳號與節數</small></span></li>
-      <li><span class="setup-pending-flow-number">3</span><span><strong>科目節數</strong><small>設定各年級每週節數</small></span></li>
-      <li><span class="setup-pending-flow-number">4</span><span><strong>配課資料</strong><small>指定教師、科目與班級</small></span></li>
+      <li><span class="setup-pending-flow-number">2</span><span><strong>學校作息</strong><small>設定各年級可排時段</small></span></li>
+      <li><span class="setup-pending-flow-number">3</span><span><strong>教師資料</strong><small>填寫身分、帳號與節數</small></span></li>
+      <li><span class="setup-pending-flow-number">4</span><span><strong>科目節數</strong><small>設定各年級每週節數</small></span></li>
+      <li><span class="setup-pending-flow-number">5</span><span><strong>配課資料</strong><small>指定教師、科目與班級</small></span></li>
     </ol>
   </section>
   <details class="onboarding-checklist setup-ready-only" id="onboardingChecklist" open>
@@ -582,9 +591,10 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   <section class="panel policy-panel setup-ready-only" id="setupPolicyPanel"></section>
   <div class="setup-tabs" role="tablist" aria-label="資料建置項目">
     <button class="on" type="button" data-setup-tab="classes" onclick="ScheduleSetup.show('classes')">步驟 1　班級資料</button>
-    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">步驟 2　教師資料</button>
-    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">步驟 3　科目節數</button>
-    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">步驟 4　配課資料</button>
+    <button type="button" data-setup-tab="schedule" onclick="ScheduleSetup.show('schedule')">步驟 2　學校作息</button>
+    <button type="button" data-setup-tab="teachers" onclick="ScheduleSetup.show('teachers')">步驟 3　教師資料</button>
+    <button type="button" data-setup-tab="subjects" onclick="ScheduleSetup.show('subjects')">步驟 4　科目節數</button>
+    <button type="button" data-setup-tab="assign" onclick="ScheduleSetup.show('assign')">步驟 5　配課資料</button>
   </div>
 
   <section class="setup-pane on" id="setup-classes">
@@ -621,6 +631,14 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
   </section>
 
+  <section class="setup-pane" id="setup-schedule">
+    <div class="panel">
+      <h2>學校作息與年級上課時段</h2>
+      <div class="sub" style="margin-bottom:14px">各校全天日可以不同。先套用低、中、高年級範本，再依學校實際作息逐格調整；綠色代表該年級可排課。</div>
+      <div id="setupGradeSchedulePanel"></div>
+    </div>
+  </section>
+
   <section class="setup-pane" id="setup-teachers">
     <div class="panel tbl">
       <div class="sub" style="margin-bottom:12px"><b>學校 Google 帳號用途：</b>發布課表後，導師可調整負責班級；科任與資源班教師可查看個人課表。只填帳號，不需提供密碼。批次補帳號時，可從上方「排課管理」下載依配課預填的教師名冊；角色與班級會自動帶入。</div>
@@ -635,7 +653,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 
   <section class="setup-pane" id="setup-subjects">
     <div class="panel tbl">
-      <div class="sub" style="margin-bottom:12px"><b>先設定每個科目通常使用的教室。</b>同一科目若會依授課教師使用不同教室，可在步驟 4 的「專科教室安排」調整。</div>
+      <div class="sub" style="margin-bottom:12px"><b>先設定每個科目通常使用的教室。</b>同一科目若會依授課教師使用不同教室，可在步驟 5 的「專科教室安排」調整。</div>
       <table class="setup-table" id="setupSubjectsTable"></table>
       <div style="margin-top:12px"><button class="btn soft sm" type="button" onclick="ScheduleSetup.addSubject()">新增科目</button></div>
     </div>
@@ -651,7 +669,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <div class="tbl assignment-table-scroll" id="setupAssignmentsScroll"><table class="setup-table" id="setupAssignmentsTable"></table></div>
       <div class="assignment-scroll-dock" id="setupAssignmentsScrollDock" aria-label="配課表水平捲動" tabindex="0" hidden><div id="setupAssignmentsScrollTrack"></div></div>
       <section class="teacher-room-panel" aria-labelledby="teacherRoomTitle">
-        <div class="teacher-room-heading"><div><h2 id="teacherRoomTitle">專科教室安排 <span class="teacher-room-optional">選用</span></h2><p>只列出步驟 3 已指定專科教室的科目。一般情況沿用科目教室；同一科目需依授課教師使用不同教室時，才在下方改選。</p><p class="teacher-room-import-note">此設定不在 Excel 母版中，重新匯入 Excel 後需回到此處重設。</p></div></div>
+        <div class="teacher-room-heading"><div><h2 id="teacherRoomTitle">專科教室安排 <span class="teacher-room-optional">選用</span></h2><p>只列出步驟 4 已指定專科教室的科目。一般情況沿用科目教室；同一科目需依授課教師使用不同教室時，才在下方改選。</p><p class="teacher-room-import-note">此設定不在 Excel 母版中，重新匯入 Excel 後需回到此處重設。</p></div></div>
         <div id="setupTeacherRooms"></div>
       </section>
     </div>
@@ -1223,7 +1241,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.35</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.36</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -3807,7 +3825,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.35');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.36');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
