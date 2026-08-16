@@ -73,7 +73,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.39",
+    title="排課服務", version="1.40",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -145,24 +145,24 @@ async def security_middleware(request: Request, call_next):
         response.headers["Cache-Control"] = "no-store"
     return response
 
-KEY_FIELD = ("API 金鑰 <input type=\"password\" name=\"api_key\" autocomplete=\"current-password\" required><br>"
+KEY_FIELD = ("管理金鑰 <input type=\"password\" name=\"api_key\" autocomplete=\"current-password\" required><br>"
              if API_KEY else "")
 PAGE = """<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CP-SAT 排課引擎</title>
+<title>課務排程服務</title>
 <style>body{font-family:'Microsoft JhengHei',sans-serif;background:#fdf8f4;display:grid;place-items:center;min-height:100vh;margin:0;color:#4a4458}
 .card{background:#fff;border-radius:8px;box-shadow:0 10px 28px rgba(120,90,110,.12);padding:32px;max-width:560px;text-align:center;margin:16px}
 h1{font-size:22px}p{color:#756b82;font-size:14px;line-height:1.8}input,textarea{margin:9px 0;font-size:14px;padding:7px;border:2px solid #efe8ea;border-radius:6px}
 input[type=number]{width:70px}button{background:#a93f68;color:#fff;border:0;border-radius:6px;padding:13px 28px;font-size:16px;font-weight:900;cursor:pointer;margin-top:10px}
 fieldset{border:1px solid #ded5e4;border-radius:8px;margin:14px 0;padding:12px;text-align:left}legend{font-weight:700}textarea{display:block;width:100%;min-height:76px;box-sizing:border-box;font-family:inherit}small{display:block;color:#756b82;line-height:1.5}.ai-off{background:#fff4d6;padding:9px;border-radius:6px}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #3878a8;outline-offset:2px}</style></head><body><main class="card">
-<h1>CP-SAT 排課引擎</h1>
-<p>不需要 AI 或模型 API。CP-SAT 負責實際求解，並通過獨立硬規則檢核後才會下載課表。</p>
+<h1>課務排程服務</h1>
+<p>上傳已完成設定的排課資料；系統確認所有必要條件後，會產生並下載課表。</p>
 <form action="/solve" method="post" enctype="multipart/form-data">
 <input type="file" name="file" accept=".xlsx" required><br>
 {{API_KEY_FIELD}}
 求解秒數上限 <input type="number" name="time_limit" value="120" min="10" max="600"><br>
-<label><input type="checkbox" name="auto_schedule_tutor" value="true"> 由 CP-SAT 一併排完導師課（預設保留給導師自行安排）</label><br>
+<label><input type="checkbox" name="auto_schedule_tutor" value="true"> 由系統一併排完導師課（預設保留給導師自行安排）</label><br>
 <label><input type="checkbox" name="strict_complete" value="true"> 要求本次直接產生完整課表</label><br>
 <button>開始排課</button></form>
 <p>檔案只在求解期間暫存，完成即回收。上傳上限由服務端設定。</p>
@@ -556,13 +556,13 @@ def _validate_published_schedule(snapshot):
     for raw_key, value in (snapshot.get("schedule") or {}).items():
         parts = str(raw_key).split("|")
         if len(parts) != 3 or not isinstance(value, dict):
-            raise ValueError(f"引擎課表資料格式不正確：{raw_key}")
+            raise ValueError(f"系統課表資料格式不正確：{raw_key}")
         add_schedule_entry(
             parts[0], parts[1], parts[2],
             value.get("s", value.get("subject")),
             value.get("t", value.get("teacher")),
             value.get("room") or "R00",
-            "引擎課表",
+            "系統課表",
         )
 
     for code, placements in (snapshot.get("tutor_placements") or {}).items():
@@ -732,7 +732,7 @@ def _solve_loaded_data(schedule_data, time_limit, use_openai=False, ai_goal="",
         if use_openai:
             openai_advisor.append_plan_sheet(
                 dst, OPENAI_MODEL, ai_status, plan=ai_plan, audit_rows=ai_audit,
-                error_message="OpenAI 規劃失敗，本次已自動改用母版原始軟規則；課表仍通過 CP-SAT 硬規則檢核。",
+                error_message="智慧建議功能未完成，本次已改用原始規則並完成必要條件檢查。",
             )
         with open(dst, "rb") as stream:
             output = stream.read()
@@ -1150,7 +1150,7 @@ async def solve_data(request: SolveDataRequest, x_api_key: str = Header(""),
     if len(encoded) > MAX_UPLOAD_BYTES:
         return JSONResponse(status_code=413, content={"error": "系統案件資料超過大小上限"})
     if request.use_openai and not OPENAI_ENABLED:
-        return JSONResponse(status_code=503, content={"error": "OpenAI 尚未設定，請先配置 OPENAI_API_KEY"})
+        return JSONResponse(status_code=503, content={"error": "智慧建議功能尚未完成設定，請聯絡系統管理者"})
     try:
         seconds = min(max(int(request.time_limit), 10), 600)
         async with SOLVE_GATE:
@@ -1244,7 +1244,7 @@ async def solve(file: UploadFile = File(...), time_limit: int = Form(120),
     if len(data) > MAX_UPLOAD_BYTES:
         return JSONResponse(status_code=413, content={"error": f"檔案超過 {MAX_UPLOAD_BYTES // 1024 // 1024} MB 上限"})
     if use_openai and not OPENAI_ENABLED:
-        return JSONResponse(status_code=503, content={"error": "OpenAI 尚未設定，請先配置 OPENAI_API_KEY"})
+        return JSONResponse(status_code=503, content={"error": "智慧建議功能尚未完成設定，請聯絡系統管理者"})
     if len(ai_goal) > 1200:
         return JSONResponse(status_code=422, content={"error": "OpenAI 排課目標不可超過 1200 字"})
     try:

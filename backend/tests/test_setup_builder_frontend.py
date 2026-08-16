@@ -92,6 +92,11 @@ def test_custom_rule_builder_uses_case_data_and_offers_admin_email_fallback():
     assert "課務排程系統－其他規則建議" in html
     assert "舊版自由文字不會執行" in html
     assert "（請輸入規則內容，正式版由引擎擴充實作）" not in html
+    assert "此頁不再假裝已套用權重" not in html
+    assert "正式 CP-SAT 使用的偏好權重" not in html
+    assert "排課時會依科目自動選擇場地；如有特殊需求，依場地例外設定處理" in html
+    assert "各年段只能排在學校作息中標示為「可排課」的時段" in html
+    assert "硬規則必須全部遵守；軟規則會在可行的課表中，依重要程度盡量達成" in html
 
 
 def test_setup_builder_javascript_has_valid_syntax():
@@ -480,13 +485,16 @@ def test_fixed_course_has_a_discoverable_grid_editor_and_run_shortcut():
     assert ".fixed-course-toolbar label,.fixed-course-toolbar select,.fixed-course-summary{width:100%" in html
 
 
-def test_sidebar_uses_compact_spacing_to_fit_standard_laptop_height():
+def test_sidebar_is_roomy_and_uses_two_columns_on_short_desktop_screens():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
 
     assert "aside{width:230px" in html and "padding:8px 10px" in html
     assert "nav{min-height:0;overflow-y:auto;scrollbar-width:thin" in html
-    assert "padding:7px 10px" in html
-    assert ".nav-group{padding:5px 10px 2px" in html
+    assert "padding:8px 10px" in html
+    assert ".nav-group{padding:7px 10px 3px" in html
+    assert "@media(min-width:801px) and (max-height:700px)" in html
+    assert "aside{width:320px}" in html
+    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in html
 
 
 def test_fixed_course_validation_reports_excess_closed_slot_and_collisions():
@@ -689,20 +697,21 @@ def test_formal_workflow_pages_have_collapsed_help():
     assert html.count('class="step-help"') == 12
     assert html.count("<summary>操作說明</summary>") == 12
     assert "導師課預設保留給老師登入後自行安排" in html
-    assert "不需要 AI 或模型 API" in html
+    assert "系統會依目前案件資料與已啟用的規則安排課表" in html
+    assert "不需要 AI 或模型 API" not in html
     assert 'name="formalRunMode" value="tutor" checked' in html
     assert "use_openai:false" in html
     assert 'id="formalUseAI"' not in html
-    assert "本次導師課已由 CP-SAT 排完" in html
+    assert "本次導師課已由系統排完" in html
     assert "只有實際抽離的節次會鎖定" in html
     assert "const limitSheet=opt('不排課時間').length?opt('不排課時間'):opt('教師時段限制')" in html
     assert "for(const r of opt('資源班overlay').slice(1))" in html
     assert "nd.resGroups=Object.entries(rgMap)" in html
     assert ".step-help[open] summary::after" in html
     assert 'id="formalDiagnosis"' in html
-    assert "CP-SAT 規則診斷" in html
+    assert "排課條件診斷" in html
     assert "renderFormalDiagnosis(data.diagnostics,data.status)" in html
-    assert "不使用 AI，也不會呼叫模型 API" in html
+    assert "不使用 AI，也不會呼叫模型 API" not in html
     assert "chihhung1988@gmail.com" in html
     assert "教育部六碼學校代碼" in html
     assert "學校 Google Workspace 網域" in html

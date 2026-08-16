@@ -50,11 +50,11 @@ aside{width:230px;background:linear-gradient(180deg,#f6effa,#fdeef2);padding:8px
 .logo-copy{min-width:0}.logo b{font-size:16.5px;display:block;line-height:1.2;white-space:nowrap}
 .logo small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted);white-space:nowrap}.logo small:empty{display:none}
 nav{min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#d9ccdf transparent}
-nav button{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:0;background:none;color:var(--ink);font:inherit;font-size:15.5px;line-height:1.2;border-radius:10px;cursor:pointer;margin-bottom:1px;text-align:left;font-weight:500}
+nav button{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:0;background:none;color:var(--ink);font:inherit;font-size:15.5px;line-height:1.2;border-radius:10px;cursor:pointer;margin-bottom:3px;text-align:left;font-weight:500}
 nav button:hover{background:#fff}
 nav button.on{background:#fff;color:var(--pink-d);font-weight:900;box-shadow:var(--shadow)}
 nav .ic{width:20px;text-align:center;font-size:16px}
-.nav-group{padding:5px 10px 2px;color:#9a8ca0;font-size:11.5px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:2px}
+.nav-group{padding:7px 10px 3px;color:#9a8ca0;font-size:11.5px;font-weight:900;border-top:1px solid rgba(130,105,130,.12);margin-top:3px}
 .nav-group:first-child{border-top:0;margin-top:0;padding-top:1px}
 main{margin-left:230px;width:calc(100% - 230px);min-width:0;min-height:100vh;display:flex;flex:1;flex-direction:column;padding:22px 26px 60px;max-width:none}
 h1{font-size:30px;font-weight:900;margin-bottom:5px}
@@ -328,6 +328,12 @@ body.signed-teacher:not(.teacher-mode) aside nav button:not([data-v="my"]){displ
 body.server-teacher-mode .offline-teacher-only{display:none}
 body.server-teacher-mode .server-teacher-only{display:flex}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--sky-d);outline-offset:2px}
+@media(min-width:801px) and (max-height:700px){
+  aside{width:320px}.logo{margin-bottom:7px}main{margin-left:320px;width:calc(100% - 320px)}
+  nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:4px 7px;overflow-y:auto}
+  .nav-group{grid-column:1/-1;margin-top:3px;padding:6px 8px 3px}
+  nav button{margin:0;padding:8px 8px;border-radius:8px;font-size:14.5px}
+}
 @media(max-width:800px){
   body{display:block}aside{position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
   .logo{margin-bottom:8px;padding:10px 12px}.nav-group{display:none}nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
@@ -395,7 +401,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.39</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.40</b></span></div>
   </div>
 </section>
 
@@ -763,7 +769,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
         <li><b>選擇安排方式：</b>目前同一案件統一使用「同年級一起上」或「各語別分開上」。</li>
         <li><b>同年級一起上：</b>設定年級、來源班級與共同節次，再建立同時上課的平行群組。</li>
         <li><b>各語別分開上：</b>逐組設定時段、來源班級、教師與原班可抽離科目。</li>
-        <li><b>重新排課：</b>任何異動都會使舊課表失效，請重新執行 CP-SAT 並確認硬規則為零違反。</li>
+        <li><b>重新排課：</b>任何異動都會使舊課表失效，請重新執行排課並確認硬規則為零違反。</li>
       </ol><div class="step-help-note">共同模式會鎖定原班本土語文；分開模式保留原班課程，並把抽離時段限制在勾選科目。兩種模式都會檢查教師與教室衝突。</div></div>
     </details>
     <div class="panel native-common-panel" id="nativeCommonPanel">
@@ -871,7 +877,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <li><b>避免衝突：</b>灰色為該年級不上課；粉紅色代表已有其他固定課，點選時會先要求確認。</li>
       <li><b>混齡／合班：</b>先替各班固定在相同時段，再到「目前固定課程」按「設為合班同步」。</li>
       <li><b>重新排課：</b>固定課是硬規則，修改後必須重新執行排課。</li>
-    </ol><div class="step-help-note">固定節數不必等於科目全部節數；例如數學每週 4 節，可只固定其中 1 節，其餘由 CP-SAT 安排。</div></div>
+    </ol><div class="step-help-note">固定節數不必等於科目全部節數；例如數學每週 4 節，可只固定其中 1 節，其餘由系統安排。</div></div>
   </details>
   <div class="panel">
     <h2>快速設定</h2>
@@ -893,19 +899,19 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <!-- ═══ 排課規則 ═══ -->
 <section class="view" id="v-rules">
   <h1>📐 排課規則</h1>
-  <div class="sub">硬規則＝絕不違反。瀏覽器 DEMO 會驗證衝堂、場地、時段、連堂、鎖定與每日上限；<b>軟規則權重僅由正式版 CP-SAT 引擎最佳化</b>，此頁不再假裝已套用權重。</div>
+  <div class="sub">硬規則必須全部遵守；軟規則會在可行的課表中，依重要程度盡量達成。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>先看硬規則：</b>衝堂、鎖定、場地與不可排時段等條件必須全部成立。</li>
-      <li><b>再調軟規則：</b>上午優先、分散或集中等偏好，由 CP-SAT 依權重盡量最佳化。</li>
+      <li><b>再調軟規則：</b>上午優先、分散或集中等偏好，可依學校需求選擇重要程度。</li>
       <li><b>少量新增：</b>用下拉選單建立學校條件；系統只會執行畫面明確支援的規則。</li>
     </ol><div class="step-help-note">硬規則互相衝突會直接無解；軟規則未完全滿足不代表課表無效。</div></div>
   </details>
   <div class="panel">
     <div class="custom-rule-builder">
       <h2>新增學校自訂條件</h2>
-      <div class="sub">教師、班級與科目會直接使用目前案件資料。加入前請先確認下方完整句子；正式 CP-SAT 排課才會執行自訂條件。</div>
+      <div class="sub">教師、班級與科目會直接使用目前案件資料。加入前請先確認下方完整句子；新增後會在下次排課時生效。</div>
       <div class="custom-rule-grid frm">
         <label>條件類型
           <select id="customRuleKind" onchange="renderCustomRuleBuilder()">
@@ -944,12 +950,12 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <!-- ═══ 執行排課 ═══ -->
 <section class="view" id="v-run">
   <h1>⚡ 執行排課</h1>
-  <div class="sub" id="runIntro">瀏覽器 DEMO 適合快速預覽；正式成果請使用 CP-SAT API，並以完整度與硬規則檢核結果為準。</div>
+  <div class="sub" id="runIntro">快速預覽適合檢查基本資料；正式成果請執行完整排課，並確認所有課程皆已排入且硬規則沒有違反。</div>
   <details class="step-help">
     <summary>操作說明</summary>
     <div class="step-help-body"><ol>
       <li><b>排課前：</b>先確認配課完整，並完成固定課程、資源班、不排課時間與規則設定。</li>
-      <li><b>開始求解：</b>CP-SAT 先排科任、固定課與鎖定課；導師課預設保留給老師登入後自行安排。</li>
+      <li><b>開始排課：</b>系統先排科任、固定課與鎖定課；導師課預設保留給老師登入後自行安排。</li>
       <li><b>檢查結果：</b>確認排入節數、未排項目與硬規則違反，再進行課表編修。</li>
     </ol><div class="step-help-note">正式使用應以硬規則違反為 0 且所有必要節數完整排入為準。</div></div>
   </details>
@@ -958,7 +964,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <button class="btn mint sm" type="button" onclick="go('fixed')">設定固定課程</button>
   </div>
   <div class="panel runbox demo-only">
-    <h2>瀏覽器 DEMO</h2>
+    <h2>快速預覽</h2>
     <button class="btn pink big" id="runBtn" onclick="doSolve()">⚡ 開始排課</button>
     <div id="runStat"></div>
     <div id="runResult" style="display:none">
@@ -975,19 +981,19 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     </div>
   </div>
   <div class="panel formal-only">
-    <h2>正式 CP-SAT 排課</h2>
-    <div class="sub">不需要 AI 或模型 API，並只會連線至平台核定的正式排課引擎。請先選擇本次要交給導師接續安排，或由系統直接完成全部課程。</div>
+    <h2>正式自動排課</h2>
+    <div class="sub">系統會依目前案件資料與已啟用的規則安排課表。請先選擇本次要交給導師接續安排，或由系統直接完成全部課程。</div>
     <div class="frm formal-grid">
       <div class="wide current-data-source"><b>排課資料</b><span id="formalDataSource">目前系統案件</span><button class="btn soft sm" type="button" onclick="openSetupIssues()">檢查資料</button></div>
       <fieldset class="formal-mode-picker wide">
         <legend>導師課怎麼處理？</legend>
         <label class="formal-mode-option">
           <input type="radio" name="formalRunMode" value="tutor" checked onchange="formalRunModeChanged()">
-          <span><b>導師登入後自行安排</b><small>建議模式。CP-SAT 只排科任、固定課、資源班與語言分組鎖課，導師課先保留。</small></span>
+          <span><b>導師登入後自行安排</b><small>建議模式。系統先排科任、固定課、資源班與語言分組鎖課，導師課先保留。</small></span>
         </label>
         <label class="formal-mode-option">
           <input type="radio" name="formalRunMode" value="complete" onchange="formalRunModeChanged()">
-          <span><b>由 CP-SAT 一併排完導師課</b><small>直接產生完整課表；導師登入後只能查看，不能重新安排已由系統排入的導師課。</small></span>
+          <span><b>由系統一併排完導師課</b><small>直接產生完整課表；導師登入後只能查看，不能重新安排已由系統排入的導師課。</small></span>
         </label>
       </fieldset>
       <div class="formal-mode-summary wide" id="formalModeSummary"><b>目前模式：導師自行安排</b><span>完成第一階段後，到「導師自排」發布給老師接續處理。</span></div>
@@ -1146,7 +1152,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </details>
   <div class="tutor-mode-notice" id="tutorModeNotice"></div>
   <div class="tutor-prerequisite" id="tutorPrerequisite" hidden>
-    <div><b>請先完成第一階段排課</b><span>導師自排必須建立在 CP-SAT 已排好的科任、固定課、資源班與語言鎖課上，才能正確避開衝突。</span></div>
+    <div><b>請先完成第一階段排課</b><span>導師自排必須建立在系統已排好的科任、固定課、資源班與語言鎖課上，才能正確避開衝突。</span></div>
     <button class="btn pink sm teacher-admin-only" type="button" onclick="go('run')">前往執行排課</button>
   </div>
   <div class="panel teacher-handoff" id="tutorHandoffPanel">
@@ -1273,7 +1279,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
 <footer class="app-footer" aria-label="系統版權資訊">
   <div class="app-footer-brand">
     <span class="app-footer-mark" aria-hidden="true">▦</span>
-    <div><b>國民小學課務排程輔助系統</b><small>CP-SAT 排課引擎｜教師配課、課務排程與課表協作平台</small></div>
+    <div><b>國民小學課務排程輔助系統</b><small>教師配課、課務排程與課表協作平台</small></div>
   </div>
   <div class="app-footer-session" id="platformFooterSession" hidden>
     <div class="app-footer-session-copy">
@@ -1285,7 +1291,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.39</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.40</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -2307,9 +2313,29 @@ function updateCustomRulePreview(){
   const rule=currentStructuredRule(),missing=!rule.teacher&&!rule.class&&!rule.subject;
   preview.innerHTML=`<b>規則預覽：</b>${missing?'請先完成教師、班級與科目資料。':esc(describeStructuredRule(rule))}`;
 }
+function displayRuleDescription(rule){
+  const builtIn={
+    H03:'同一時段使用同一場地的班級數，不得超過該場地設定容量',
+    H05:'各年段只能排在學校作息中標示為「可排課」的時段',
+    H07:'教師個人的不排課時間必須遵守',
+    H11:'排課時會依科目自動選擇場地；如有特殊需求，依場地例外設定處理',
+    H12:'未指定教師的課程不會自動排入，並顯示為未配課警示',
+    H13:'資源班一般節次會同步安排來源班級的可抽離科目；早自修不受此限制',
+    H14:'本土語文採全年級同時分組；固定時段依語言分組鎖定設定',
+    H15:'本土語分組使用的場地與協同教師，在相同時段不得安排其他課程',
+    H16:'早自修實施的新住民語不占正課節數，也不影響正課衝堂檢查',
+    H17:'自訂時段限制可套用教師、年級或班級；只有已新增的限制會生效'
+  };
+  return builtIn[rule[0]]||String(rule[3]||'')
+    .replaceAll('設定_場地表','場地設定')
+    .replaceAll('設定_年段時段','學校作息')
+    .replaceAll('教師時段限制','不排課時間')
+    .replace(/\s*\(room_override\)/g,'')
+    .replaceAll('overlay','同步安排');
+}
 function renderRules(){
   const t=document.getElementById('ruleTbl');
-  let h='<tr><th>編號</th><th>硬/軟</th><th>類別</th><th style="min-width:340px">規則內容</th><th>權重</th><th>啟用</th><th></th></tr>';
+  let h='<tr><th>編號</th><th>硬/軟</th><th>類別</th><th style="min-width:340px">規則內容</th><th>重要程度</th><th>啟用</th><th></th></tr>';
   // 硬規則(H)→軟規則(S)→自訂(C)，各依編號排序
   const order=x=>({H:0,S:1,C:2}[x[0]]??3);
   const sorted=RULES.map((r,i)=>[r,i]).sort((a,b)=>order(a[0][0])-order(b[0][0])||a[0][0].localeCompare(b[0][0]));
@@ -2322,8 +2348,8 @@ function renderRules(){
       <td style="font-weight:900">${esc(r[0])}</td>
       <td><span class="chip ${r[1]==='硬'?'bad':'warn'}" style="padding:2px 10px">${esc(r[1])}</span></td>
       <td style="font-size:13px">${esc(r[2])}</td>
-      <td><span style="font-size:13.5px;white-space:normal">${esc(structured?describeStructuredRule(r[6]):r[3])}</span>${legacy?'<small class="legacy-rule-note">舊版自由文字不會執行，請刪除後用上方選單重建。</small>':referenceIssue?`<small class="legacy-rule-note">${esc(referenceIssue)}，請停用或刪除後重建。</small>`:''}</td>
-      <td>${r[1]==='軟'?`<span title="正式 CP-SAT 使用的偏好權重">${w?(+w[1]<=1?'低':+w[1]>=6?'高':'中'):'—'}</span>`:'—'}</td>
+      <td><span style="font-size:13.5px;white-space:normal">${esc(structured?describeStructuredRule(r[6]):displayRuleDescription(r))}</span>${legacy?'<small class="legacy-rule-note">舊版自由文字不會執行，請刪除後用上方選單重建。</small>':referenceIssue?`<small class="legacy-rule-note">${esc(referenceIssue)}，請停用或刪除後重建。</small>`:''}</td>
+      <td>${r[1]==='軟'?`<span title="軟規則的重要程度">${w?(+w[1]<=1?'低':+w[1]>=6?'高':'中'):'—'}</span>`:'—'}</td>
       <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} ${legacy?'disabled title="舊版自由文字規則不會執行"':''} onchange="setRuleValue(${i},5,this.checked?'是':'否')"></td>
       <td>${structured?`<button class="btn soft sm" type="button" onclick="editStructuredRule(${i})">編輯</button> `:''}${custom?`<button class="btn soft sm" type="button" title="刪除此規則" onclick="removeRule(${i})">✕</button>`:''}</td></tr>`;
   });
@@ -2433,7 +2459,7 @@ function resourceTeacherSelect(group,index){
   return `<select class="edit" style="min-width:150px" aria-label="資源班教師" onchange="rgSet(${index},'t',this.value)"><option value="">選擇資源班教師</option>${preferred.length?`<optgroup label="資源班教師">${options(preferred)}</optgroup>`:''}${others.length?`<optgroup label="其他兼任教師">${options(others)}</optgroup>`:''}${current&&!names.includes(current)?`<option value="${esc(current)}" selected>${esc(current)}｜原設定</option>`:''}</select>`;
 }
 function resourceSlotGrid(group,index){
-  if(group.scheduleMode!=='fixed')return '<div><b>資源班課表</b><div class="sub" style="margin-top:5px">由 CP-SAT 尋找所有來源班級可在同一節排入相同科目的時段。</div></div>';
+  if(group.scheduleMode!=='fixed')return '<div><b>資源班課表</b><div class="sub" style="margin-top:5px">由系統尋找所有來源班級可在同一節排入相同科目的時段。</div></div>';
   const selected=new Set(resourceSlots(group).map(slot=>`${slot.d}|${slot.p}`));let html='<div><b>資源班課表</b><table class="tt resource-slot-grid"><tr><th class="pd">節次</th>'+DAYS.map(day=>`<th>週${day}</th>`).join('')+'</tr>';
   for(const period of RESOURCE_PERIODS){
     if(period===5)html+='<tr class="lunch"><td></td><td colspan="5">午　休</td></tr>';
@@ -3159,7 +3185,7 @@ function doSolve(){
     const check=refreshValidation(poolN);
     document.getElementById('rWarns').innerHTML=
       (OVL.length?`<div class="sub" style="margin-bottom:8px">🧩 資源班抽離已排入 <b>${uniqueResourceSessions(OVL).length}</b> 節（見課表檢視）</div>`:'')+
-      (best.unplaced.length?'<ul class="warnlist">'+best.unplaced.map(tk=>tk.isMsg?`<li>⚠ ${esc(tk.s)}</li>`:`<li>⚠ ${esc(clsName(CODE2C[tk.code]))} ${esc(tk.s)} 未能排入（示範演算法限制，正式版 CP-SAT 可解）</li>`).join('')+'</ul>':'')+
+      (best.unplaced.length?'<ul class="warnlist">'+best.unplaced.map(tk=>tk.isMsg?`<li>⚠ ${esc(tk.s)}</li>`:`<li>⚠ ${esc(clsName(CODE2C[tk.code]))} ${esc(tk.s)} 未能排入（快速預覽的安排範圍較小，可改用正式排課）</li>`).join('')+'</ul>':'')+
       (check.hard.length?'<ul class="warnlist">'+check.hard.map(x=>`<li>✕ ${esc(x.text)}</li>`).join('')+'</ul>':'');
     btn.disabled=false;btn.textContent='⚡ 重新排課';
     fillTT();fillTutor();saveLS();
@@ -3211,9 +3237,9 @@ function renderFormalQuality(meta={}){
     <div class="solve-quality-head"><div><h3>排課品質</h3><p>${violationTotal?'部分偏好未完全達成，可展開查看明細。':'本次已達成所有啟用的軟規則偏好。'}</p></div><span class="solve-quality-badge">${validationBadge}</span></div>
     <div class="solve-quality-metrics">
       <span><b>${enabled.length}</b>啟用偏好</span><span><b>${violationTotal}</b>未達成單位</span>
-      <span><b>${penaltyTotal}</b>加權值</span><span><b>${qualityResult}</b>${qualityResultLabel}</span>
+      <span><b>${penaltyTotal}</b>影響值</span><span><b>${qualityResult}</b>${qualityResultLabel}</span>
     </div>
-    <details><summary>查看逐條偏好結果</summary><div class="solve-quality-table-wrap"><table class="solve-quality-table"><thead><tr><th>規則</th><th>偏好</th><th>狀態</th><th>權重</th><th>未達成</th><th>加權值</th><th>明細</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+    <details><summary>查看逐條偏好結果</summary><div class="solve-quality-table-wrap"><table class="solve-quality-table"><thead><tr><th>規則</th><th>偏好</th><th>狀態</th><th>重要程度</th><th>未達成</th><th>影響值</th><th>明細</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   box.hidden=false;
 }
 const FORMAL_DIAG_VIEWS=new Set(['build','alloc','native','res','lim','rules']);
@@ -3235,7 +3261,7 @@ function renderFormalDiagnosis(items,status='INFEASIBLE'){
   box.innerHTML=`
     <div class="solve-diagnosis-head">
       <div><h3>${timedOut?'尚未找到可行解':'無解診斷'}</h3><p>${timedOut?'求解時間已到，請先依下列順序縮小問題範圍。':'系統已依硬規則與可用節次整理出優先調整項目。'}</p></div>
-      <span class="solve-diagnosis-source">CP-SAT 規則診斷</span>
+      <span class="solve-diagnosis-source">排課條件診斷</span>
     </div>
     <ol class="solve-diagnosis-list">${rows.map((item,index)=>{
       const confirmed=item.confirmed!==false,view=FORMAL_DIAG_VIEWS.has(item.view)?item.view:'';
@@ -3247,7 +3273,7 @@ function renderFormalDiagnosis(items,status='INFEASIBLE'){
         </div>
         ${view?`<button class="btn soft sm" type="button" data-view="${view}" onclick="formalDiagnosticGo(this.dataset.view)">前往調整</button>`:''}
       </li>`}).join('')}</ol>
-    <div class="solve-diagnosis-foot">診斷由案件資料與硬規則容量計算產生，不使用 AI，也不會呼叫模型 API。每次調整後請重新執行排課。</div>`;
+    <div class="solve-diagnosis-foot">診斷結果依目前案件資料與已啟用規則產生。每次調整後請重新執行排課。</div>`;
   box.hidden=false;
 }
 function formalRunIsComplete(){
@@ -3256,8 +3282,8 @@ function formalRunIsComplete(){
 function formalRunModeChanged(){
   const complete=formalRunIsComplete(),summary=document.getElementById('formalModeSummary'),button=document.getElementById('formalBtn');
   if(summary)summary.innerHTML=complete?
-    '<b>目前模式：系統完成全部課程</b><span>CP-SAT 會連同導師課一起排完，完成後可直接進入課表編修與匯出。</span>':
-    '<b>目前模式：導師自行安排</b><span>CP-SAT 先排科任與鎖定課，完成後到「導師自排」交給老師接續處理。</span>';
+    '<b>目前模式：系統完成全部課程</b><span>系統會連同導師課一起排完，完成後可直接進入課表編修與匯出。</span>':
+    '<b>目前模式：導師自行安排</b><span>系統先排科任與鎖定課，完成後到「導師自排」交給老師接續處理。</span>';
   if(button)button.textContent=complete?'執行完整排課並下載':'執行第一階段排課並下載';
 }
 function formalDiagnosticEligibleSetupIssue(message){
@@ -3295,7 +3321,7 @@ async function runFormal(diagnosticDraft=false){
     use_openai:false,
     ai_goal:'',
   };
-  btn.disabled=true;formalMessage('warn',diagnosticDraft?'診斷草案產生中':'正式引擎求解中',
+  btn.disabled=true;formalMessage('warn',diagnosticDraft?'診斷草案產生中':'正在安排正式課表',
     diagnosticDraft?'系統會先把未排節數降到最低，再利用剩餘時間改善排課品質。':'請保持此頁開啟，完成後會自動下載。');
   try{
     const response=await ScheduleAuth.solveData(payload);
@@ -3323,7 +3349,7 @@ async function runFormal(diagnosticDraft=false){
     const pool=response.headers.get('X-Tutor-Pool')||'0';
     const weekly=response.headers.get('X-Weekly-Cap-Issues')||'0';
     const compliance=response.headers.get('X-Compliance-Issues')||'0';
-    applyData(localData,(localData._school?localData._school+'（':'')+'正式 CP-SAT 結果'+(localData._school?'）':''));
+    applyData(localData,(localData._school?localData._school+'（':'')+'正式排課結果'+(localData._school?'）':''));
     FORMAL_AUTO_TUTOR=completeMode;
     SOL={};
     for(const row of result.schedule)SOL[`${row.code}|${row.day}|${row.period}`]={s:row.subject,t:row.teacher||'',room:row.room||'R00'};
@@ -3343,7 +3369,7 @@ async function runFormal(diagnosticDraft=false){
       (FORMAL_AUTO_TUTOR?'':'；科任與鎖定課已載入，可前往導師自排交給老師接續安排'));
   }catch(error){
     if(diagnosticDraft)setFormalDiagnosticAction(true);
-    formalMessage('bad','無法連線正式 API','請確認 API 網址、CORS 與服務是否已啟動。');
+    formalMessage('bad','目前無法連線排課服務','請稍後再試；若持續發生，請使用錯誤回報通知管理員。');
   }finally{btn.disabled=false}
 }
 
@@ -3914,7 +3940,7 @@ function renderTutor(){
   if(notice){
     notice.className='tutor-mode-notice'+(FORMAL_AUTO_TUTOR?' warn':'');
     notice.innerHTML=FORMAL_AUTO_TUTOR?
-      '<span><b>本次導師課已由 CP-SAT 排完。</b> 此頁沒有可手排科目；若要交給導師安排，請回到「執行排課」選擇第一個模式後重新排課。</span><button class="btn soft sm teacher-admin-only" type="button" onclick="go(\'run\')">回到執行排課</button>':
+      '<span><b>本次導師課已由系統排完。</b> 此頁沒有可手排科目；若要交給導師安排，請回到「執行排課」選擇第一個模式後重新排課。</span><button class="btn soft sm teacher-admin-only" type="button" onclick="go(\'run\')">回到執行排課</button>':
       `<span><b>本次保留導師手排。</b> ${pool.reduce((sum,item)=>sum+Math.max(0,item[1]),0)} 節待安排；導師登入後只能處理自己的班級。</span>`;
   }
   document.getElementById('poolBar').innerHTML=pool.map(([s,left])=>
@@ -4002,7 +4028,7 @@ function clearTutor(){
   const removable=Object.entries(tutorPlaced[code]||{});
   if(!removable.length)return;
   const classroom=CODE2C[code];
-  if(!confirm(`確定清除${classroom?clsName(classroom):code}由導師自行排入的 ${removable.length} 節課？引擎課、資源班抽離與固定課不受影響。`))return;
+  if(!confirm(`確定清除${classroom?clsName(classroom):code}由導師自行排入的 ${removable.length} 節課？系統已排課程、資源班抽離與固定課不受影響。`))return;
   tutorPlaced[code]={};syncTutorUI();
 }
 
@@ -4049,7 +4075,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.39');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.40');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -4057,7 +4083,7 @@ function configureAppMode(){
   document.getElementById('appIntro').textContent='可直接建立空白案件或載入雲端暫存；若使用 Excel，請先下載母版，填寫完成後再按「上傳填妥的 Excel」。';
   document.getElementById('dataSourceDescription').innerHTML='目前：<b id="dataSrc" style="color:var(--pink-d)">尚未載入學校資料</b>。系統建置與 Excel 匯入使用同一份雲端暫存；發布後才會開放教師查看。';
   document.getElementById('setupEntryHelp').textContent='直接在系統建立班級、教師、科目與配課；Excel 僅作為大量匯入選項。';
-  document.getElementById('runIntro').textContent='正式排課只使用 CP-SAT；預設先排科任與鎖定課，再由導師登入自行安排導師課。';
+  document.getElementById('runIntro').textContent='系統會先排科任與鎖定課，導師課可選擇交由老師登入後自行安排，或由系統一併完成。';
 }
 function enterFormalAdminMode(){
   document.body.classList.remove('formal-locked');
