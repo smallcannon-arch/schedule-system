@@ -1254,6 +1254,45 @@ def test_frontend_fixed_course_reports_teacher_collision():
         engine.load_frontend_data(payload)
 
 
+def test_frontend_combined_fixed_courses_share_teacher_room_and_daily_load():
+    slots = [[1, 1, 1, 1, 1, 1, 1] for _ in range(5)]
+    payload = {
+        "classes": [
+            {"g": 1, "i": 1, "code": "1甲", "tutor": "甲導師"},
+            {"g": 2, "i": 1, "code": "2甲", "tutor": "乙導師"},
+        ],
+        "roster": {"甲導師": "導師", "乙導師": "導師", "體育老師": "科任"},
+        "rooms": {"R00": 99, "活動中心": 1},
+        "subjects": {"體育低": {
+            "hours": [1, 1, 0, 0, 0, 0], "room": "活動中心", "banned": [],
+            "block": "", "self": False, "pairMode": "",
+        }},
+        "gslot": {str(grade): slots for grade in range(1, 7)},
+        "assign": {
+            "1甲": {"體育低": "體育老師"},
+            "2甲": {"體育低": "體育老師"},
+        },
+        "override": {}, "blocked": [], "resGroups": [],
+        "nativeLockEnabled": False, "nativeBands": [], "nativeGroups": [],
+        "locks": [
+            {"c": "1甲", "d": "二", "p": 1, "s": "體育低",
+             "combinedGroup": "mixed-a"},
+            {"c": "2甲", "d": "二", "p": 1, "s": "體育低",
+             "combinedGroup": "mixed-a"},
+        ],
+    }
+
+    data = engine.load_frontend_data(payload)
+    schedule, tasks, _, meta, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=True)
+
+    assert data["teacher_weekly_load"]["體育老師"] == 1
+    assert schedule[("1甲", "二", 1)][0] == "體育低"
+    assert schedule[("2甲", "二", 1)][0] == "體育低"
+    assert meta["completion"] == "complete"
+    assert engine.validate(data, schedule, tasks, overlay) == []
+
+
 def test_frontend_native_language_rejects_duplicate_staff_assignment():
     payload = _native_frontend_payload()
     payload["nativeGroups"].append({

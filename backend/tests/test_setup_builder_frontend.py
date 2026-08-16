@@ -445,6 +445,8 @@ def test_fixed_course_has_a_discoverable_grid_editor_and_run_shortcut():
     assert 'id="fixedCourseGrid"' in html
     assert 'id="fixedCourseList"' in html
     assert "function toggleFixedCourse(day,period)" in html
+    assert "function toggleCombinedFixedCourses(teacher,day,period)" in html
+    assert "設為合班同步" in html
     assert "固定節數不必等於科目全部節數" in html
     assert "有課程必須排在指定時間？" in html
     assert "onclick=\"go('fixed')\"" in html
@@ -501,6 +503,40 @@ process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
     assert any("1甲 數學每週 2 節，但設定了 3 個固定時段" in issue for issue in hard)
     assert any("1乙 數學固定在週五第7節，但該年級此時段不上課" in issue for issue in hard)
     assert any("數學教師在週一第1節有兩筆固定課" in issue for issue in hard)
+
+
+def test_fixed_course_validation_accepts_explicit_combined_lesson_group():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const open=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={
+  classes:[
+    {g:1,i:1,code:'1甲',tutor:'甲導師'},
+    {g:2,i:1,code:'2甲',tutor:'乙導師'}
+  ],
+  roster:{甲導師:'導師',乙導師:'導師',體育老師:'科任'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{體育低:{self:false,hours:[1,1,0,0,0,0]}},
+  assign:{'1甲':{體育低:'體育老師'},'2甲':{體育低:'體育老師'}},
+  assignmentModes:{},override:{},
+  locks:[
+    {c:'1甲',d:'二',p:1,s:'體育低',combinedGroup:'mixed-a'},
+    {c:'2甲',d:'二',p:1,s:'體育低',combinedGroup:'mixed-a'}
+  ],
+  nativeLockEnabled:false,nativeBands:[],nativeGroups:[],
+  resGroups:[],rooms:{R00:99},gslot:{1:open,2:open}
+};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},
+  startBlank:()=>true,syncTeachers:async()=>({})});
+process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    hard = json.loads(result.stdout)["hard"]
+    assert not any("兩筆固定課" in issue for issue in hard)
 
 
 def test_custom_county_policy_frontend_is_wired_and_valid():

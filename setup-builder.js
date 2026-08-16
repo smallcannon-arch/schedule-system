@@ -157,6 +157,20 @@
     for (const group of (d.resGroups || [])) {
       if (group.t === name) result.cross += Math.max(0, Number(group.n) || 0);
     }
+    const combined = new Map();
+    for (const lock of (d.locks || [])) {
+      const group = String(lock.combinedGroup || "").trim();
+      const code = String(lock.c || lock.class || "").trim();
+      const subject = String(lock.s || lock.subj || "").trim();
+      const teacher = String((d.assign[code] || {})[subject] || lock.teacher || "").trim();
+      if (!group || teacher !== name) continue;
+      const key = `${teacher}|${lock.d || lock.day}|${Number(lock.p) || 0}|${group}`;
+      combined.set(key, (combined.get(key) || 0) + 1);
+    }
+    const reduction = [...combined.values()].reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+    const crossReduction = Math.min(result.cross, reduction);
+    result.cross -= crossReduction;
+    result.retained = Math.max(0, result.retained - (reduction - crossReduction));
     result.total = result.retained + result.cross;
     return result;
   }
@@ -513,10 +527,14 @@
         continue;
       }
       const teacherSlotKey = `${teacher}|${day}|${period}`;
+      const combinedGroup = String(row.combinedGroup || "").trim();
       if (fixedTeacherSlots.has(teacherSlotKey)) {
-        hard.push(`${teacher}在週${day}第${period}節有兩筆固定課：${fixedTeacherSlots.get(teacherSlotKey)}、${code} ${subject}`);
+        const existing = fixedTeacherSlots.get(teacherSlotKey);
+        if (!combinedGroup || existing.combinedGroup !== combinedGroup) {
+          hard.push(`${teacher}在週${day}第${period}節有兩筆固定課：${existing.label}、${code} ${subject}`);
+        }
       } else {
-        fixedTeacherSlots.set(teacherSlotKey, `${code} ${subject}`);
+        fixedTeacherSlots.set(teacherSlotKey, {label: `${code} ${subject}`, combinedGroup});
       }
     }
     for (const [key, count] of fixedCounts) {
