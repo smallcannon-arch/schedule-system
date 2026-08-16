@@ -457,6 +457,15 @@ def test_fixed_course_has_a_discoverable_grid_editor_and_run_shortcut():
     assert ".fixed-course-toolbar label,.fixed-course-toolbar select,.fixed-course-summary{width:100%" in html
 
 
+def test_sidebar_uses_compact_spacing_to_fit_standard_laptop_height():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert "aside{width:230px" in html and "padding:8px 10px" in html
+    assert "nav{min-height:0;overflow-y:auto;scrollbar-width:thin" in html
+    assert "padding:7px 10px" in html
+    assert ".nav-group{padding:5px 10px 2px" in html
+
+
 def test_fixed_course_validation_reports_excess_closed_slot_and_collisions():
     script = r"""
 const fs=require('fs'),vm=require('vm');
