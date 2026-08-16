@@ -12,6 +12,7 @@ v1.5：新增 OpenAI 軟規則規劃介面，硬規則與最終驗證仍由 CP-S
 v1.6：新增完整度指標、正式模式自動排導師課、週節數上限與求解品質資訊
 v1.7：新增逐條軟規則品質報告與統一的待完成課程原因格式
 v1.8：新增安全診斷草案，一般課程可回報缺額，所有衝堂與結構性硬規則維持不放寬
+v1.9：新增資料連動的結構化學校自訂條件，並納入 CP-SAT 與獨立結果檢核
 """
 import os
 import re
@@ -40,6 +41,15 @@ SOFT_RULE_LABELS = {
     "S07": "減少教師相鄰節次跨場地",
     "S08": "科任每日負荷以五節內為佳",
     "S09": "導師每日負荷以四節內為佳",
+}
+
+CUSTOM_RULE_KINDS = {
+    "teacher_day_max",
+    "teacher_consecutive_max",
+    "class_slot_avoid",
+    "subject_period_avoid",
+    "subject_halfday_preference",
+    "class_subject_daily_max",
 }
 
 
@@ -271,6 +281,16 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
                 "所有可排節次中沒有同一天、且不跨午休的連續兩節。",
                 "放寬該班、教師或場地限制，或取消此科的連堂硬規則。", "rules"))
 
+    if not diagnostics and status != "UNKNOWN":
+        for rule in d.get("custom_rules", []):
+            if rule.get("strength") != "hard":
+                continue
+            diagnostics.append(_diagnostic(
+                f"檢查自訂硬規則 {rule['id']}",
+                _custom_rule_label(rule),
+                "可先停用這條規則重新求解；若可排，再調整條件範圍或改為「盡量達成」。",
+                "rules", False))
+
     if not diagnostics:
         if status == "UNKNOWN":
             auto_resource_sessions = [
@@ -425,6 +445,103 @@ def _parse_grade_limit_target(value):
         match.group(1), int(match.group(1)) if match.group(1).isdigit() else None)
 
 
+def _parse_custom_rule(rule_id, spec, roster, classes, subjects):
+    """Validate the structured rule builder schema; free-form text is never executed."""
+    if not isinstance(spec, dict) or spec.get("version") != 1:
+        raise ValueError(f"自訂規則 {rule_id} 格式不正確，請刪除後重新建立")
+    kind = _text(spec.get("kind"))
+    if kind not in CUSTOM_RULE_KINDS:
+        raise ValueError(f"自訂規則 {rule_id} 使用尚未支援的條件類型")
+    strength = _text(spec.get("strength"))
+    if strength not in {"hard", "soft"}:
+        raise ValueError(f"自訂規則 {rule_id} 必須選擇「必須遵守」或「盡量達成」")
+    if kind == "subject_halfday_preference" and strength != "soft":
+        raise ValueError(f"自訂規則 {rule_id} 的上午／下午安排只能設為偏好")
+    try:
+        weight = _whole_number(spec.get("weight", 3)) if strength == "soft" else 0
+    except (TypeError, ValueError):
+        raise ValueError(f"自訂規則 {rule_id} 的重要程度格式不正確")
+    if strength == "soft" and weight not in range(1, 11):
+        raise ValueError(f"自訂規則 {rule_id} 的重要程度必須介於 1 到 10")
+
+    parsed = {
+        "id": rule_id, "kind": kind, "strength": strength, "weight": weight,
+    }
+    teacher = _text(spec.get("teacher"))
+    code = _text(spec.get("class"))
+    subject = _text(spec.get("subject"))
+    day = _text(spec.get("day"))
+    class_by_code = {item["code"]: item for item in classes}
+
+    if kind in {"teacher_day_max", "teacher_consecutive_max"}:
+        if teacher not in roster:
+            raise ValueError(f"自訂規則 {rule_id} 引用不存在的教師：{teacher or '未選擇'}")
+        parsed["teacher"] = teacher
+    if kind in {"class_slot_avoid", "class_subject_daily_max"}:
+        if code not in class_by_code:
+            raise ValueError(f"自訂規則 {rule_id} 引用不存在的班級：{code or '未選擇'}")
+        parsed["class"] = code
+    if kind in {"subject_period_avoid", "subject_halfday_preference", "class_subject_daily_max"}:
+        if subject not in subjects:
+            raise ValueError(f"自訂規則 {rule_id} 引用不存在的科目：{subject or '未選擇'}")
+        parsed["subject"] = subject
+    if kind == "class_subject_daily_max":
+        grade = class_by_code[code]["grade"]
+        if subjects[subject]["hours"].get(grade, 0) <= 0:
+            raise ValueError(f"自訂規則 {rule_id} 的 {code} 沒有「{subject}」課程")
+
+    if kind in {"teacher_day_max", "subject_period_avoid", "class_subject_daily_max"}:
+        if day != "每日" and day not in DAYS:
+            raise ValueError(f"自訂規則 {rule_id} 的星期不正確")
+        parsed["day"] = day
+    elif kind == "class_slot_avoid":
+        if day not in DAYS:
+            raise ValueError(f"自訂規則 {rule_id} 的星期不正確")
+        parsed["day"] = day
+
+    if kind in {"class_slot_avoid", "subject_period_avoid"}:
+        try:
+            period = _whole_number(spec.get("period"))
+        except (TypeError, ValueError):
+            raise ValueError(f"自訂規則 {rule_id} 的節次格式不正確")
+        if period not in PERIODS:
+            raise ValueError(f"自訂規則 {rule_id} 的節次必須介於 1 到 7")
+        parsed["period"] = period
+
+    if kind in {"teacher_day_max", "teacher_consecutive_max", "class_subject_daily_max"}:
+        try:
+            maximum = _whole_number(spec.get("max"))
+        except (TypeError, ValueError):
+            raise ValueError(f"自訂規則 {rule_id} 的節數上限格式不正確")
+        upper = 4 if kind == "teacher_consecutive_max" else 7
+        if maximum not in range(1, upper + 1):
+            raise ValueError(f"自訂規則 {rule_id} 的節數上限必須介於 1 到 {upper}")
+        parsed["max"] = maximum
+
+    if kind == "subject_halfday_preference":
+        half = _text(spec.get("half"))
+        if half not in {"上午", "下午"}:
+            raise ValueError(f"自訂規則 {rule_id} 必須選擇上午或下午")
+        parsed["half"] = half
+    return parsed
+
+
+def _custom_rule_label(rule):
+    strength = "必須" if rule["strength"] == "hard" else "盡量"
+    kind = rule["kind"]
+    if kind == "teacher_day_max":
+        return f"{rule['teacher']}在{rule['day']}授課{strength}不超過{rule['max']}節"
+    if kind == "teacher_consecutive_max":
+        return f"{rule['teacher']}連續授課{strength}不超過{rule['max']}節"
+    if kind == "class_slot_avoid":
+        return f"{rule['class']}週{rule['day']}第{rule['period']}節{strength}不排課"
+    if kind == "subject_period_avoid":
+        return f"{rule['subject']}在{rule['day']}第{rule['period']}節{strength}不排"
+    if kind == "subject_halfday_preference":
+        return f"{rule['subject']}盡量排在{rule['half']}"
+    return f"{rule['class']}的{rule['subject']}在{rule['day']}{strength}不超過{rule['max']}節"
+
+
 def excel_safe(value):
     """Prevent user/model text from becoming an active Excel formula."""
     if not isinstance(value, str):
@@ -531,6 +648,7 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
         raise ValueError("年段時段沒有可排節次：" + "、".join(map(str, missing_grades)) + "年級")
 
     rule_map = _default_rules()
+    custom_rules = []
     for row in rules or payload.get("rules") or []:
         if not isinstance(row, (list, tuple)) or not row:
             continue
@@ -539,8 +657,18 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
             continue
         parameter = _text(row[4] if len(row) > 4 else "")
         match = re.search(r"penalty=(\d+)", parameter)
-        rule_map[rule_id] = {"on": len(row) < 6 or _text(row[5]) == "是",
+        enabled = len(row) < 6 or _text(row[5]) == "是"
+        rule_map[rule_id] = {"on": enabled,
                              "w": int(match.group(1)) if match else 0}
+        if rule_id.startswith("C") and enabled:
+            if len(row) > 6 and isinstance(row[6], dict):
+                custom_rules.append(_parse_custom_rule(
+                    rule_id, row[6], roster, classes, subjects))
+            else:
+                notes.append(
+                    f"{rule_id} 是舊版自由文字規則，未套用；請在排課規則頁重新建立")
+    if len(custom_rules) > 50:
+        raise ValueError("自訂規則最多 50 條，請刪除不再使用的條件")
 
     teacher_limit, grade_limit, class_limit = set(), set(), set()
     limit_rows = list(limits or payload.get("limits") or [])
@@ -1007,6 +1135,7 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
         "schema_version": "frontend-1", "classes": classes, "roster": roster,
         "rooms": rooms, "room_names": room_names, "room_prio": {},
         "subjects": subjects, "grade_slot": grade_slot, "rules": rule_map,
+        "custom_rules": custom_rules,
         "teacher_limit": teacher_limit, "grade_limit": grade_limit,
         "class_limit": class_limit, "assign": assign, "assignment_modes": assignment_modes,
         "room_override": room_override, "teacher_room_override": teacher_room_override,
@@ -1903,6 +2032,32 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
     def active(code, s):
         return [(day, p, x[(code, s, day, p)]) for day, p in slots if x.get((code, s, day, p)) is not None]
 
+    # 學校自訂條件：只有通過白名單結構驗證的規則才會進入模型。
+    for rule in d.get("custom_rules", []):
+        if rule["strength"] != "hard":
+            continue
+        kind = rule["kind"]
+        if kind == "class_slot_avoid":
+            for (code, subject, day, period), value in x.items():
+                if (value is not None and code == rule["class"]
+                        and day == rule["day"] and period == rule["period"]):
+                    m.Add(value == 0)
+        elif kind == "subject_period_avoid":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for (code, subject, day, period), value in x.items():
+                if (value is not None and subject == rule["subject"] and day in days
+                        and period == rule["period"]):
+                    m.Add(value == 0)
+        elif kind == "class_subject_daily_max":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for day in days:
+                values = [
+                    value for dd, _period, value in active(rule["class"], rule["subject"])
+                    if dd == day
+                ]
+                if values:
+                    m.Add(sum(values) <= rule["max"])
+
     diagnostic_missing = {}
     scheduled_counts = {}
     for (code, s), tk in tasks.items():
@@ -2096,6 +2251,45 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
     for zs in ov_by_source.values():
         if len(zs) > 1:
             m.Add(sum(zs) <= 1)
+
+    native_teacher_slots = {
+        (teacher, group.get("d"), int(group.get("p")))
+        for group in d.get("native_groups", [])
+        if group.get("d") in DAYS and str(group.get("p", "")).isdigit()
+        for teacher in (group.get("t"), group.get("assistant")) if teacher
+    }
+
+    def custom_teacher_slot_values(teacher, day, period):
+        return [
+            *teacher_slot.get((teacher, day, period), []),
+            *ov_by_teacher.get((teacher, day, period), []),
+        ]
+
+    for rule in d.get("custom_rules", []):
+        if rule["strength"] != "hard" or rule["kind"] not in {
+                "teacher_day_max", "teacher_consecutive_max"}:
+            continue
+        teacher = rule["teacher"]
+        days = (DAYS if rule["kind"] == "teacher_consecutive_max"
+                or rule.get("day") == "每日" else [rule["day"]])
+        if rule["kind"] == "teacher_day_max":
+            for day in days:
+                values = [value for period in PERIODS
+                          for value in custom_teacher_slot_values(teacher, day, period)]
+                fixed = sum((teacher, day, period) in native_teacher_slots
+                            for period in PERIODS)
+                m.Add(sum(values) + fixed <= rule["max"])
+        else:
+            window_size = rule["max"] + 1
+            for day in days:
+                for segment in (PERIODS[:4], PERIODS[4:]):
+                    for start in range(0, len(segment) - window_size + 1):
+                        window = segment[start:start + window_size]
+                        values = [value for period in window
+                                  for value in custom_teacher_slot_values(teacher, day, period)]
+                        fixed = sum((teacher, day, period) in native_teacher_slots
+                                    for period in window)
+                        m.Add(sum(values) + fixed <= rule["max"])
     grp_rows = defaultdict(list)
     for i, ov in enumerate(d["overlay"]):
         group_id = str(ov.get("id") or "").rsplit("-", 1)[0] or ov["grp"]
@@ -2193,6 +2387,71 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
             return
         pen.append(weight * expression)
         soft_terms[rid].append((expression, detail))
+
+    for rule in d.get("custom_rules", []):
+        if rule["strength"] != "soft":
+            continue
+        rid, kind = rule["id"], rule["kind"]
+        if kind == "class_slot_avoid":
+            for (code, subject, day, period), value in x.items():
+                if (value is not None and code == rule["class"]
+                        and day == rule["day"] and period == rule["period"]):
+                    add_soft_term(rid, value, {
+                        "class": code, "subject": subject, "day": day, "period": period,
+                    })
+        elif kind == "subject_period_avoid":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for (code, subject, day, period), value in x.items():
+                if (value is not None and subject == rule["subject"] and day in days
+                        and period == rule["period"]):
+                    add_soft_term(rid, value, {
+                        "class": code, "subject": subject, "day": day, "period": period,
+                    })
+        elif kind == "subject_halfday_preference":
+            preferred = MORNING if rule["half"] == "上午" else set(PERIODS) - MORNING
+            for (code, subject, day, period), value in x.items():
+                if value is not None and subject == rule["subject"] and period not in preferred:
+                    add_soft_term(rid, value, {
+                        "class": code, "subject": subject, "day": day, "period": period,
+                    })
+        elif kind == "class_subject_daily_max":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for day in days:
+                values = [value for dd, _period, value
+                          in active(rule["class"], rule["subject"]) if dd == day]
+                if len(values) > rule["max"]:
+                    over = m.NewIntVar(0, 7, f"custom_over_{rid}_{day}")
+                    m.Add(over >= sum(values) - rule["max"])
+                    add_soft_term(rid, over, {
+                        "class": rule["class"], "subject": rule["subject"], "day": day,
+                    })
+        elif kind == "teacher_day_max":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for day in days:
+                values = [value for period in PERIODS
+                          for value in custom_teacher_slot_values(rule["teacher"], day, period)]
+                fixed = sum((rule["teacher"], day, period) in native_teacher_slots
+                            for period in PERIODS)
+                if len(values) + fixed > rule["max"]:
+                    over = m.NewIntVar(0, 7, f"custom_over_{rid}_{day}")
+                    m.Add(over >= sum(values) + fixed - rule["max"])
+                    add_soft_term(rid, over, {"teacher": rule["teacher"], "day": day})
+        elif kind == "teacher_consecutive_max":
+            window_size = rule["max"] + 1
+            for day in DAYS:
+                for segment in (PERIODS[:4], PERIODS[4:]):
+                    for start in range(0, len(segment) - window_size + 1):
+                        window = segment[start:start + window_size]
+                        values = [value for period in window for value
+                                  in custom_teacher_slot_values(rule["teacher"], day, period)]
+                        fixed = sum((rule["teacher"], day, period) in native_teacher_slots
+                                    for period in window)
+                        over = m.NewIntVar(0, 1, f"custom_consecutive_{rid}_{day}_{start}_{window[0]}")
+                        m.Add(over >= sum(values) + fixed - rule["max"])
+                        add_soft_term(rid, over, {
+                            "teacher": rule["teacher"], "day": day,
+                            "from_period": window[0], "to_period": window[-1],
+                        })
 
     for (code, s), tk in tasks.items():
         rid = "S01" if s == "國語文" else "S02" if s == "數學" else None
@@ -2449,7 +2708,12 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
     remaining_total = max(0, required_total - len(sched))
     completion = "complete" if remaining_total == 0 else "partial"
     quality_report = []
-    for rid, label in SOFT_RULE_LABELS.items():
+    quality_labels = dict(SOFT_RULE_LABELS)
+    quality_labels.update({
+        rule["id"]: _custom_rule_label(rule)
+        for rule in d.get("custom_rules", []) if rule["strength"] == "soft"
+    })
+    for rid, label in quality_labels.items():
         rule = R.get(rid, {})
         weight = int(rule.get("w", 0)) if rule.get("on") else 0
         details = []
@@ -2497,6 +2761,11 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
         "quality_report": quality_report,
         "quality_violation_total": quality_violation_total,
         "quality_penalty_total": quality_penalty_total,
+        "custom_rules": [
+            {"rule_id": rule["id"], "label": _custom_rule_label(rule),
+             "strength": rule["strength"]}
+            for rule in d.get("custom_rules", [])
+        ],
         "diagnostic_draft": bool(diagnostic_draft),
         "diagnostic_shortfall_status": diagnostic_shortfall_status,
         "diagnostic_quality_optimized": diagnostic_quality_optimized,
@@ -2641,6 +2910,60 @@ def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
         if len(cells) != 2 or cells[0][0] != cells[1][0] or cells[1][1] - cells[0][1] != 1 \
                 or cells[0][1] == 4:
             errs.append(f"H09違反(未連堂/跨午休)：{code} {s} {cells}")
+
+    teacher_busy = set(tslot)
+    teacher_busy.update((teacher, day, period) for teacher, day, period in ovt if period)
+    teacher_busy.update(
+        (teacher, group.get("d"), int(group.get("p")))
+        for group in d.get("native_groups", [])
+        if group.get("d") in DAYS and str(group.get("p", "")).isdigit()
+        for teacher in (group.get("t"), group.get("assistant")) if teacher
+    )
+    for rule in d.get("custom_rules", []):
+        if rule["strength"] != "hard":
+            continue
+        rid, kind = rule["id"], rule["kind"]
+        if kind == "teacher_day_max":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for day in days:
+                count = sum((rule["teacher"], day, period) in teacher_busy
+                            for period in PERIODS)
+                if count > rule["max"]:
+                    errs.append(
+                        f"{rid}違反：{rule['teacher']}週{day}授課{count}節，"
+                        f"上限為{rule['max']}節")
+        elif kind == "teacher_consecutive_max":
+            for day in DAYS:
+                for segment in (PERIODS[:4], PERIODS[4:]):
+                    run = 0
+                    for period in segment:
+                        run = run + 1 if (rule["teacher"], day, period) in teacher_busy else 0
+                        if run > rule["max"]:
+                            errs.append(
+                                f"{rid}違反：{rule['teacher']}週{day}連續授課超過"
+                                f"{rule['max']}節")
+                            break
+        elif kind == "class_slot_avoid":
+            if (rule["class"], rule["day"], rule["period"]) in sched:
+                errs.append(
+                    f"{rid}違反：{rule['class']}週{rule['day']}第{rule['period']}節仍有課")
+        elif kind == "subject_period_avoid":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            violations = [
+                f"{code}週{day}第{period}節" for (code, day, period), (subject, _t, _r) in sched.items()
+                if subject == rule["subject"] and day in days and period == rule["period"]
+            ]
+            if violations:
+                errs.append(f"{rid}違反：{rule['subject']}仍排在" + "、".join(violations))
+        elif kind == "class_subject_daily_max":
+            days = DAYS if rule["day"] == "每日" else [rule["day"]]
+            for day in days:
+                count = sum(code == rule["class"] and subject == rule["subject"] and dd == day
+                            for (code, dd, _period), (subject, _t, _r) in sched.items())
+                if count > rule["max"]:
+                    errs.append(
+                        f"{rid}違反：{rule['class']}的{rule['subject']}週{day}排了"
+                        f"{count}節，上限為{rule['max']}節")
     return errs
 
 
@@ -2679,6 +3002,25 @@ def write_output(path, d, sched, tasks, warn, meta, errs, ov_sched=()):
         ws.cell(1, 1).fill = PatternFill("solid", start_color="F4CCCC")
         ws.cell(1, 1).font = Font(name=F, size=12, bold=True, color="9C0006")
     ws.column_dimensions["A"].width = 80
+
+    if meta.get("custom_rules"):
+        custom_ws = wb.create_sheet("學校自訂條件")
+        for column, value in enumerate(["編號", "強度", "條件內容"], 1):
+            cell = custom_ws.cell(1, column, value)
+            cell.font = HDR; cell.fill = FILL; cell.alignment = CTR; cell.border = THIN
+        for row, item in enumerate(meta["custom_rules"], 2):
+            values = [
+                item.get("rule_id", ""),
+                "必須遵守" if item.get("strength") == "hard" else "盡量達成",
+                item.get("label", ""),
+            ]
+            for column, value in enumerate(values, 1):
+                cell = custom_ws.cell(row, column, excel_safe(value))
+                cell.font = Font(name=F, size=10); cell.border = THIN
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
+        for column, width in zip("ABC", [10, 15, 70]):
+            custom_ws.column_dimensions[column].width = width
+        custom_ws.freeze_panes = "A2"
 
     quality_ws = wb.create_sheet("排課品質")
     quality_headers = ["規則", "偏好", "狀態", "權重", "未達成單位", "加權值", "明細"]

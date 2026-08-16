@@ -98,6 +98,15 @@ h1{font-size:30px;font-weight:900;margin-bottom:5px}
 .tbl select.empty{background:var(--pink);color:var(--pink-d);font-weight:900}
 .tbl select.edit{border:2px solid var(--line);background:#fefaf0}
 .tbl td.na{background:#f6f1ee;color:#d8cdc4}
+.custom-rule-builder{margin-bottom:18px;padding:17px;border:1px solid #e3ddd9;border-left:5px solid var(--mint-d);border-radius:7px;background:#fbfdfc}
+.custom-rule-builder h2{margin:0 0 4px;font-size:18px}.custom-rule-builder>.sub{margin-bottom:13px;font-size:13.5px}
+.custom-rule-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:11px;align-items:end}
+.custom-rule-grid label{margin:0}.custom-rule-grid select{width:100%;border-radius:7px;padding:9px 10px;font-size:14px}
+.custom-rule-fields{display:contents}.custom-rule-preview{grid-column:1/-1;padding:10px 12px;border-left:4px solid var(--lav-d);background:#f5f1fb;color:var(--ink);font-size:14px;line-height:1.55}
+.custom-rule-preview b{color:var(--lav-d)}.custom-rule-action{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.custom-rule-contact{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:15px;padding:12px 14px;border:1px solid #eadfc8;background:#fffaf0;color:#6d5c3e;font-size:13.5px;line-height:1.55}
+.custom-rule-contact a{flex:0 0 auto;color:#11664f;font-weight:900;text-decoration:none}.custom-rule-contact a:hover{text-decoration:underline}
+.legacy-rule-note{display:block;margin-top:3px;color:var(--bad);font-size:11.5px;white-space:normal}
 .numin{width:52px!important;font-weight:900}
 .runbox{text-align:center;padding:26px 20px}
 .formal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;text-align:left}
@@ -340,6 +349,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .export-groups{grid-template-columns:1fr}.export-group{border-right:0;border-bottom:1px solid var(--line)}.export-group:last-child{border-bottom:0}.export-group p{min-height:0}
   .platform-school-form{grid-template-columns:1fr}.platform-school-list{min-width:620px}.platform-usage-summary{grid-template-columns:repeat(2,minmax(120px,1fr))}.platform-usage-summary div:last-child:nth-child(odd){grid-column:1/-1}.platform-school-actions{overflow-x:auto}.platform-usage-head{align-items:flex-start;flex-direction:column}.platform-usage-actions{justify-content:flex-start}.usage-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-detail-summary div:nth-child(2){border-right:0}.usage-detail-summary div:nth-child(-n+2){border-bottom:1px solid var(--line)}.usage-timeline-row{grid-template-columns:1fr auto}.usage-timeline-row time{grid-column:1/-1}.resource-settings-body{grid-template-columns:1fr}.resource-pull-head{align-items:stretch;flex-direction:column}.resource-pull-head .btn{align-self:flex-start}
   .fixed-course-toolbar{align-items:stretch}.fixed-course-toolbar label,.fixed-course-toolbar select,.fixed-course-summary{width:100%;min-width:0;box-sizing:border-box}
+  .custom-rule-grid{grid-template-columns:1fr}.custom-rule-preview{grid-column:1}.custom-rule-contact{align-items:flex-start;flex-direction:column}.custom-rule-action .btn{width:100%}
   .native-arrangement{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}.native-arrangement button{min-width:0;padding:10px 8px}.native-arrangement-note{grid-column:1/-1;margin-left:0;line-height:1.5}
   .formal-gate{padding:18px 12px}.formal-gate-inner{padding:28px 20px 22px}.formal-gate-head{grid-template-columns:48px minmax(0,1fr);gap:13px}.formal-gate-mark{width:48px;height:48px;font-size:24px}.formal-gate h1{font-size:27px}.formal-gate-request{grid-template-columns:1fr;align-items:stretch}.formal-request-link{text-align:center}.formal-request-details{grid-column:1}.formal-request-details ul{grid-template-columns:1fr}.formal-gate-owner{align-items:flex-start;flex-direction:column;gap:3px}
 }
@@ -385,7 +395,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.38</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.39</b></span></div>
   </div>
 </section>
 
@@ -889,12 +899,45 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
     <div class="step-help-body"><ol>
       <li><b>先看硬規則：</b>衝堂、鎖定、場地與不可排時段等條件必須全部成立。</li>
       <li><b>再調軟規則：</b>上午優先、分散或集中等偏好，由 CP-SAT 依權重盡量最佳化。</li>
-      <li><b>少量新增：</b>只有學校確實需要的條件才新增自訂規則，避免互相牴觸。</li>
+      <li><b>少量新增：</b>用下拉選單建立學校條件；系統只會執行畫面明確支援的規則。</li>
     </ol><div class="step-help-note">硬規則互相衝突會直接無解；軟規則未完全滿足不代表課表無效。</div></div>
   </details>
   <div class="panel">
+    <div class="custom-rule-builder">
+      <h2>新增學校自訂條件</h2>
+      <div class="sub">教師、班級與科目會直接使用目前案件資料。加入前請先確認下方完整句子；正式 CP-SAT 排課才會執行自訂條件。</div>
+      <div class="custom-rule-grid frm">
+        <label>條件類型
+          <select id="customRuleKind" onchange="renderCustomRuleBuilder()">
+            <option value="teacher_day_max">教師每日／指定星期授課上限</option>
+            <option value="teacher_consecutive_max">教師連續授課上限</option>
+            <option value="class_slot_avoid">班級指定時段不排課</option>
+            <option value="subject_period_avoid">科目指定節次不排</option>
+            <option value="subject_halfday_preference">科目安排上午／下午</option>
+            <option value="class_subject_daily_max">班級某科每日上限</option>
+          </select>
+        </label>
+        <div class="custom-rule-fields" id="customRuleFields"></div>
+        <label>規則強度
+          <select id="customRuleStrength" onchange="customRuleStrengthChanged()">
+            <option value="hard">必須遵守（可能造成無解）</option>
+            <option value="soft">盡量達成（仍可產生課表）</option>
+          </select>
+        </label>
+        <label id="customRuleWeightWrap" hidden>重要程度
+          <select id="customRuleWeight" onchange="updateCustomRulePreview()">
+            <option value="1">低</option><option value="3" selected>中</option><option value="6">高</option>
+          </select>
+        </label>
+        <div class="custom-rule-action"><button class="btn soft sm" id="customRuleCancel" type="button" onclick="cancelStructuredRuleEdit()" hidden>取消編輯</button><button class="btn mint sm" id="customRuleSubmit" type="button" onclick="addStructuredRule()">＋ 加入這條規則</button></div>
+        <div class="custom-rule-preview" id="customRulePreview"><b>規則預覽：</b>請選擇條件。</div>
+      </div>
+      <div class="custom-rule-contact">
+        <span><b>找不到需要的選項？</b> 其他規則建議請寫信給管理員，請附上希望限制的對象、星期、節次及預期結果；請勿附教師或學生敏感個資。</span>
+        <a href="mailto:chihhung1988@gmail.com?subject=課務排程系統－其他規則建議&amp;body=您好，我想建議新增以下排課規則：%0D%0A%0D%0A規則目的：%0D%0A適用對象：%0D%0A星期／節次：%0D%0A必須遵守或盡量達成：%0D%0A預期結果：">寫信給管理員</a>
+      </div>
+    </div>
     <div class="tbl"><table id="ruleTbl" style="min-width:760px"></table></div>
-    <div style="margin-top:12px"><button class="btn mint sm" onclick="addRule()">＋ 新增自訂規則</button></div>
   </div>
 </section>
 
@@ -1242,7 +1285,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.38</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.39</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -2170,9 +2213,100 @@ function clearSelectedFixedCourse(){
 }
 
 /* ═══ 排課規則（可增刪修）═══ */
-let RULES=[];   // [id,硬軟,類別,內容,參數,啟用]
+let RULES=[];   // [id,硬軟,類別,內容,參數,啟用,結構化條件]
+let CUSTOM_RULE_EDIT_INDEX=-1;
 function ruleOn(id){const r=RULES.find(x=>x[0]===id);return !r||r[5]==='是'}
 function ruleW(id){const r=RULES.find(x=>x[0]===id);if(!r||r[5]!=='是')return 0;const m=/penalty=(\d+)/.exec(r[4]);return m?+m[1]:0}
+function customRuleOptions(values,selected){
+  return values.map(value=>`<option value="${esc(value)}" ${String(value)===String(selected)?'selected':''}>${esc(value)}</option>`).join('');
+}
+function customRuleField(id,label,values,selected,onchange='updateCustomRulePreview()'){
+  return `<label>${esc(label)}<select id="${id}" onchange="${onchange}">${customRuleOptions(values,selected)}</select></label>`;
+}
+function customRuleTeachers(){return Object.keys(DATA.roster||{}).sort((a,b)=>a.localeCompare(b,'zh-Hant'))}
+function customRuleClasses(){return (DATA.classes||[]).map(item=>item.code).filter(Boolean)}
+function customRuleSubjects(code=''){
+  const classroom=(DATA.classes||[]).find(item=>item.code===code),grade=+(classroom?.g||0);
+  return Object.entries(DATA.subjects||{}).filter(([,info])=>!grade||+(info.hours||[])[grade-1]>0).map(([name])=>name);
+}
+function customRuleStrengthChanged(){
+  const strength=document.getElementById('customRuleStrength'),wrap=document.getElementById('customRuleWeightWrap');
+  if(wrap)wrap.hidden=!strength||strength.value!=='soft';updateCustomRulePreview();
+}
+function renderCustomRuleBuilder(){
+  const kindEl=document.getElementById('customRuleKind'),box=document.getElementById('customRuleFields');
+  if(!kindEl||!box)return;
+  const kind=kindEl.value,old=id=>document.getElementById(id)?.value||'';
+  const previous={teacher:old('customRuleTeacher'),class:old('customRuleClass'),subject:old('customRuleSubject'),day:old('customRuleDay'),period:old('customRulePeriod'),max:old('customRuleMax'),half:old('customRuleHalf')};
+  const teachers=customRuleTeachers(),classes=customRuleClasses(),days=['每日',...DAYS],periods=PS.map(String);
+  let fields='';
+  if(kind==='teacher_day_max')fields=
+    customRuleField('customRuleTeacher','教師',teachers,previous.teacher||teachers[0])+customRuleField('customRuleDay','星期',days,previous.day||'每日')+customRuleField('customRuleMax','最多節數',PS.map(String),previous.max||'4');
+  else if(kind==='teacher_consecutive_max')fields=
+    customRuleField('customRuleTeacher','教師',teachers,previous.teacher||teachers[0])+customRuleField('customRuleMax','最多連續節數',['1','2','3','4'],previous.max||'2');
+  else if(kind==='class_slot_avoid')fields=
+    customRuleField('customRuleClass','班級',classes,previous.class||classes[0])+customRuleField('customRuleDay','星期',DAYS,previous.day||DAYS[0])+customRuleField('customRulePeriod','節次',periods,previous.period||'1');
+  else if(kind==='subject_period_avoid')fields=
+    customRuleField('customRuleSubject','科目',customRuleSubjects(),previous.subject||customRuleSubjects()[0])+customRuleField('customRuleDay','星期',days,previous.day||'每日')+customRuleField('customRulePeriod','節次',periods,previous.period||'1');
+  else if(kind==='subject_halfday_preference')fields=
+    customRuleField('customRuleSubject','科目',customRuleSubjects(),previous.subject||customRuleSubjects()[0])+customRuleField('customRuleHalf','優先時段',['上午','下午'],previous.half||'上午');
+  else if(kind==='class_subject_daily_max'){
+    const code=previous.class&&classes.includes(previous.class)?previous.class:classes[0],subjects=customRuleSubjects(code);
+    fields=customRuleField('customRuleClass','班級',classes,code,'customRuleClassChanged()')+customRuleField('customRuleSubject','科目',subjects,previous.subject||subjects[0])+customRuleField('customRuleDay','星期',days,previous.day||'每日')+customRuleField('customRuleMax','最多節數',PS.map(String),previous.max||'1');
+  }
+  box.innerHTML=fields;
+  const strength=document.getElementById('customRuleStrength');
+  if(strength){
+    const preference=kind==='subject_halfday_preference';
+    if(preference)strength.value='soft';
+    strength.disabled=preference;
+  }
+  syncCustomRuleEditButtons();
+  customRuleStrengthChanged();
+}
+function syncCustomRuleEditButtons(){
+  const editing=CUSTOM_RULE_EDIT_INDEX>=0,submit=document.getElementById('customRuleSubmit'),cancel=document.getElementById('customRuleCancel');
+  if(submit)submit.textContent=editing?'儲存規則修改':'＋ 加入這條規則';
+  if(cancel)cancel.hidden=!editing;
+}
+function customRuleClassChanged(){
+  const code=document.getElementById('customRuleClass')?.value||'',subject=document.getElementById('customRuleSubject');
+  if(subject)subject.innerHTML=customRuleOptions(customRuleSubjects(code),customRuleSubjects(code)[0]);
+  updateCustomRulePreview();
+}
+function currentStructuredRule(){
+  const value=id=>document.getElementById(id)?.value||'',kind=value('customRuleKind'),strength=value('customRuleStrength')||'hard';
+  const rule={version:1,kind,strength,weight:strength==='soft'?+(value('customRuleWeight')||3):0};
+  if(kind.startsWith('teacher_'))rule.teacher=value('customRuleTeacher');
+  if(kind.startsWith('class_'))rule.class=value('customRuleClass');
+  if(['subject_period_avoid','subject_halfday_preference','class_subject_daily_max'].includes(kind))rule.subject=value('customRuleSubject');
+  if(['teacher_day_max','class_slot_avoid','subject_period_avoid','class_subject_daily_max'].includes(kind))rule.day=value('customRuleDay');
+  if(['class_slot_avoid','subject_period_avoid'].includes(kind))rule.period=+value('customRulePeriod');
+  if(['teacher_day_max','teacher_consecutive_max','class_subject_daily_max'].includes(kind))rule.max=+value('customRuleMax');
+  if(kind==='subject_halfday_preference')rule.half=value('customRuleHalf');
+  return rule;
+}
+function describeStructuredRule(rule){
+  const required=rule.strength==='hard'?'必須':'盡量',day=rule.day==='每日'?'每天':`星期${rule.day}`;
+  if(rule.kind==='teacher_day_max')return `${rule.teacher}在${day}授課${required}不超過 ${rule.max} 節`;
+  if(rule.kind==='teacher_consecutive_max')return `${rule.teacher}連續授課${required}不超過 ${rule.max} 節（午休前後分開計算）`;
+  if(rule.kind==='class_slot_avoid')return `${rule.class}星期${rule.day}第 ${rule.period} 節${required}不排課`;
+  if(rule.kind==='subject_period_avoid')return `${rule.subject}在${day}第 ${rule.period} 節${required}不排`;
+  if(rule.kind==='subject_halfday_preference')return `${rule.subject}盡量安排在${rule.half}`;
+  if(rule.kind==='class_subject_daily_max')return `${rule.class}的${rule.subject}在${day}${required}不超過 ${rule.max} 節`;
+  return '尚未支援的自訂條件';
+}
+function customRuleReferenceIssue(rule){
+  if(rule.teacher&&!Object.prototype.hasOwnProperty.call(DATA.roster||{},rule.teacher))return `教師「${rule.teacher}」已不在目前資料中`;
+  if(rule.class&&!customRuleClasses().includes(rule.class))return `班級「${rule.class}」已不在目前資料中`;
+  if(rule.subject&&!Object.prototype.hasOwnProperty.call(DATA.subjects||{},rule.subject))return `科目「${rule.subject}」已不在目前資料中`;
+  return '';
+}
+function updateCustomRulePreview(){
+  const preview=document.getElementById('customRulePreview');if(!preview)return;
+  const rule=currentStructuredRule(),missing=!rule.teacher&&!rule.class&&!rule.subject;
+  preview.innerHTML=`<b>規則預覽：</b>${missing?'請先完成教師、班級與科目資料。':esc(describeStructuredRule(rule))}`;
+}
 function renderRules(){
   const t=document.getElementById('ruleTbl');
   let h='<tr><th>編號</th><th>硬/軟</th><th>類別</th><th style="min-width:340px">規則內容</th><th>權重</th><th>啟用</th><th></th></tr>';
@@ -2181,29 +2315,58 @@ function renderRules(){
   const sorted=RULES.map((r,i)=>[r,i]).sort((a,b)=>order(a[0][0])-order(b[0][0])||a[0][0].localeCompare(b[0][0]));
   sorted.forEach(([r,i])=>{
     const custom=r[0].startsWith('C');
+    const structured=custom&&r[6]&&typeof r[6]==='object'&&r[6].version===1;
+    const legacy=custom&&!structured,referenceIssue=structured?customRuleReferenceIssue(r[6]):'';
     const w=/penalty=(\d+)/.exec(r[4]);
     h+=`<tr style="${r[5]!=='是'?'opacity:.45':''}">
       <td style="font-weight:900">${esc(r[0])}</td>
       <td><span class="chip ${r[1]==='硬'?'bad':'warn'}" style="padding:2px 10px">${esc(r[1])}</span></td>
       <td style="font-size:13px">${esc(r[2])}</td>
-      <td>${custom?`<input value="${esc(r[3])}" style="text-align:left" onchange="setRuleValue(${i},3,this.value)">`:`<span style="font-size:13.5px">${esc(r[3])}</span>`}</td>
-      <td>${r[1]==='軟'?`<input class="numin" type="number" min="0" value="${w?w[1]:0}" disabled title="瀏覽器 DEMO 不套用軟規則權重；請使用正式版 CP-SAT">`:'—'}</td>
-      <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} onchange="setRuleValue(${i},5,this.checked?'是':'否')"></td>
-      <td>${custom?`<button class="btn soft sm" type="button" title="刪除此規則" onclick="removeRule(${i})">✕</button>`:''}</td></tr>`;
+      <td><span style="font-size:13.5px;white-space:normal">${esc(structured?describeStructuredRule(r[6]):r[3])}</span>${legacy?'<small class="legacy-rule-note">舊版自由文字不會執行，請刪除後用上方選單重建。</small>':referenceIssue?`<small class="legacy-rule-note">${esc(referenceIssue)}，請停用或刪除後重建。</small>`:''}</td>
+      <td>${r[1]==='軟'?`<span title="正式 CP-SAT 使用的偏好權重">${w?(+w[1]<=1?'低':+w[1]>=6?'高':'中'):'—'}</span>`:'—'}</td>
+      <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} ${legacy?'disabled title="舊版自由文字規則不會執行"':''} onchange="setRuleValue(${i},5,this.checked?'是':'否')"></td>
+      <td>${structured?`<button class="btn soft sm" type="button" onclick="editStructuredRule(${i})">編輯</button> `:''}${custom?`<button class="btn soft sm" type="button" title="刪除此規則" onclick="removeRule(${i})">✕</button>`:''}</td></tr>`;
   });
   t.innerHTML=h;
+  renderCustomRuleBuilder();
 }
 function saveRuleChange(label){invalidateSchedule();renderRules();rebuildLim();saveLS(label||'排課規則已更新')}
 function setRuleValue(index,key,value){if(!RULES[index])return;RULES[index][key]=value;saveRuleChange()}
-function addRule(){
-  const n=RULES.filter(r=>r[0].startsWith('C')).length+1;
-  RULES.push(['C'+String(n).padStart(2,'0'),'軟','自訂','（請輸入規則內容，正式版由引擎擴充實作）','penalty=1','是']);
-  renderRules();saveLS('已新增自訂規則');
+function addStructuredRule(){
+  if(CUSTOM_RULE_EDIT_INDEX<0&&RULES.filter(r=>r[0].startsWith('C')).length>=50)return alert('自訂規則最多 50 條，請先刪除不再使用的條件。');
+  const rule=currentStructuredRule();
+  if((rule.teacher!==undefined&&!rule.teacher)||(rule.class!==undefined&&!rule.class)||(rule.subject!==undefined&&!rule.subject))
+    return alert('請先完成教師、班級與科目資料，再建立自訂規則。');
+  const hard=rule.strength==='hard';
+  if(CUSTOM_RULE_EDIT_INDEX>=0&&RULES[CUSTOM_RULE_EDIT_INDEX]){
+    const existing=RULES[CUSTOM_RULE_EDIT_INDEX],id=existing[0],enabled=existing[5];
+    RULES[CUSTOM_RULE_EDIT_INDEX]=[id,hard?'硬':'軟','學校條件',describeStructuredRule(rule),hard?'-':`penalty=${rule.weight}`,enabled,rule];
+    CUSTOM_RULE_EDIT_INDEX=-1;saveRuleChange('已更新學校自訂條件');return;
+  }
+  let n=1;while(RULES.some(row=>row[0]===`C${String(n).padStart(2,'0')}`))n++;
+  const id=`C${String(n).padStart(2,'0')}`;
+  RULES.push([id,hard?'硬':'軟','學校條件',describeStructuredRule(rule),hard?'-':`penalty=${rule.weight}`,'是',rule]);
+  CUSTOM_RULE_EDIT_INDEX=-1;saveRuleChange('已新增學校自訂條件');
 }
+function addRule(){addStructuredRule()}
+function editStructuredRule(index){
+  const rule=RULES[index]?.[6];if(!rule||typeof rule!=='object')return;
+  CUSTOM_RULE_EDIT_INDEX=index;
+  const kind=document.getElementById('customRuleKind');if(!kind)return;
+  kind.value=rule.kind;renderCustomRuleBuilder();
+  const set=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined)el.value=String(value)};
+  set('customRuleTeacher',rule.teacher);set('customRuleClass',rule.class);
+  if(rule.kind==='class_subject_daily_max'){customRuleClassChanged()}
+  set('customRuleSubject',rule.subject);set('customRuleDay',rule.day);set('customRulePeriod',rule.period);
+  set('customRuleMax',rule.max);set('customRuleHalf',rule.half);set('customRuleStrength',rule.strength);set('customRuleWeight',rule.weight||3);
+  customRuleStrengthChanged();syncCustomRuleEditButtons();
+  document.querySelector('.custom-rule-builder')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelStructuredRuleEdit(){CUSTOM_RULE_EDIT_INDEX=-1;renderCustomRuleBuilder()}
 function removeRule(index){
   const rule=RULES[index];if(!rule||!rule[0].startsWith('C'))return;
   if(!confirm(`確定刪除自訂規則 ${rule[0]}？`))return;
-  RULES.splice(index,1);saveRuleChange('已刪除自訂規則');
+  RULES.splice(index,1);CUSTOM_RULE_EDIT_INDEX=-1;saveRuleChange('已刪除自訂規則');
 }
 
 /* ═══ 資源班（勾選班級＋抽離設定＋overlay 排入）═══ */
@@ -3886,7 +4049,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.38');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.39');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';

@@ -73,7 +73,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課引擎 API", version="1.38",
+    title="排課引擎 API", version="1.39",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -759,7 +759,7 @@ PUBLIC_SOLVE_META_KEYS = (
     "missing_course_count", "tutor_pending_course_count",
     "diagnostic_shortfall_course_count", "unfinished_course_count",
     "missing_courses", "incomplete_totals", "completion",
-    "quality_report", "quality_violation_total", "quality_penalty_total",
+    "quality_report", "quality_violation_total", "quality_penalty_total", "custom_rules",
     "diagnostic_draft", "diagnostic_shortfall_status",
     "diagnostic_quality_optimized", "diagnostic_fallback_to_phase1",
     "diagnostic_phase1_status", "diagnostic_phase1_wall", "diagnostic_phase2_wall",
