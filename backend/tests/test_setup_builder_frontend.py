@@ -71,6 +71,29 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
     assert "表單已清空，可繼續新增下一間學校" in auth
 
 
+def test_custom_rule_builder_uses_case_data_and_offers_admin_email_fallback():
+    html = (FORMAL / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="customRuleKind"' in html
+    assert 'id="customRuleFields"' in html
+    assert "教師每日／指定星期授課上限" in html
+    assert "教師連續授課上限" in html
+    assert "班級指定時段不排課" in html
+    assert "科目指定節次不排" in html
+    assert "科目安排上午／下午" in html
+    assert "班級某科每日上限" in html
+    assert "customRuleTeachers()" in html
+    assert "customRuleClasses()" in html
+    assert "customRuleSubjects(code='')" in html
+    assert "addStructuredRule()" in html
+    assert "editStructuredRule(index)" in html
+    assert "取消編輯" in html
+    assert "其他規則建議請寫信給管理員" in html
+    assert "課務排程系統－其他規則建議" in html
+    assert "舊版自由文字不會執行" in html
+    assert "（請輸入規則內容，正式版由引擎擴充實作）" not in html
+
+
 def test_setup_builder_javascript_has_valid_syntax():
     subprocess.run(
         ["node", "--check", str(FORMAL / "setup-builder.js")],

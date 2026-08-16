@@ -284,6 +284,160 @@ def test_loads_frontend_cloud_draft_schema_without_excel():
     assert meta["completion"] == "complete"
 
 
+def _custom_rule_payload(hours=None, slots=None):
+    hours = hours or {"國語文": 1, "數學": 1}
+    slots = slots or [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
+    subjects = {
+        subject: {
+            "hours": [count, 0, 0, 0, 0, 0], "room": "R00", "banned": [],
+            "block": "", "self": False, "pairMode": "",
+        }
+        for subject, count in hours.items()
+    }
+    return {
+        "classes": [{"g": 1, "i": 1, "code": "1甲", "tutor": "王老師"}],
+        "roster": {"王老師": "科任"}, "rooms": {"R00": 99},
+        "subjects": subjects,
+        "gslot": {str(grade): slots for grade in range(1, 7)},
+        "assign": {"1甲": {subject: "王老師" for subject in subjects}},
+        "override": {}, "locks": [], "blocked": [], "resGroups": [],
+    }
+
+
+def _custom_rule_row(rule_id, spec):
+    hard = spec["strength"] == "hard"
+    return [
+        rule_id, "硬" if hard else "軟", "學校條件", "結構化測試規則",
+        "-" if hard else f"penalty={spec.get('weight', 3)}", "是", spec,
+    ]
+
+
+def test_structured_teacher_daily_max_is_enforced_and_independently_validated():
+    payload = _custom_rule_payload()
+    spec = {
+        "version": 1, "kind": "teacher_day_max", "strength": "hard",
+        "weight": 0, "teacher": "王老師", "day": "每日", "max": 1,
+    }
+    data = engine.load_frontend_data(payload, rules=[_custom_rule_row("C01", spec)])
+
+    schedule, tasks, _, meta, overlays = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=True)
+
+    daily = {}
+    for (_code, day, _period), (_subject, teacher, _room) in schedule.items():
+        if teacher == "王老師":
+            daily[day] = daily.get(day, 0) + 1
+    assert max(daily.values()) == 1
+    assert engine.validate(data, schedule, tasks, overlays) == []
+    assert meta["custom_rules"] == [{
+        "rule_id": "C01", "label": "王老師在每日授課必須不超過1節",
+        "strength": "hard",
+    }]
+
+
+def test_structured_class_slot_avoid_moves_course_out_of_forbidden_slot():
+    closed = [0, 0, 0, 0, 0, 0, 0]
+    slots = [[1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0],
+             closed, closed, closed]
+    payload = _custom_rule_payload({"國語文": 1}, slots)
+    spec = {
+        "version": 1, "kind": "class_slot_avoid", "strength": "hard",
+        "weight": 0, "class": "1甲", "day": "一", "period": 1,
+    }
+    data = engine.load_frontend_data(payload, rules=[_custom_rule_row("C01", spec)])
+
+    schedule, tasks, _, _, overlays = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=True)
+
+    assert ("1甲", "一", 1) not in schedule
+    assert schedule[("1甲", "二", 1)][0] == "國語文"
+    assert engine.validate(data, schedule, tasks, overlays) == []
+
+
+def test_structured_subject_halfday_preference_is_reported_as_soft_quality():
+    closed = [0, 0, 0, 0, 0, 0, 0]
+    slots = [[0, 0, 0, 0, 1, 0, 0], closed, closed, closed, closed]
+    payload = _custom_rule_payload({"國語文": 1}, slots)
+    spec = {
+        "version": 1, "kind": "subject_halfday_preference", "strength": "soft",
+        "weight": 6, "subject": "國語文", "half": "上午",
+    }
+    data = engine.load_frontend_data(payload, rules=[_custom_rule_row("C01", spec)])
+
+    schedule, _, _, meta, _ = engine.solve(data, time_limit=5, auto_schedule_tutor=True)
+
+    assert schedule[("1甲", "一", 5)][0] == "國語文"
+    report = {item["rule_id"]: item for item in meta["quality_report"]}
+    assert report["C01"]["label"] == "國語文盡量排在上午"
+    assert report["C01"]["violations"] == 1
+    assert report["C01"]["weighted_penalty"] == 6
+
+
+@pytest.mark.parametrize(("spec", "message"), [
+    ({"version": 1, "kind": "teacher_day_max", "strength": "hard",
+      "teacher": "不存在教師", "day": "每日", "max": 3}, "不存在的教師"),
+    ({"version": 1, "kind": "subject_period_avoid", "strength": "hard",
+      "subject": "不存在科目", "day": "每日", "period": 1}, "不存在的科目"),
+    ({"version": 1, "kind": "arbitrary_text", "strength": "hard"}, "尚未支援"),
+])
+def test_structured_custom_rules_reject_unknown_references_and_kinds(spec, message):
+    with pytest.raises(ValueError, match=message):
+        engine.load_frontend_data(
+            _custom_rule_payload(), rules=[_custom_rule_row("C01", spec)])
+
+
+def test_legacy_free_text_custom_rule_is_preserved_but_never_executed():
+    data = engine.load_frontend_data(
+        _custom_rule_payload(),
+        rules=[["C01", "軟", "自訂", "王老師不要太累", "penalty=3", "是"]],
+    )
+
+    assert data["custom_rules"] == []
+    assert any("舊版自由文字規則，未套用" in note for note in data["derived_notes"])
+
+
+def test_all_rule_builder_condition_types_use_the_versioned_structured_schema():
+    specs = [
+        {"version": 1, "kind": "teacher_day_max", "strength": "hard",
+         "teacher": "王老師", "day": "一", "max": 3},
+        {"version": 1, "kind": "teacher_consecutive_max", "strength": "soft",
+         "weight": 3, "teacher": "王老師", "max": 2},
+        {"version": 1, "kind": "class_slot_avoid", "strength": "hard",
+         "class": "1甲", "day": "二", "period": 1},
+        {"version": 1, "kind": "subject_period_avoid", "strength": "soft",
+         "weight": 3, "subject": "國語文", "day": "每日", "period": 7},
+        {"version": 1, "kind": "subject_halfday_preference", "strength": "soft",
+         "weight": 3, "subject": "數學", "half": "上午"},
+        {"version": 1, "kind": "class_subject_daily_max", "strength": "hard",
+         "class": "1甲", "subject": "國語文", "day": "每日", "max": 1},
+    ]
+
+    data = engine.load_frontend_data(
+        _custom_rule_payload(),
+        rules=[_custom_rule_row(f"C{index:02d}", spec)
+               for index, spec in enumerate(specs, 1)],
+    )
+
+    assert [rule["kind"] for rule in data["custom_rules"]] == [
+        "teacher_day_max", "teacher_consecutive_max", "class_slot_avoid",
+        "subject_period_avoid", "subject_halfday_preference",
+        "class_subject_daily_max",
+    ]
+
+
+def test_disabled_structured_rule_can_keep_a_stale_reference_without_blocking_solve():
+    spec = {
+        "version": 1, "kind": "teacher_day_max", "strength": "hard",
+        "teacher": "已刪除教師", "day": "每日", "max": 3,
+    }
+    row = _custom_rule_row("C01", spec)
+    row[5] = "否"
+
+    data = engine.load_frontend_data(_custom_rule_payload(), rules=[row])
+
+    assert data["custom_rules"] == []
+
+
 def test_teacher_room_overrides_apply_after_assignment_and_before_class_override():
     slots = [[1, 1, 1, 1, 0, 0, 0] for _ in range(5)]
     classes = [
