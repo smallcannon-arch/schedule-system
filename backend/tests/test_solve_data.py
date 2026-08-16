@@ -12,8 +12,10 @@ def test_default_mode_uses_cp_sat_and_leaves_tutor_lessons_manual():
     assert request.auto_schedule_tutor is False
     assert request.strict_complete is False
     assert request.diagnostic_draft is False
-    assert "CP-SAT 排課引擎" in app.PAGE
-    assert "不需要 AI 或模型 API" in app.PAGE
+    assert "課務排程服務" in app.PAGE
+    assert "CP-SAT 排課引擎" not in app.PAGE
+    assert "系統確認所有必要條件後，會產生並下載課表" in app.PAGE
+    assert "模型 API" not in app.PAGE
     assert 'name="use_openai"' not in app.PAGE
 
 

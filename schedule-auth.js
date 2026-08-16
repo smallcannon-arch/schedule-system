@@ -115,7 +115,7 @@
   }
 
   async function request(path, options) {
-    if (!state.apiBaseUrl) throw new Error("正式教師入口尚未設定 API 網址");
+    if (!state.apiBaseUrl) throw new Error("正式教師入口尚未完成設定，請聯絡管理員");
     const headers = new Headers((options && options.headers) || {});
     if (state.credential) headers.set("Authorization", `Bearer ${state.credential}`);
     let response;
@@ -143,7 +143,7 @@
   }
 
   async function solveData(payload) {
-    if (!state.apiBaseUrl) throw new Error("正式排課引擎尚未設定");
+    if (!state.apiBaseUrl) throw new Error("正式排課服務尚未完成設定，請聯絡管理員");
     if (!state.credential) throw new Error("請先使用學校 Google 帳號登入");
     try {
       return await fetch(`${state.apiBaseUrl}/solve-data`, {
@@ -152,7 +152,7 @@
         body: JSON.stringify(payload),
       });
     } catch (_error) {
-      throw new Error("目前無法連線至排課引擎，請確認網路後再試。");
+      throw new Error("目前無法連線排課服務，請確認網路後再試。");
     }
   }
 

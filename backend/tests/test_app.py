@@ -161,7 +161,7 @@ def test_openai_request_requires_server_configuration(monkeypatch):
     )
 
     assert response.status_code == 503
-    assert "OPENAI_API_KEY" in response.json()["error"]
+    assert response.json()["error"] == "智慧建議功能尚未完成設定，請聯絡系統管理者"
 
 
 def test_openai_plan_is_applied_and_written_to_workbook(monkeypatch):
