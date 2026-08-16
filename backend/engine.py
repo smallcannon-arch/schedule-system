@@ -144,11 +144,11 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
         teacher = _text(lock.get("teacher")) or (task["t"] if task else "")
         if teacher:
             teacher_locks[(teacher, lock["day"], lock["p"])].append(
-                f"{lock['class']} {lock['subj']}")
+                (f"{lock['class']} {lock['subj']}", _combined_group(lock)))
         room = task["room"] if task else "R00"
         if room != "R00":
             room_locks[(room, lock["day"], lock["p"])].append(
-                f"{lock['class']} {lock['subj']}")
+                (f"{lock['class']} {lock['subj']}", _combined_group(lock)))
 
     for (code, day, period), subjects in class_locks.items():
         unique = list(dict.fromkeys(subjects))
@@ -158,18 +158,22 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
                 f"週{day}第{period}節同時鎖定：{'、'.join(unique)}。",
                 "回到本土語、資源班或固定課來源，只保留一門課。", "rules"))
     for (teacher, day, period), lessons in teacher_locks.items():
-        unique = list(dict.fromkeys(lessons))
-        if len(unique) > 1:
+        unique = list(dict.fromkeys(label for label, _group in lessons))
+        groups = {group for _label, group in lessons}
+        combined = len(groups) == 1 and bool(next(iter(groups), ""))
+        if len(unique) > 1 and not combined:
             diagnostics.append(_diagnostic(
                 f"{teacher} 的固定課發生衝堂",
                 f"週{day}第{period}節同時需要：{'、'.join(unique)}。",
                 "調整其中一筆固定課、資源班綁課或本土語分組。", "rules"))
     for (room, day, period), lessons in room_locks.items():
         capacity = int(d.get("rooms", {}).get(room, 1))
-        if len(lessons) > capacity:
+        regular = sum(1 for _label, group in lessons if not group)
+        combined = len({group for _label, group in lessons if group})
+        if regular + combined > capacity:
             diagnostics.append(_diagnostic(
                 f"場地 {d.get('room_names', {}).get(room, room)} 容量不足",
-                f"週{day}第{period}節容量 {capacity}，固定課需求 {len(lessons)}。",
+                f"週{day}第{period}節容量 {capacity}，固定課需求 {regular + combined}。",
                 "改用其他教室、提高正確容量，或調整固定節次。", "build"))
 
     class_tasks = defaultdict(list)
@@ -202,8 +206,10 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
             if teacher:
                 native_daily[(teacher, group.get("d"))] += 1
     hard_cap = schedule_policy.daily_hard_cap(d)
+    combined_reductions = _combined_fixed_reductions(d.get("locks", []))
     for teacher, rows in teacher_tasks.items():
-        demand = sum(task["h"] for _, task in rows)
+        demand = max(0, sum(task["h"] for _, task in rows)
+                     - combined_reductions.get(teacher, 0))
         available = candidate_slots(key for key, _ in rows)
         daily_details = []
         daily_capacity = 0
@@ -337,6 +343,25 @@ def _resource_pull_subjects(item):
 
 def _native_pull_subjects(item):
     return _list_values(item.get("pull_subjects", item.get("pullSubjects")))
+
+
+def _combined_group(item):
+    """Return the explicit combined-lesson id carried by a fixed course."""
+    return _text(item.get("combined_group", item.get("combinedGroup")))
+
+
+def _combined_fixed_reductions(locks):
+    """Count duplicate class rows that represent one real teacher period."""
+    groups = defaultdict(list)
+    for lock in locks or []:
+        group = _combined_group(lock)
+        teacher = _text(lock.get("teacher"))
+        if group and teacher:
+            groups[(teacher, lock.get("day"), lock.get("p"), group)].append(lock)
+    reductions = defaultdict(int)
+    for (teacher, _day, _period, _group), members in groups.items():
+        reductions[teacher] += max(0, len(members) - 1)
+    return reductions
 
 
 def _normalize_subject_name(value):
@@ -623,17 +648,22 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
                 f"{fixed_class_slots[class_slot]}與{subject}")
         fixed_class_slots[class_slot] = subject
         teacher = _text(row.get("teacher")) or assign.get((code, subject), "")
+        combined_group = _text(row.get("combinedGroup", row.get("combined_group")))
         if teacher and teacher not in roster:
             raise ValueError(f"{code} {subject}固定課引用不在名冊的教師：{teacher}")
         teacher_slot = (teacher, day, period)
         if teacher and teacher_slot in fixed_teacher_slots:
-            raise ValueError(
-                f"{teacher}的固定課發生衝堂：週{day}第{period}節同時需要"
-                f"{fixed_teacher_slots[teacher_slot]}、{code} {subject}")
-        if teacher:
-            fixed_teacher_slots[teacher_slot] = f"{code} {subject}"
+            existing = fixed_teacher_slots[teacher_slot]
+            if not combined_group or existing["combined_group"] != combined_group:
+                raise ValueError(
+                    f"{teacher}的固定課發生衝堂：週{day}第{period}節同時需要"
+                    f"{existing['label']}、{code} {subject}")
+        if teacher and teacher_slot not in fixed_teacher_slots:
+            fixed_teacher_slots[teacher_slot] = {
+                "label": f"{code} {subject}", "combined_group": combined_group,
+            }
         locks.append({"class": code, "day": day, "p": period, "subj": subject,
-                      "teacher": teacher or None})
+                      "teacher": teacher or None, "combined_group": combined_group})
 
     overlay = []
     class_grade = {item["code"]: item["grade"] for item in classes}
@@ -957,6 +987,8 @@ def load_frontend_data(payload, limits=(), rules=(), allow_course_shortfall=Fals
                     load[teacher] += 1
     for item in overlay:
         load[item["t"]] += 1
+    for teacher, reduction in _combined_fixed_reductions(locks).items():
+        load[teacher] = max(0, load[teacher] - reduction)
     teacher_weekly_quota, weekly_cap_violations = {}, []
     for teacher in roster:
         total = load.get(teacher, 0)
@@ -1917,24 +1949,57 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
                   f"請調整語言抽離群組的可抽離科目、原班配課或不排課時間：{'、'.join(sorted(subjects_allowed))}"}])
         m.Add(sum(values) == 1)
 
-    # H01 教師不衝堂
-    teacher_slot = defaultdict(list)
+    combined_lock_groups = {
+        (lock["class"], lock["subj"], lock["day"], lock["p"]): _combined_group(lock)
+        for lock in d["locks"] if _combined_group(lock)
+    }
+
+    def collapse_combined_usage(regular, grouped, prefix):
+        """Count every explicit combined lesson once in an occupancy constraint."""
+        usage = defaultdict(list)
+        for slot_key, values in regular.items():
+            usage[slot_key].extend(values)
+        for grouped_key, values in grouped.items():
+            slot_key, group = grouped_key[:-1], grouped_key[-1]
+            occupancy = m.NewBoolVar(
+                f"{prefix}_{'_'.join(str(value) for value in slot_key)}_{group}")
+            m.AddMaxEquality(occupancy, values)
+            usage[slot_key].append(occupancy)
+        return usage
+
+    # H01 教師不衝堂；明確標示的合班固定課只占同一個教師時段。
+    teacher_regular = defaultdict(list)
+    teacher_combined = defaultdict(list)
     for (code, s, day, p), v in x.items():
         if v is not None and tasks[(code, s)]["t"]:
-            teacher_slot[(tasks[(code, s)]["t"], day, p)].append(v)
+            slot_key = (tasks[(code, s)]["t"], day, p)
+            group = combined_lock_groups.get((code, s, day, p), "")
+            if group:
+                teacher_combined[(*slot_key, group)].append(v)
+            else:
+                teacher_regular[slot_key].append(v)
+    teacher_slot = collapse_combined_usage(
+        teacher_regular, teacher_combined, "combined_teacher")
     for vs in teacher_slot.values():
         if len(vs) > 1:
             m.Add(sum(vs) <= 1)
 
     # H03 場地容量（先蒐集；2+1「連堂科任+單節原班」之科目改以連堂變數計占用，約束於連堂建模後生效）
-    room_slot = defaultdict(list)
+    room_regular = defaultdict(list)
+    room_combined = defaultdict(list)
     for (code, s, day, p), v in x.items():
         tk = tasks[(code, s)]
         if v is None or tk["room"] == "R00":
             continue
         if tk["info"]["block"] == "2+1" and tk["info"]["pair_mode"] == "連堂科任+單節原班":
             continue  # 由連堂變數計入
-        room_slot[(tk["room"], day, p)].append(v)
+        slot_key = (tk["room"], day, p)
+        group = combined_lock_groups.get((code, s, day, p), "")
+        if group:
+            room_combined[(*slot_key, group)].append(v)
+        else:
+            room_regular[slot_key].append(v)
+    room_slot = collapse_combined_usage(room_regular, room_combined, "combined_room")
 
     # H10/H14 固定課鎖定
     invalid_locks = []
@@ -2225,9 +2290,8 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
                  "鐘點教師": 6, "其他": 6, "": 6}
     policy_hard_cap = schedule_policy.daily_hard_cap(d)
     tload = defaultdict(list)
-    for (code, s, day, p), v in x.items():
-        if v is not None and tasks[(code, s)]["t"]:
-            tload[(tasks[(code, s)]["t"], day)].append(v)
+    for (teacher, day, _period), values in teacher_slot.items():
+        tload[(teacher, day)].extend(values)
     native_daily = defaultdict(int)
     for group in d.get("native_groups", []):
         for teacher in (group.get("t"), group.get("assistant")):
@@ -2453,6 +2517,10 @@ def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
     errs = []
     diagnostic_shortfalls = diagnostic_shortfalls or {}
     grade_of = {c["code"]: c["grade"] for c in d["classes"]}
+    combined_lock_groups = {
+        (lock["class"], lock["subj"], lock["day"], lock["p"]): _combined_group(lock)
+        for lock in d.get("locks", []) if _combined_group(lock)
+    }
     ovt = defaultdict(list)
     ovc = defaultdict(list)
     ov_subjects = defaultdict(set)
@@ -2488,12 +2556,14 @@ def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
     tslot, cslot, rslot, tday = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
     for (code, day, p), (s, t, room) in sched.items():
         g = grade_of[code]
+        combined_group = combined_lock_groups.get((code, s, day, p), "")
         cslot[(code, day, p)].append(s)
         if t:
-            tslot[(t, day, p)].append(f"{code}{s}")
-            tday[(t, day)].append(f"{code}{s}")
+            tslot[(t, day, p)].append((f"{code}{s}", combined_group))
+            occupancy_key = ("combined", combined_group, p) if combined_group else ("course", code, s, p)
+            tday[(t, day)].append((f"{code}{s}", occupancy_key))
         if room != "R00":
-            rslot[(room, day, p)].append(code)
+            rslot[(room, day, p)].append((code, combined_group))
         if not d["grade_slot"][(g, day, p)]:
             errs.append(f"H05違反：{code} {s} 週{day}{p}")
         if p in tasks[(code, s)]["info"]["banned"]:
@@ -2507,32 +2577,41 @@ def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
         if room != "R00" and (room, day, p) in d["room_blocked"]:
             errs.append(f"H15違反：{room} 週{day}{p}")
     for k, v in tslot.items():
-        if len(v) > 1:
-            errs.append(f"H01違反：{k} {v}")
+        groups = {group for _label, group in v}
+        combined = len(groups) == 1 and bool(next(iter(groups), ""))
+        if len(v) > 1 and not combined:
+            errs.append(f"H01違反：{k} {[label for label, _group in v]}")
     resource_daily_seen = set()
     for group_id, grp, code, s, pull_subject, t, day, p in ov_sched:
         marker = (group_id, t, day, p)
         if t and marker not in resource_daily_seen:
             resource_daily_seen.add(marker)
-            tday[(t, day)].append(f"{s}({grp})")
+            tday[(t, day)].append((f"{s}({grp})", ("resource", group_id, p)))
     for group in d.get("native_groups", []):
         for teacher in (group.get("t"), group.get("assistant")):
             if teacher:
-                tday[(teacher, group.get("d"))].append(f"{group.get('grp', '本土語分組')}(固定)")
+                label = f"{group.get('grp', '本土語分組')}(固定)"
+                tday[(teacher, group.get("d"))].append(
+                    (label, ("native", group.get("grp"), group.get("p"))))
     daily_caps = {role: schedule_policy.daily_hard_cap(d) for role in (
         "科任", "導師", "組長", "主任", "導師兼組長", "導師兼主任",
         "資源班教師", "資源班導師", "專任輔導教師", "教支人員",
         "鐘點教師", "其他", "")}
     for (teacher, day), items in tday.items():
         cap = daily_caps.get(d["roster"].get(teacher, ""), 7)
-        if len(items) > cap:
-            errs.append(f"每日上限違反：{teacher} 週{day} {len(items)}/{cap}節 {items}")
+        unique_items = list(dict.fromkeys(key for _label, key in items))
+        if len(unique_items) > cap:
+            errs.append(
+                f"每日上限違反：{teacher} 週{day} {len(unique_items)}/{cap}節 "
+                f"{[label for label, _key in items]}")
     for k, v in cslot.items():
         if len(v) > 1:
             errs.append(f"H02違反：{k} {v}")
     for (room, day, p), v in rslot.items():
-        if len(v) > d["rooms"].get(room, 1):
-            errs.append(f"H03違反：{room} 週{day}{p} {v}")
+        regular = sum(1 for _code, group in v if not group)
+        combined = len({group for _code, group in v if group})
+        if regular + combined > d["rooms"].get(room, 1):
+            errs.append(f"H03違反：{room} 週{day}{p} {[code for code, _group in v]}")
     for (code, s), tk in tasks.items():
         n = sum(1 for (cc, dd, pp), (ss, _, _) in sched.items() if cc == code and ss == s)
         allowed_missing = int(diagnostic_shortfalls.get((code, s), 0))
