@@ -417,8 +417,14 @@ class FirestoreScheduleStore:
         bind(transaction)
 
     def import_teachers(self, records, replace=True):
+        existing = list(self._teachers.stream())
+        existing_by_email = {}
+        for snapshot in existing:
+            value = snapshot.to_dict() or {}
+            key = normalize_email(value.get("email") or snapshot.id)
+            existing_by_email[key] = value
+
         if replace:
-            existing = list(self._teachers.stream())
             for start in range(0, len(existing), 450):
                 batch = self._client.batch()
                 for snapshot in existing[start:start + 450]:
@@ -428,12 +434,13 @@ class FirestoreScheduleStore:
         for start in range(0, len(records), 450):
             batch = self._client.batch()
             for record in records[start:start + 450]:
-                ref = self._teacher_ref(record["email"])
-                previous = ref.get()
+                key = normalize_email(record["email"])
+                ref = self._teacher_ref(key)
+                previous = existing_by_email.get(key) or {}
                 value = deepcopy(record)
-                value["email"] = normalize_email(record["email"])
-                if previous.exists and (previous.to_dict() or {}).get("google_sub"):
-                    value["google_sub"] = previous.to_dict()["google_sub"]
+                value["email"] = key
+                if previous.get("google_sub"):
+                    value["google_sub"] = previous["google_sub"]
                 batch.set(ref, value, merge=True)
             batch.commit()
         return len(records)

@@ -59,6 +59,25 @@ def test_requires_api_key_when_configured(monkeypatch):
     assert accepted_key.status_code == 422
 
 
+def test_form_api_key_reaches_solve_route_when_google_login_is_enabled(monkeypatch):
+    monkeypatch.setattr(app, "API_KEY", "test-secret")
+    monkeypatch.setattr(app, "GOOGLE_CLIENT_ID", "google-client-id")
+
+    accepted = CLIENT.post(
+        "/solve",
+        data={"api_key": "test-secret"},
+        files={"file": ("bad.xlsx", b"not-excel", app.XLSX_MIME)},
+    )
+    denied = CLIENT.post(
+        "/solve",
+        data={"api_key": "wrong-secret"},
+        files={"file": ("bad.xlsx", b"not-excel", app.XLSX_MIME)},
+    )
+
+    assert accepted.status_code == 422
+    assert denied.status_code == 401
+
+
 def test_rate_limiter_rejects_requests_over_instance_limit(monkeypatch):
     monkeypatch.setattr(app, "RATE_LIMIT_PER_MINUTE", 1)
     with app.RATE_LOCK:

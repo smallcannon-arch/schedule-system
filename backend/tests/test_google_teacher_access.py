@@ -770,6 +770,86 @@ def test_first_save_cannot_bypass_an_unmigrated_legacy_draft():
     assert store._drafts["shared"]["saved_by"] == "admin1@school.test"
 
 
+def test_firestore_teacher_import_prefetches_existing_records_once():
+    class FakeDocument:
+        def __init__(self, collection, key):
+            self.collection = collection
+            self.key = key
+
+        def get(self):
+            self.collection.document_get_calls += 1
+            raise AssertionError("教師匯入不應逐筆讀取文件")
+
+    class FakeSnapshot:
+        def __init__(self, collection, key, value):
+            self.id = key
+            self.reference = FakeDocument(collection, key)
+            self.value = deepcopy(value)
+
+        def to_dict(self):
+            return deepcopy(self.value)
+
+    class FakeCollection:
+        def __init__(self, values):
+            self.values = deepcopy(values)
+            self.stream_calls = 0
+            self.document_get_calls = 0
+
+        def stream(self):
+            self.stream_calls += 1
+            return [FakeSnapshot(self, key, value) for key, value in self.values.items()]
+
+        def document(self, key):
+            return FakeDocument(self, key)
+
+    class FakeBatch:
+        def __init__(self):
+            self.operations = []
+
+        def update(self, reference, value):
+            self.operations.append(("update", reference, deepcopy(value), False))
+
+        def set(self, reference, value, merge=False):
+            self.operations.append(("set", reference, deepcopy(value), merge))
+
+        def commit(self):
+            for operation, reference, value, merge in self.operations:
+                previous = reference.collection.values.get(reference.key, {})
+                if operation == "update" or merge:
+                    reference.collection.values[reference.key] = {**previous, **value}
+                else:
+                    reference.collection.values[reference.key] = value
+
+    class FakeClient:
+        @staticmethod
+        def batch():
+            return FakeBatch()
+
+    teachers = FakeCollection({
+        "teacher@school.test": {
+            "email": "teacher@school.test", "name": "舊姓名", "active": True,
+            "google_sub": "bound-google-subject",
+        },
+        "retired@school.test": {
+            "email": "retired@school.test", "name": "待停用", "active": True,
+        },
+    })
+    store = object.__new__(FirestoreScheduleStore)
+    store._teachers = teachers
+    store._client = FakeClient()
+
+    imported = store.import_teachers([{
+        "email": "Teacher@School.Test", "name": "新姓名", "active": True,
+    }], replace=True)
+
+    assert imported == 1
+    assert teachers.stream_calls == 1
+    assert teachers.document_get_calls == 0
+    assert teachers.values["teacher@school.test"]["name"] == "新姓名"
+    assert teachers.values["teacher@school.test"]["google_sub"] == "bound-google-subject"
+    assert teachers.values["retired@school.test"]["active"] is False
+
+
 def test_firestore_draft_serializes_nested_timetable_arrays():
     class FakeSnapshot:
         exists = True

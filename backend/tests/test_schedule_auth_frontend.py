@@ -105,6 +105,8 @@ def test_formal_release_check_bypasses_cached_homepage():
     assert 'url.searchParams.set("release"' in script_text
     assert 'sed -i "s/__APP_RELEASE__/${GITHUB_SHA}/g" _site/app-config.js _site/index.html' in workflow
     assert '_site/release.json' in workflow
+    for checked_script in ("readiness-center.js", "app-config.js", "auth-config.js"):
+        assert f"node --check {checked_script}" in workflow
 
     script = r"""
 const fs=require('fs'),vm=require('vm');

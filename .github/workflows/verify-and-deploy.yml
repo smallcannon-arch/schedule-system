@@ -44,6 +44,9 @@ jobs:
           node --check schedule-policy.js
           node --check teacher-workflow.js
           node --check feedback.js
+          node --check readiness-center.js
+          node --check app-config.js
+          node --check auth-config.js
 
   deploy:
     if: github.event_name == 'push'
