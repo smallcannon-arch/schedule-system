@@ -73,7 +73,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").strip().lower() in {"1", "true", "yes", "on"}
 app = FastAPI(
-    title="排課服務", version="1.40",
+    title="排課服務", version="1.41",
     docs_url="/docs" if ENABLE_API_DOCS else None,
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
@@ -129,9 +129,15 @@ async def security_middleware(request: Request, call_next):
         request.url.path.startswith(("/admin/", "/teacher/", "/platform/"))
         or request.url.path in {"/solve", "/solve-data"}
     )
+    form_api_key_auth = (
+        request.url.path == "/solve"
+        and bool(API_KEY)
+        and request.headers.get("content-type", "").lower().startswith("multipart/form-data")
+    )
     if (protected_write and GOOGLE_CLIENT_ID
             and not request.headers.get("authorization")
-            and not request.headers.get("x-api-key")):
+            and not request.headers.get("x-api-key")
+            and not form_api_key_auth):
         return JSONResponse(
             status_code=401, content={"error": "請先使用學校 Google 帳號登入"},
             headers={"WWW-Authenticate": "Bearer, ApiKey"})
