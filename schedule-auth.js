@@ -54,16 +54,31 @@
     return token && !token.startsWith("__") ? token : "";
   }
 
-  function showVersionNotice(messages, latestRelease) {
+  function compareVersions(left, right) {
+    const leftParts = String(left || "").split(".").map((part) => Number.parseInt(part, 10) || 0);
+    const rightParts = String(right || "").split(".").map((part) => Number.parseInt(part, 10) || 0);
+    const count = Math.max(leftParts.length, rightParts.length);
+    for (let index = 0; index < count; index += 1) {
+      const difference = (leftParts[index] || 0) - (rightParts[index] || 0);
+      if (difference) return difference > 0 ? 1 : -1;
+    }
+    return 0;
+  }
+
+  function showVersionNotice(messages, latestRelease, reloadable) {
     const notice = document.getElementById("appVersionNotice");
     const message = document.getElementById("appVersionMessage");
+    const reloadButton = document.getElementById("appVersionReload");
     if (!notice || !message) return;
     if (!messages.length) {
       notice.hidden = true;
       return;
     }
     if (latestRelease) state.latestRelease = latestRelease;
-    message.textContent = `${messages.join("；")}。請先儲存目前進度，再載入最新版。`;
+    message.textContent = reloadable
+      ? `${messages.join("；")}。請先儲存目前進度，再載入最新版。`
+      : `${messages.join("；")}。服務更新完成後會自動恢復，不需要重複重新整理。`;
+    if (reloadButton) reloadButton.hidden = !reloadable;
     notice.hidden = false;
   }
 
@@ -73,11 +88,17 @@
     const currentRelease = releaseToken(appConfig.release);
     const messages = [];
     let latestRelease = "";
+    let reloadable = false;
     try {
       const health = await request(`/health?ts=${Date.now()}`);
       if (currentVersion && health.version && health.version !== currentVersion) {
-        messages.push(`系統服務已更新（網頁 ${currentVersion}／服務 ${health.version}）`);
-        latestRelease = String(health.version);
+        if (compareVersions(health.version, currentVersion) > 0) {
+          messages.push(`系統服務已有新版（網頁 ${currentVersion}／服務 ${health.version}）`);
+          latestRelease = String(health.version);
+          reloadable = true;
+        } else {
+          messages.push(`雲端排課服務正在更新（網頁 ${currentVersion}／服務 ${health.version}）`);
+        }
       }
     } catch (_) {
       // OAuth 初始化會在下一個請求顯示正式的連線錯誤。
@@ -93,13 +114,14 @@
           if (publishedRelease && publishedRelease !== currentRelease) {
             messages.push("網站介面已有新版本");
             latestRelease = publishedRelease;
+            reloadable = true;
           }
         }
       } catch (_) {
         // 靜態版本檔暫時無法讀取時，不影響登入與排課。
       }
     }
-    showVersionNotice(messages, latestRelease);
+    showVersionNotice(messages, latestRelease, reloadable);
   }
 
   function startVersionChecks() {

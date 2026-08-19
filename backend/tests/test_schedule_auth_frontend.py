@@ -97,12 +97,17 @@ def test_formal_release_check_bypasses_cached_homepage():
         "schedule-auth.js",
     ):
         assert f'{script_name}?v=__APP_RELEASE__' in html
+    assert 'id="appVersionReload"' in html
     assert 'onclick="ScheduleAuth.reloadLatest()">載入最新版' in html
     assert 'schedule-auth.js?v=__APP_RELEASE__' in html
     assert 'new URL("release.json", root.location.href)' in script_text
     assert '{cache: "no-store"}' in script_text
     assert 'root.setInterval(checkForUpdates, 5 * 60 * 1000)' in script_text
     assert 'url.searchParams.set("release"' in script_text
+    assert 'compareVersions(health.version, currentVersion) > 0' in script_text
+    assert "雲端排課服務正在更新" in script_text
+    assert "不需要重複重新整理" in script_text
+    assert "reloadButton.hidden = !reloadable" in script_text
     assert 'sed -i "s/__APP_RELEASE__/${GITHUB_SHA}/g" _site/app-config.js _site/index.html' in workflow
     assert '_site/release.json' in workflow
     for checked_script in ("readiness-center.js", "app-config.js", "auth-config.js"):
