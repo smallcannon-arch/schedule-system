@@ -14,11 +14,10 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from pydantic import BaseModel, ConfigDict, Field
 
 
-RuleId = Literal["S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09"]
+RuleId = Literal["S01", "S02", "S04", "S05", "S06", "S07", "S08", "S09"]
 RULE_DESCRIPTIONS = {
     "S01": "國語文優先排上午",
     "S02": "數學優先排上午",
-    "S03": "體育避免連續兩天",
     "S04": "自然科學避免連續兩天",
     "S05": "行政教師空堂集中",
     "S06": "盡量保留偏好課表",

@@ -29,6 +29,28 @@ def test_loads_v6_merged_teacher_and_assignment_sheet():
     assert "張科任" in data["roster"]
     assert data["assign"][("1甲", "音樂")] == "張科任"
     assert data["assign"][("1甲", "國語文")] == "王導師"
+    assert [(row["subj"], row["pull_subjects"], row["day"], row["p"])
+            for row in data["overlay"]] == [
+        ("國語文", ["國語文"], "一", 1),
+        ("數學", ["數學"], "三", 2),
+    ]
+    assert all(row["sources"] == ["1甲", "1乙"] for row in data["overlay"])
+
+
+def test_v6_resource_timetable_binds_each_source_class_to_same_subject_and_slot():
+    data = engine.load_data(V6_TEMPLATE)
+
+    schedule, tasks, _, meta, overlay = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=True)
+
+    assert meta["status"] in {"OPTIMAL", "FEASIBLE"}
+    assert {(row[2], row[4], row[6], row[7]) for row in overlay} == {
+        ("1甲", "國語文", "一", 1), ("1乙", "國語文", "一", 1),
+        ("1甲", "數學", "三", 2), ("1乙", "數學", "三", 2),
+    }
+    for _, _, code, _, pull_subject, _, day, period in overlay:
+        assert schedule[(code, day, period)][0] == pull_subject
+    assert engine.validate(data, schedule, tasks, overlay) == []
 
 
 def test_v6_excel_requires_explicit_distributed_native_language_mode(tmp_path):
@@ -128,14 +150,14 @@ def test_v6_invalid_nonblank_rows_are_rejected(tmp_path, sheet_name, values, mes
 
 @pytest.mark.parametrize(("sheet_name", "values", "message"), [
     ("不排課時間", ["王導師", "六", 1, "不可排"], "星期不正確"),
-    ("資源班overlay", ["測試組", "1甲", "國語文", "名冊外教師"], "教師不在名冊"),
+    ("資源班課表", ["測試組", "1甲", "國語文", "名冊外教師", "一", 1, "國語文"], "教師不在名冊"),
 ])
 def test_v6_invalid_optional_rows_are_rejected(tmp_path, sheet_name, values, message):
     workbook = load_workbook(V6_TEMPLATE)
     sheet = workbook[sheet_name] if sheet_name in workbook.sheetnames else workbook.create_sheet(sheet_name)
     if sheet.max_row == 1 and sheet["A1"].value is None:
         headers = (["對象", "星期", "節次", "類型", "備註"] if sheet_name == "不排課時間"
-                   else ["組別", "原班", "科目", "資源班教師", "星期", "節次"])
+                   else ["分組名稱", "來源班級", "資源班授課科目", "資源班教師", "星期", "節次", "原班綁定科目"])
         for column, value in enumerate(headers, start=1):
             sheet.cell(1, column, value)
     sheet.append(values)
@@ -212,12 +234,9 @@ def test_v6_direct_parser_reads_alias_limits_and_resource_overlay(tmp_path):
         for column, value in enumerate(["對象", "星期", "節次", "類型", "備註"], start=1):
             limit_sheet.cell(1, column, value)
     limit_sheet.append([teacher, "五", 7, "不可排", "測試限制"])
-    overlay_sheet = (workbook["資源班overlay"] if "資源班overlay" in workbook.sheetnames
-                     else workbook.create_sheet("資源班overlay"))
-    if overlay_sheet.max_row == 1 and overlay_sheet["A1"].value is None:
-        for column, value in enumerate(["組別", "原班", "科目", "資源班教師", "星期", "節次"], start=1):
-            overlay_sheet.cell(1, column, value)
-    overlay_sheet.append(["測試資源組", code, "國語文", teacher, "一", 1])
+    overlay_sheet = workbook["資源班課表"]
+    overlay_sheet.delete_rows(2, overlay_sheet.max_row)
+    overlay_sheet.append(["測試資源組", code, "國語文", teacher, "一", 1, "國語文"])
     target = tmp_path / "v6-options.xlsx"
     workbook.save(target)
 
@@ -227,6 +246,25 @@ def test_v6_direct_parser_reads_alias_limits_and_resource_overlay(tmp_path):
     assert (teacher, "五", 7) in data["teacher_limit"]
     assert data["overlay"] == [{
         "grp": "測試資源組", "class": code, "subj": "國語文", "t": teacher,
+        "day": "一", "p": 1, "sources": [code], "pull_subjects": ["國語文"],
+    }]
+
+
+def test_v6_direct_parser_keeps_legacy_resource_overlay_compatible(tmp_path):
+    workbook = load_workbook(V6_TEMPLATE)
+    workbook.remove(workbook["資源班課表"])
+    teacher = workbook["教師與配課"]["A3"].value
+    code = workbook["班級"]["A2"].value
+    sheet = workbook.create_sheet("資源班overlay")
+    sheet.append(["組別", "原班", "科目", "資源班教師", "星期", "節次"])
+    sheet.append(["舊版資源組", code, "國語文", teacher, "一", 1])
+    target = tmp_path / "legacy-resource-overlay.xlsx"
+    workbook.save(target)
+
+    data = engine.load_data(target)
+
+    assert data["overlay"] == [{
+        "grp": "舊版資源組", "class": code, "subj": "國語文", "t": teacher,
         "day": "一", "p": 1,
     }]
 
@@ -244,6 +282,8 @@ def test_v6_template_uses_consistent_fonts_and_bounded_notes():
     assert workbook["教師與配課"]["I2"].value == "教師姓名"
     assert workbook["本土語分組"]["E1"].value == "分組名稱"
     assert workbook["本土語分組"]["H1"].value == "授課教師"
+    assert workbook["資源班課表"]["A1"].value == "分組名稱"
+    assert workbook["資源班課表"]["G1"].value == "原班綁定科目"
     assert workbook["說明"].max_column == 8
     assert any("只填帳號，不需提供密碼" in str(cell.value or "")
                for row in workbook["說明"].iter_rows() for cell in row)
@@ -352,6 +392,52 @@ def test_structured_class_slot_avoid_moves_course_out_of_forbidden_slot():
     assert ("1甲", "一", 1) not in schedule
     assert schedule[("1甲", "二", 1)][0] == "國語文"
     assert engine.validate(data, schedule, tasks, overlays) == []
+
+
+def test_pe_is_hard_spread_across_nonadjacent_days():
+    data = engine.load_frontend_data(_custom_rule_payload({"體育": 2}))
+
+    schedule, tasks, _, meta, overlays = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=True)
+
+    days = sorted(
+        {engine.DAYS.index(day) for (code, day, _period), (subject, _teacher, _room)
+         in schedule.items() if code == "1甲" and subject == "體育"})
+    assert len(days) == 2
+    assert days[1] - days[0] >= 2
+    assert "S03" not in {item["rule_id"] for item in meta["quality_report"]}
+    assert engine.validate(data, schedule, tasks, overlays) == []
+
+
+def test_pe_hard_rule_combines_mixed_age_subject_names():
+    data = engine.load_frontend_data(
+        _custom_rule_payload({"體育低": 1, "體育中": 1}))
+
+    schedule, tasks, _, _, overlays = engine.solve(
+        data, time_limit=5, auto_schedule_tutor=True)
+
+    lessons = sorted(
+        (engine.DAYS.index(day), subject)
+        for (code, day, _period), (subject, _teacher, _room) in schedule.items()
+        if code == "1甲" and "體育" in subject)
+    assert {subject for _day, subject in lessons} == {"體育低", "體育中"}
+    assert lessons[1][0] - lessons[0][0] >= 2
+    assert engine.validate(data, schedule, tasks, overlays) == []
+
+
+def test_adjacent_fixed_pe_days_report_h19_conflict():
+    payload = _custom_rule_payload({"體育低": 2})
+    payload["locks"] = [
+        {"c": "1甲", "s": "體育低", "d": "一", "p": 1},
+        {"c": "1甲", "s": "體育低", "d": "二", "p": 1},
+    ]
+    data = engine.load_frontend_data(payload)
+
+    with pytest.raises(engine.InfeasibleScheduleError) as caught:
+        engine.solve(data, time_limit=5, auto_schedule_tutor=True)
+
+    assert any("體育固定課排在相鄰兩天" in item["title"]
+               for item in caught.value.diagnostics)
 
 
 def test_structured_subject_halfday_preference_is_reported_as_soft_quality():
@@ -1571,6 +1657,24 @@ def test_validator_detects_nonconsecutive_two_period_block():
     }
 
     assert any("H09違反" in error for error in engine.validate(data, sched, tasks))
+
+
+@pytest.mark.parametrize("days", [("一", "一"), ("一", "二")])
+def test_validator_detects_same_or_adjacent_pe_days(days):
+    data, info = _validation_fixture(
+        [{"code": "1甲", "grade": 1}],
+        {"block": "", "banned": set()},
+    )
+    tasks = {
+        ("1甲", "體育低"): {"h": 1, "info": info},
+        ("1甲", "體育中"): {"h": 1, "info": info},
+    }
+    sched = {
+        ("1甲", days[0], 1): ("體育低", "王老師", "R00"),
+        ("1甲", days[1], 2): ("體育中", "王老師", "R00"),
+    }
+
+    assert any("H19違反" in error for error in engine.validate(data, sched, tasks))
 
 
 def test_validator_detects_tutor_daily_hard_cap():

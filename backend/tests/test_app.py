@@ -141,7 +141,8 @@ def test_strict_mode_rejects_partial_result_without_inventing_weekly_targets():
     assert payload["completion"] == "partial"
     assert payload["missing_courses"]
     assert payload["incomplete_totals"]["missing_teacher"] > 0
-    assert len(payload["quality_report"]) == 9
+    assert len(payload["quality_report"]) == 8
+    assert "S03" not in {item["rule_id"] for item in payload["quality_report"]}
     assert payload["weekly_cap_issues"] == []
     assert any("尚未填寫教師每週基準節數" in item for item in payload["compliance_warnings"])
 
@@ -161,7 +162,8 @@ def test_json_response_contains_workbook_and_structured_schedule():
     assert payload["schedule"]
     assert payload["meta"]["auto_schedule_tutor"] is False
     assert payload["meta"]["pool_total"] > 0
-    assert len(payload["meta"]["quality_report"]) == 9
+    assert len(payload["meta"]["quality_report"]) == 8
+    assert "S03" not in {item["rule_id"] for item in payload["meta"]["quality_report"]}
     assert payload["meta"]["missing_courses"]
     workbook = load_workbook(BytesIO(base64.b64decode(payload["workbook_base64"])))
     assert "排課品質" in workbook.sheetnames

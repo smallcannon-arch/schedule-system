@@ -73,6 +73,7 @@ def test_formal_frontend_supports_direct_case_setup_and_solve():
 
 def test_custom_rule_builder_uses_case_data_and_offers_admin_email_fallback():
     html = (FORMAL / "index.html").read_text(encoding="utf-8")
+    demo = (FORMAL / "data.js").read_text(encoding="utf-8")
 
     assert 'id="customRuleKind"' in html
     assert 'id="customRuleFields"' in html
@@ -97,6 +98,11 @@ def test_custom_rule_builder_uses_case_data_and_offers_admin_email_fallback():
     assert "排課時會依科目自動選擇場地；如有特殊需求，依場地例外設定處理" in html
     assert "各年段只能排在學校作息中標示為「可排課」的時段" in html
     assert "硬規則必須全部遵守；軟規則會在可行的課表中，依重要程度盡量達成" in html
+    assert "H19:'同一班的體育課不得排在同一天，也不得排在相鄰兩個上課日'" in html
+    assert 'mandatory=r[0]===\'H19\'' in html
+    assert 'disabled title="體育分散為必要硬規則"' in html
+    assert '"H19", "硬", "科目", "同一班體育課不得排在同一天，且不得排在相鄰兩天"' in demo
+    assert '"S03"' not in demo
 
 
 def test_setup_builder_javascript_has_valid_syntax():
@@ -545,6 +551,40 @@ process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
     assert any("數學教師在週一第1節有兩筆固定課" in issue for issue in hard)
 
 
+def test_fixed_course_validation_applies_pe_rule_to_mixed_age_subject_names():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const open=Array.from({length:5},()=>[1,1,1,1,1,1,1]);
+const data={
+  classes:[{g:1,i:1,code:'1甲',tutor:'甲導師'}],
+  roster:{甲導師:'導師',體育老師:'科任'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{
+    體育低:{self:false,hours:[1,0,0,0,0,0]},
+    體育中:{self:false,hours:[1,0,0,0,0,0]}
+  },
+  assign:{'1甲':{體育低:'體育老師',體育中:'體育老師'}},
+  assignmentModes:{},override:{},
+  locks:[
+    {c:'1甲',d:'一',p:1,s:'體育低'},
+    {c:'1甲',d:'二',p:2,s:'體育中'}
+  ],
+  nativeLockEnabled:false,nativeBands:[],nativeGroups:[],
+  resGroups:[],rooms:{R00:99},gslot:{1:open}
+};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},
+  startBlank:()=>true,syncTeachers:async()=>({})});
+process.stdout.write(JSON.stringify(ScheduleSetup.validate()));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+
+    hard = json.loads(result.stdout)["hard"]
+    assert any("體育固定課不可排在相鄰兩天" in issue for issue in hard)
+
+
 def test_fixed_course_validation_accepts_explicit_combined_lesson_group():
     script = r"""
 const fs=require('fs'),vm=require('vm');
@@ -640,6 +680,30 @@ process.stdout.write(JSON.stringify({tutor:data.classes[0].tutor,role:data.roste
 
     assert json.loads(result.stdout) == {
         "tutor": "王老師", "role": "導師", "assignment": "王老師"}
+
+
+def test_checking_resource_students_prepares_chinese_and_math_binding():
+    script = r"""
+const fs=require('fs'),vm=require('vm');
+vm.runInThisContext(fs.readFileSync(process.argv[1],'utf8'));
+const data={classes:[{g:1,i:1,code:'1甲',tutor:'王老師',res:false}],roster:{王老師:'導師'},
+  teacherAccounts:{},teacherNativeLangs:{},teacherSubjects:{},tcap:{},
+  subjects:{國語文:{},數學:{}},assign:{'1甲':{}},assignmentModes:{},override:{},locks:[],
+  resGroups:[],nativeBands:[],nativeGroups:[],rooms:{R00:99}};
+ScheduleSetup.init({getData:()=>data,getLimits:()=>[],escape:String,commit:()=>{},startBlank:()=>true,syncTeachers:async()=>({})});
+ScheduleSetup.setClass(0,'res',true);
+process.stdout.write(JSON.stringify({resource:data.classes[0].res,groups:data.resGroups}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(FORMAL / "setup-builder.js")],
+        check=True, capture_output=True, text=True, encoding="utf-8")
+    output = json.loads(result.stdout)
+
+    assert output["resource"] is True
+    assert len(output["groups"]) == 1
+    assert output["groups"][0]["sources"] == ["1甲"]
+    assert output["groups"][0]["pullSubjects"] == ["國語文", "數學"]
+    assert output["groups"][0]["scheduleMode"] == "fixed"
 
 
 def test_teacher_subject_skills_and_per_class_arrangement_mode_are_saved():
@@ -810,7 +874,7 @@ function addRow(name,headers,row,origin){
   XLSX.utils.sheet_add_aoa(bad.Sheets[name],[row],{origin});
 }
 XLSX.utils.sheet_add_aoa(bad.Sheets['班級'],[['7甲','七年級','王導師']],{origin:'A11'});
-XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,'組長',20,0]],{origin:'A11'});
+XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,'組長',20,0]],{origin:'A20'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,null,'1甲']],{origin:'I12'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['教師與配課'],[[bad.Sheets['教師與配課']['A3'].v,'英語文','1甲']],{origin:'I13'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['場地'],[[null,2]],{origin:'A20'});
@@ -820,10 +884,11 @@ XLSX.utils.sheet_add_aoa(bad.Sheets['科目節數'],[['閱讀','兩節',0,0,0,0,
 XLSX.utils.sheet_add_aoa(bad.Sheets['年段時段'],[['七年級',1,1]],{origin:'A9'});
 XLSX.utils.sheet_add_aoa(bad.Sheets['本土語分組'],[[1,'二',1,'客語','名冊外教師','原班教室','','測試組','1甲',1,'實體']],{origin:'A20'});
 addRow('不排課時間',['對象','星期','節次','類型','備註'],['王導師','六',1,'不可排',''],'A20');
-addRow('資源班overlay',['組別','原班','科目','資源班教師','星期','節次'],['測試組','1甲','國語文','名冊外教師','',''],'A20');
+addRow('資源班課表',['分組名稱','來源班級','資源班授課科目','資源班教師','星期','節次','原班綁定科目'],['測試組','1甲','國語文','名冊外教師','一',1,'國語文'],'A20');
 let error='';try{parse(bad)}catch(reason){error=String(reason.message||reason)}
 process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:baseline._warn,
-  customSubject:customResult.subjects['閱讀'],customAssignment:customResult.assign['1甲']['閱讀'],error}));
+  customSubject:customResult.subjects['閱讀'],customAssignment:customResult.assign['1甲']['閱讀'],
+  resourceGroups:baseline.resGroups,error}));
 """
     result = subprocess.run(
         ["node", "-e", script, str(FORMAL / "index.html"),
@@ -836,8 +901,14 @@ process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:ba
     assert any("目前沒有符合的任教班級" in warning for warning in output["warnings"])
     assert output["customSubject"]["hours"][0] == 1
     assert output["customAssignment"]
+    assert [(group["subj"], group["pullSubjects"], group["scheduleMode"], group["slots"])
+            for group in output["resourceGroups"]] == [
+        ("國語文", ["國語文"], "fixed", [{"d": "一", "p": 1}]),
+        ("數學", ["數學"], "fixed", [{"d": "三", "p": 2}]),
+    ]
+    assert all(group["sources"] == ["1甲", "1乙"] for group in output["resourceGroups"])
     assert "班級 第 11 列" in output["error"]
-    assert "教師與配課 第 11 列" in output["error"]
+    assert "教師與配課 第 20 列" in output["error"]
     assert "教師與配課 第 12 列" in output["error"]
     assert "教師與配課 第 13 列" in output["error"]
     assert "場地 第 20 列" in output["error"]
@@ -847,7 +918,7 @@ process.stdout.write(JSON.stringify({classes:baseline.classes.length,warnings:ba
     assert "年段時段 第 9 列" in output["error"]
     assert "本土語分組 第 20 列" in output["error"]
     assert "不排課時間 第 20 列" in output["error"]
-    assert "資源班overlay 第 20 列" in output["error"]
+    assert "資源班課表 第 20 列" in output["error"]
 
 
 def test_v6_browser_import_requires_explicit_distributed_native_language_mode():

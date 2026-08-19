@@ -13,6 +13,7 @@ v1.6：新增完整度指標、正式模式自動排導師課、週節數上限�
 v1.7：新增逐條軟規則品質報告與統一的待完成課程原因格式
 v1.8：新增安全診斷草案，一般課程可回報缺額，所有衝堂與結構性硬規則維持不放寬
 v1.9：新增資料連動的結構化學校自訂條件，並納入 CP-SAT 與獨立結果檢核
+v1.10：體育課改為不同日且不得相鄰日的 H19 硬規則
 """
 import os
 import re
@@ -34,7 +35,6 @@ V6_REQUIRED = {"班級", "教師與配課", "場地", "科目節數", "年段時
 SOFT_RULE_LABELS = {
     "S01": "國語文優先排上午",
     "S02": "數學優先排上午",
-    "S03": "體育避免連續兩天",
     "S04": "自然科學避免連續兩天",
     "S05": "行政教師空堂集中",
     "S06": "盡量保留偏好課表",
@@ -186,15 +186,43 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
                 f"週{day}第{period}節容量 {capacity}，固定課需求 {regular + combined}。",
                 "改用其他教室、提高正確容量，或調整固定節次。", "build"))
 
+    pe_fixed_days = defaultdict(list)
+    for lock in d.get("locks", []):
+        if _is_pe_subject(lock.get("subj")) and lock.get("day") in DAYS:
+            pe_fixed_days[lock["class"]].append(lock["day"])
+    for code, days in pe_fixed_days.items():
+        indexes = [DAYS.index(day) for day in days]
+        if len(indexes) != len(set(indexes)):
+            diagnostics.append(_diagnostic(
+                f"{code} 體育固定課排在同一天",
+                "同一班的體育課不得排在同一天。",
+                "前往固定課程，將體育課分散到不同且不相鄰的上課日。", "fixed"))
+        adjacent = sorted({(DAYS[a], DAYS[b]) for a in indexes for b in indexes if b == a + 1})
+        if adjacent:
+            pairs = "、".join(f"週{first}與週{second}" for first, second in adjacent)
+            diagnostics.append(_diagnostic(
+                f"{code} 體育固定課排在相鄰兩天",
+                f"{pairs}皆有體育課，違反體育課不得連續兩天的硬規則。",
+                "前往固定課程，至少間隔一個上課日。", "fixed"))
+
     class_tasks = defaultdict(list)
     teacher_tasks = defaultdict(list)
     room_tasks = defaultdict(list)
+    pe_task_hours = defaultdict(int)
     for key, task in tasks.items():
         class_tasks[key[0]].append((key, task))
         if task["t"]:
             teacher_tasks[task["t"]].append((key, task))
         if task["room"] != "R00":
             room_tasks[task["room"]].append((key, task))
+        if _is_pe_subject(key[1]):
+            pe_task_hours[key[0]] += task["h"]
+    for code, hours in pe_task_hours.items():
+        if hours > 3:
+            diagnostics.append(_diagnostic(
+                f"{code} 體育節數超過可分散上限",
+                f"每週需要 {hours} 節，但五個上課日中不同日且不相鄰最多只能安排 3 節。",
+                "調整體育每週節數，或重新確認是否需要修改這項全校硬規則。", "build"))
 
     def candidate_slots(keys):
         wanted = set(keys)
@@ -327,13 +355,17 @@ def diagnose_infeasibility(d, tasks, candidates, invalid_locks=(), status="INFEA
 
 
 def _default_rules():
-    weights = {"S01": 4, "S02": 4, "S03": 2, "S04": 2, "S05": 2,
+    weights = {"S01": 4, "S02": 4, "S04": 2, "S05": 2,
                "S06": 1, "S07": 1, "S08": 2, "S09": 2}
     return {rid: {"on": True, "w": weight} for rid, weight in weights.items()}
 
 
 def _text(value):
     return str(value or "").strip()
+
+
+def _is_pe_subject(value):
+    return "體育" in _text(value)
 
 
 def _whole_number(value):
@@ -1651,35 +1683,58 @@ def _load_data_v5(wb, allow_course_shortfall=False):
         teacher_limit, grade_limit, class_limit)
 
     overlay = []
-    if "資源班overlay" in wb.sheetnames:
-        overlay_sheet = wb["資源班overlay"]
+    resource_sheet_name = ("資源班課表" if "資源班課表" in wb.sheetnames
+                           else "資源班overlay")
+    if resource_sheet_name in wb.sheetnames:
+        overlay_sheet = wb[resource_sheet_name]
+        is_resource_timetable = resource_sheet_name == "資源班課表"
         for row_number, row in enumerate(
                 overlay_sheet.iter_rows(min_row=2, values_only=True), start=2):
             group = _text(row[0] if len(row) > 0 else None) or f"第{row_number}列"
-            code = _text(row[1] if len(row) > 1 else None)
+            sources = _list_values(row[1] if len(row) > 1 else None)
             subject = _resolve_subject_name(row[2] if len(row) > 2 else None, subjects)
             teacher = _text(row[3] if len(row) > 3 else None)
-            if not code and not subject and not teacher:
+            if not sources and not subject and not teacher:
                 continue
-            if not code or not subject or not teacher:
+            if not sources or not subject or not teacher:
                 raise ValueError(
-                    f"資源班overlay第 {row_number} 列必須完整填寫來源班級、科目與教師")
-            if code not in class_map:
-                raise ValueError(f"資源班overlay第 {row_number} 列的來源班級不存在：{code}")
+                    f"{resource_sheet_name}第 {row_number} 列必須完整填寫來源班級、科目與教師")
+            unknown_source = next((code for code in sources if code not in class_map), None)
+            if unknown_source:
+                raise ValueError(
+                    f"{resource_sheet_name}第 {row_number} 列的來源班級不存在：{unknown_source}")
+            if len({class_map[code]["grade"] for code in sources}) != 1:
+                raise ValueError(
+                    f"{resource_sheet_name}第 {row_number} 列的來源班級必須屬於同一年級")
             if subject not in subjects:
-                raise ValueError(f"資源班overlay第 {row_number} 列的科目不存在：{subject}")
+                raise ValueError(f"{resource_sheet_name}第 {row_number} 列的科目不存在：{subject}")
             if teacher not in roster:
-                raise ValueError(f"資源班overlay第 {row_number} 列的教師不在名冊：{teacher}")
+                raise ValueError(f"{resource_sheet_name}第 {row_number} 列的教師不在名冊：{teacher}")
             day = _text(row[4] if len(row) > 4 else None)
             raw_period = row[5] if len(row) > 5 else None
             try:
                 period = _whole_number(raw_period) if raw_period not in (None, "") else None
             except (TypeError, ValueError):
-                raise ValueError(f"資源班overlay第 {row_number} 列的節次不正確：{group}")
+                raise ValueError(f"{resource_sheet_name}第 {row_number} 列的節次不正確：{group}")
+            if is_resource_timetable and (not day or period is None):
+                raise ValueError(
+                    f"{resource_sheet_name}第 {row_number} 列必須填寫固定星期與節次：{group}")
             if day and day not in DAYS or period is not None and period not in RESOURCE_PERIODS:
-                raise ValueError(f"資源班overlay第 {row_number} 列的時段不正確：{group}")
-            overlay.append({"grp": group, "class": code, "subj": subject, "t": teacher,
-                            "day": day or None, "p": period})
+                raise ValueError(f"{resource_sheet_name}第 {row_number} 列的時段不正確：{group}")
+            pull_subjects = _list_values(row[6] if len(row) > 6 else None) or [subject]
+            invalid_pull = next((value for value in pull_subjects
+                                 if _resolve_subject_name(value, subjects) not in subjects), None)
+            if invalid_pull:
+                raise ValueError(
+                    f"{resource_sheet_name}第 {row_number} 列的原班綁定科目不存在：{invalid_pull}")
+            resolved_pull_subjects = [
+                _resolve_subject_name(value, subjects) for value in pull_subjects]
+            entry = {"grp": group, "class": sources[0], "subj": subject,
+                     "t": teacher, "day": day or None, "p": period}
+            if is_resource_timetable:
+                entry["sources"] = sources
+                entry["pull_subjects"] = resolved_pull_subjects
+            overlay.append(entry)
     d["overlay"] = overlay
 
     # 基礎一致性檢核與教師週節數提示。
@@ -2090,6 +2145,23 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
             if vs:
                 m.Add(sum(vs) <= 1)
 
+    # H19 體育：同一班所有體育類科目合併計算，不得同日或排在相鄰日。
+    for c in classes:
+        code = c["code"]
+        daily_values = {}
+        for day in DAYS:
+            values = [
+                value for (cc, subject, dd, _period), value in x.items()
+                if value is not None and cc == code and dd == day and _is_pe_subject(subject)
+            ]
+            daily_values[day] = values
+            if values:
+                m.Add(sum(values) <= 1)
+        for first, second in zip(DAYS, DAYS[1:]):
+            values = daily_values[first] + daily_values[second]
+            if values:
+                m.Add(sum(values) <= 1)
+
     # 分散語言抽離：原班在抽離時段必須安排學校指定的可抽離科目。
     for (code, day, period), subjects_allowed in d.get("native_pull_requirements", {}).items():
         values = [
@@ -2463,7 +2535,7 @@ def solve(d, time_limit=60, auto_schedule_tutor=False, diagnostic_draft=False):
                     })
 
     for (code, s), tk in tasks.items():
-        rid = "S03" if s == "體育" else "S04" if s == "自然科學" else None
+        rid = "S04" if s == "自然科學" else None
         if rid and w(rid):
             db = {}
             for day in DAYS:
@@ -2823,6 +2895,7 @@ def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
                 f"H18違反(語言抽離科目)：{code} 週{day}第{period}節為{actual}，"
                 f"可抽離科目為{'、'.join(sorted(allowed))}")
     tslot, cslot, rslot, tday = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
+    pe_days = defaultdict(list)
     for (code, day, p), (s, t, room) in sched.items():
         g = grade_of[code]
         combined_group = combined_lock_groups.get((code, s, day, p), "")
@@ -2845,6 +2918,15 @@ def validate(d, sched, tasks, ov_sched=(), diagnostic_shortfalls=None):
             errs.append(f"H17違反(班級限制)：{code} 週{day}{p}")
         if room != "R00" and (room, day, p) in d["room_blocked"]:
             errs.append(f"H15違反：{room} 週{day}{p}")
+        if _is_pe_subject(s):
+            pe_days[code].append(day)
+    for code, days in pe_days.items():
+        indexes = [DAYS.index(day) for day in days]
+        if len(indexes) != len(set(indexes)):
+            errs.append(f"H19違反(同日體育)：{code} 體育課不得排在同一天")
+        adjacent = sorted({(DAYS[a], DAYS[b]) for a in indexes for b in indexes if b == a + 1})
+        for first, second in adjacent:
+            errs.append(f"H19違反(相鄰日體育)：{code} 體育課排在週{first}與週{second}")
     for k, v in tslot.items():
         groups = {group for _label, group in v}
         combined = len(groups) == 1 and bool(next(iter(groups), ""))
