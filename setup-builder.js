@@ -82,6 +82,30 @@
     return subjectValues(values);
   }
 
+  function isPeSubject(value) {
+    return String(value || "").includes("體育");
+  }
+
+  function resourceCoreSubjects(d) {
+    const subjects = Object.keys(d.subjects || {});
+    const language = subjects.includes("國語文") ? "國語文" : (subjects.includes("國語") ? "國語" : "");
+    return [language, subjects.includes("數學") ? "數學" : ""].filter(Boolean);
+  }
+
+  function addDefaultResourceGroup(d, item) {
+    if (!item || d.resGroups.some((group) => resourceSources(group).includes(item.code))) return false;
+    const core = resourceCoreSubjects(d);
+    const subject = core[0] || Object.keys(d.subjects || {})[0] || "";
+    if (!subject) return false;
+    d.resGroups.push({
+      id: `resource-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      grp: `${item.code}資源組`, sources: [item.code], subj: subject,
+      pullSubjects: core.length ? core : [subject], t: "", n: 2,
+      scheduleMode: "fixed", slots: [],
+    });
+    return true;
+  }
+
   function isMinnanLanguage(value) {
     const language = String(value || "").replace(/[\s（）()]/g, "");
     return !language || ["本土語", "本土語文", "閩南語", "臺語", "台語", "臺灣台語", "台灣台語", "本土語文閩南語"].includes(language);
@@ -458,6 +482,11 @@
         hard.push(message);
         hardTargets.set(message, {group: "setup", view: "schedule", label: "調整學校作息"});
       }
+      const peHours = subjectNames.reduce((sum, subject) => isPeSubject(subject)
+        ? sum + Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0) : sum, 0);
+      if (peHours > 3) {
+        hard.push(`${code}體育每週 ${peHours} 節，但不同日且不相鄰最多只能排 3 節`);
+      }
 
       for (const subject of subjectNames) {
         const hours = Math.max(0, Number((d.subjects[subject].hours || [])[item.g - 1]) || 0);
@@ -486,6 +515,7 @@
     const fixedCounts = new Map();
     const fixedClassSlots = new Map();
     const fixedTeacherSlots = new Map();
+    const fixedPeDays = new Map();
     for (const row of (d.locks || [])) {
       const code = String(row.c || row.class || "").trim();
       const subject = String(row.s || row.subj || "").trim();
@@ -518,6 +548,15 @@
       fixedCounts.set(courseKey, (fixedCounts.get(courseKey) || 0) + 1);
       const weeklyHours = Math.max(0, Number((subjectInfo.hours || [])[+classroom.g - 1]) || 0);
       if (!weeklyHours) hard.push(`${code} ${subject}沒有課程節數，不能設定固定課`);
+      if (isPeSubject(subject)) {
+        const priorDays = fixedPeDays.get(code) || [];
+        const dayIndex = DAYS.indexOf(day);
+        if (priorDays.includes(day)) hard.push(`${code}體育固定課不可排在同一天（週${day}）`);
+        const adjacent = priorDays.find((prior) => Math.abs(DAYS.indexOf(prior) - dayIndex) === 1);
+        if (adjacent) hard.push(`${code}體育固定課不可排在相鄰兩天（週${adjacent}、週${day}）`);
+        priorDays.push(day);
+        fixedPeDays.set(code, priorDays);
+      }
       const managedKey = `${code}|${day}|${period}|${subject}`;
       if (nativeManagedLockKeys.has(managedKey)) continue;
       const teacher = String((d.assign[code] || {})[subject]
@@ -858,7 +897,7 @@
         <td><input class="numin" type="number" min="1" max="20" aria-label="${esc(item.code || `第 ${index + 1} 班`)}班序" value="${Number(item.i) || 1}" onchange="ScheduleSetup.setClass(${index},'i',this.value)"></td>
         <td><input value="${esc(item.code)}" maxlength="20" aria-label="第 ${index + 1} 筆班級代碼" onchange="ScheduleSetup.renameClass(${index},this.value)"></td>
         <td><input class="setup-wide-select" list="setupTutorNames" value="${esc(item.tutor)}" placeholder="輸入導師姓名" maxlength="40" aria-label="${esc(item.code || `第 ${index + 1} 班`)}導師" onchange="ScheduleSetup.setClass(${index},'tutor',this.value)"></td>
-        <td><input type="checkbox" aria-label="${esc(item.code || `第 ${index + 1} 班`)}有資源班學生" title="勾選後可在資源班頁建立抽離分組" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
+        <td><input type="checkbox" aria-label="${esc(item.code || `第 ${index + 1} 班`)}有資源班學生" title="勾選後自動建立國語文、數學抽離設定，再到資源班頁填入教師與課表" ${item.res ? "checked" : ""} onchange="ScheduleSetup.setClass(${index},'res',this.checked)"></td>
         <td><button class="icon-btn" type="button" title="刪除班級" aria-label="刪除 ${esc(item.code || `第 ${index + 1} 班`)}" onclick="ScheduleSetup.removeClass(${index})">×</button></td>
       </tr>`).join("")}</tbody>`;
     const tutorNames = document.getElementById("setupTutorNames");
@@ -1142,6 +1181,9 @@
         return renderClasses();
       }
       item.res = !!value;
+      if (item.res && addDefaultResourceGroup(d, item)) {
+        lastMessage = `${item.code}已建立國語文、數學抽離設定；請到「資源班」填入教師與固定課表。`;
+      }
     }
     else if (key === "tutor") {
       const previous = item.tutor;

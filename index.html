@@ -401,7 +401,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
       <span><b>BETA 廣測中</b>　登入或操作發生異常時，請使用錯誤回報並附上問題畫面。</span>
       <button class="btn soft sm" type="button" onclick="ScheduleFeedback.open()">錯誤回報</button>
     </div>
-    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.41</b></span></div>
+    <div class="formal-gate-owner"><span>系統規劃與維護：新竹市 內湖國小 江志宏</span><span>國民小學課務排程輔助系統 <b data-app-version>1.42</b></span></div>
   </div>
 </section>
 
@@ -1291,7 +1291,7 @@ if(document.body.classList.contains('formal-mode'))document.body.classList.add('
   </div>
   <div class="app-footer-meta">
     <b>系統規劃與維護：新竹市 內湖國小 江志宏</b>
-    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.41</span></small>
+    <small>© 2026 江志宏｜國民小學課務排程輔助系統．版權所有　版本 <span data-app-version>1.42</span></small>
     <small><button class="app-footer-feedback" type="button" onclick="ScheduleFeedback.open()">BETA 錯誤回報</button>｜系統會帶入版本與操作頁面，請另附問題畫面。</small>
   </div>
 </footer>
@@ -1370,6 +1370,7 @@ document.querySelectorAll('#fmtopts .fo').forEach(e=>e.onclick=()=>setFmt(e.data
 let CODE2C={};
 const CAT={'國語文':'k-lang','英語文':'k-lang','本土語文':'k-lang','數學':'k-math','數學遊藝':'k-math','自然科學':'k-nat','社會':'k-soc','音樂':'k-art','視覺藝術':'k-art','音閱百寶箱':'k-art','健康':'k-pe','體育':'k-pe','生活課程':'k-life','綜合活動':'k-life'};
 function cat(s){return CAT[s]||'k-flex'}
+function isPeSubject(s){return String(s||'').includes('體育')}
 let BLK=new Set();
 
 /* ═══ 不排課時間（可增刪修）═══ */
@@ -2194,6 +2195,12 @@ function toggleFixedCourse(day,period){
   if(exactIndex>=0){
     DATA.locks.splice(exactIndex,1);saveFixedCourseChange('已取消固定課程');return;
   }
+  if(isPeSubject(FIXED_SUBJECT)&&ruleOn('H19')){
+    const existingDays=(DATA.locks||[]).filter(lock=>lock.c===FIXED_CLASS&&isPeSubject(lock.s)&&!fixedCourseManagedByNative(lock)).map(lock=>lock.d);
+    if(existingDays.includes(day))return alert(`${FIXED_CLASS} 體育課不可固定在同一天。`);
+    const adjacent=existingDays.find(value=>Math.abs(DAYS.indexOf(value)-DAYS.indexOf(day))===1);
+    if(adjacent)return alert(`${FIXED_CLASS} 體育課不可固定在相鄰兩天（週${adjacent}、週${day}）。`);
+  }
   const collisionIndexes=(DATA.locks||[]).map((lock,index)=>({lock,index})).filter(({lock})=>lock.c===FIXED_CLASS&&lock.d===day&&+lock.p===+period);
   if(collisionIndexes.some(({lock})=>fixedCourseManagedByNative(lock)))return alert('此時段由語言分組鎖定，請到「語言分組鎖定」頁調整。');
   if(collisionIndexes.length&&!confirm(`此時段已固定「${collisionIndexes[0].lock.s}」，要改為「${FIXED_SUBJECT}」嗎？`))return;
@@ -2324,7 +2331,8 @@ function displayRuleDescription(rule){
     H14:'本土語文採全年級同時分組；固定時段依語言分組鎖定設定',
     H15:'本土語分組使用的場地與協同教師，在相同時段不得安排其他課程',
     H16:'早自修實施的新住民語不占正課節數，也不影響正課衝堂檢查',
-    H17:'自訂時段限制可套用教師、年級或班級；只有已新增的限制會生效'
+    H17:'自訂時段限制可套用教師、年級或班級；只有已新增的限制會生效',
+    H19:'同一班的體育課不得排在同一天，也不得排在相鄰兩個上課日'
   };
   return builtIn[rule[0]]||String(rule[3]||'')
     .replaceAll('設定_場地表','場地設定')
@@ -2341,6 +2349,7 @@ function renderRules(){
   const sorted=RULES.map((r,i)=>[r,i]).sort((a,b)=>order(a[0][0])-order(b[0][0])||a[0][0].localeCompare(b[0][0]));
   sorted.forEach(([r,i])=>{
     const custom=r[0].startsWith('C');
+    const mandatory=r[0]==='H19';
     const structured=custom&&r[6]&&typeof r[6]==='object'&&r[6].version===1;
     const legacy=custom&&!structured,referenceIssue=structured?customRuleReferenceIssue(r[6]):'';
     const w=/penalty=(\d+)/.exec(r[4]);
@@ -2350,7 +2359,7 @@ function renderRules(){
       <td style="font-size:13px">${esc(r[2])}</td>
       <td><span style="font-size:13.5px;white-space:normal">${esc(structured?describeStructuredRule(r[6]):displayRuleDescription(r))}</span>${legacy?'<small class="legacy-rule-note">舊版自由文字不會執行，請刪除後用上方選單重建。</small>':referenceIssue?`<small class="legacy-rule-note">${esc(referenceIssue)}，請停用或刪除後重建。</small>`:''}</td>
       <td>${r[1]==='軟'?`<span title="軟規則的重要程度">${w?(+w[1]<=1?'低':+w[1]>=6?'高':'中'):'—'}</span>`:'—'}</td>
-      <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} ${legacy?'disabled title="舊版自由文字規則不會執行"':''} onchange="setRuleValue(${i},5,this.checked?'是':'否')"></td>
+      <td><input type="checkbox" style="width:20px;height:20px" ${r[5]==='是'?'checked':''} ${legacy?'disabled title="舊版自由文字規則不會執行"':mandatory?'disabled title="體育分散為必要硬規則"':''} onchange="setRuleValue(${i},5,this.checked?'是':'否')"></td>
       <td>${structured?`<button class="btn soft sm" type="button" onclick="editStructuredRule(${i})">編輯</button> `:''}${custom?`<button class="btn soft sm" type="button" title="刪除此規則" onclick="removeRule(${i})">✕</button>`:''}</td></tr>`;
   });
   t.innerHTML=h;
@@ -2733,7 +2742,7 @@ function buildTasks(){
   return tasks;
 }
 function trySolve(tasks){
-  const cls={},tch={},rm={},rmCombined={},dayLoad={},lockErrors=[];
+  const cls={},tch={},rm={},rmCombined={},dayLoad={},sportsDays={},lockErrors=[];
   const groupedMinnan=minnanGroupSources();
   const occT=(t,d,p,combinedGroup='')=>{
     if(!t)return false;
@@ -2750,10 +2759,13 @@ function trySolve(tasks){
   const dailyFree=(t,d,p,combinedGroup='')=>!t
     ||(combinedGroup&&tch[`${t}|${d}|${p}`]===combinedGroup)
     ||(dayLoad[`${t}|${d}`]||0)<(DAILY_HARD_CAP[DATA.roster[t]||'']||6);
+  const sportsDayFree=(tk,d)=>!isPeSubject(tk.s)||!ruleOn('H19')
+    ||![...(sportsDays[tk.code]||[])].some(value=>Math.abs(DAYS.indexOf(value)-DAYS.indexOf(d))<=1);
   const ok=(tk,d,p)=>DATA.gslot[tk.g][DAYS.indexOf(d)][p-1]
     &&(!ruleOn('H06')||!tk.banned.has(p))
     &&!GLIM.has(`${tk.g}|${d}|${p}`)&&!CLIM.has(`${tk.code}|${d}|${p}`)
-    &&!cls[`${tk.code}|${d}|${p}`]&&!occT(tk.t,d,p,tk.combinedGroup)&&dailyFree(tk.t,d,p,tk.combinedGroup);
+    &&!cls[`${tk.code}|${d}|${p}`]&&!occT(tk.t,d,p,tk.combinedGroup)&&dailyFree(tk.t,d,p,tk.combinedGroup)
+    &&sportsDayFree(tk,d);
   const put=(tk,d,p,useRoom)=>{
     cls[`${tk.code}|${d}|${p}`]={s:tk.s,t:tk.t,room:useRoom?tk.room:'R00'};
     if(tk.t){
@@ -2766,6 +2778,7 @@ function trySolve(tasks){
       if(!(tk.combinedGroup&&rmCombined[key]===tk.combinedGroup))rm[key]=(rm[key]||0)+1;
       if(tk.combinedGroup)rmCombined[key]=tk.combinedGroup;
     }
+    if(isPeSubject(tk.s))(sportsDays[tk.code]??=new Set()).add(d);
   };
   // 1. 鎖定課
   for(const lk of DATA.locks){
@@ -2927,6 +2940,13 @@ function validateSchedule(){
         else if(!allowed.includes(original.s))add('H18',`${group.grp||group.lang||'語言抽離群組'}：${code} 同節為「${original.s}」，不在可抽離科目內`);
       }
     }
+  }
+  if(ruleOn('H19'))for(const c of DATA.classes){
+    const cells=entries.filter(e=>e.code===c.code&&isPeSubject(e.s)).sort((a,b)=>DAYS.indexOf(a.d)-DAYS.indexOf(b.d)||a.p-b.p);
+    const indexes=cells.map(e=>DAYS.indexOf(e.d));
+    if(indexes.length!==new Set(indexes).size)add('H19',`${clsName(c)} 體育課排在同一天`);
+    for(let index=1;index<indexes.length;index++)if(indexes[index]-indexes[index-1]===1)
+      add('H19',`${clsName(c)} 體育課排在相鄰兩天（週${cells[index-1].d}、週${cells[index].d}）`);
   }
   for(const c of DATA.classes)for(const s in DATA.subjects){
     const need=hoursOf(s,c.g)||0;if(!need)continue;
@@ -3120,6 +3140,11 @@ function editorCanPlace(source,day,period){
   if(ruleOn('H17')&&(GLIM.has(`${c.g}|${day}|${period}`)||CLIM.has(`${source.code}|${day}|${period}`)))return '年級或班級限制禁止此時段';
   if(ruleOn('H07')&&source.t&&TLIM.has(`${source.t}|${day}|${period}`))return `${source.t} 此時段不可排課`;
   const others=scheduleEntries(true).filter(entry=>!editorSameEntry(entry,source));
+  if(ruleOn('H19')&&isPeSubject(source.s)){
+    const conflict=others.find(entry=>entry.code===source.code&&isPeSubject(entry.s)
+      &&Math.abs(DAYS.indexOf(entry.d)-DAYS.indexOf(day))<=1);
+    if(conflict)return `體育課不可排在同一天或相鄰兩天（已有週${conflict.d}）`;
+  }
   if(ruleOn('H01')&&source.t&&others.some(entry=>entry.t===source.t&&entry.d===day&&+entry.p===+period))return `${source.t} 此時段已有課程`;
   if(source.t){const cap=DAILY_HARD_CAP[DATA.roster[source.t]||'']||6;
     if(others.filter(entry=>entry.t===source.t&&entry.d===day).length>=cap)return `${source.t} 週${day}已達每日 ${cap} 節上限`;
@@ -3986,6 +4011,11 @@ function canPlaceTutor(code,s,d,p){
   if(ruleOn('H05')&&!DATA.gslot[c.g][DAYS.indexOf(d)]?.[p-1])return '此時段不是該年級可上課時段';
   if(ruleOn('H06')&&(info.banned||[]).includes(p))return `${s} 不可排第 ${p} 節`;
   if(ruleOn('H17')&&(GLIM.has(`${c.g}|${d}|${p}`)||CLIM.has(`${code}|${d}|${p}`)))return '此時段已被年級或班級限制封鎖';
+  if(ruleOn('H19')&&isPeSubject(s)){
+    const conflict=scheduleEntries(false).find(entry=>entry.code===code&&isPeSubject(entry.s)
+      &&Math.abs(DAYS.indexOf(entry.d)-DAYS.indexOf(d))<=1);
+    if(conflict)return `體育課不可排在同一天或相鄰兩天（已有週${conflict.d}）`;
+  }
   const t=c.tutor||'';
   if(ruleOn('H07')&&t&&TLIM.has(`${t}|${d}|${p}`))return `${t} 此時段不可排課`;
   if(ruleOn('H01')&&t&&scheduleEntries(true).some(e=>e.t===t&&e.d===d&&e.p===p))return `${t} 此時段已有其他課程`;
@@ -4075,7 +4105,7 @@ function emptyFormalData(){
 function configureAppMode(){
   if(APP_MODE!=='formal')return;
   purgeLegacyFormalBackups();
-  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.41');
+  const appVersion=String((window.SCHEDULE_APP_CONFIG||{}).version||'1.42');
   document.querySelectorAll('[data-app-version]').forEach(element=>{element.textContent=appVersion});
   document.title='國民小學課務排程輔助系統｜正式版';
   document.getElementById('appBrandName').textContent='課務排程系統';
@@ -4164,7 +4194,11 @@ function initDerived(){
   CODE2C={};DATA.classes.forEach(c=>CODE2C[c.code]=c);
   BLK=new Set(DATA.blocked.map(x=>x.join('|')));
   LIMITS=DATA.limits.map(r=>[...r]);
-  RULES=DATA.rules.map(r=>[...r]);
+  RULES=DATA.rules.map(r=>[...r]).filter(row=>row[0]!=='S03');
+  const peRule=RULES.find(row=>row[0]==='H19');
+  if(peRule){
+    peRule[1]='硬';peRule[2]='科目';peRule[3]='同一班體育課不得排在同一天，且不得排在相鄰兩天';peRule[4]='-';peRule[5]='是';
+  }else RULES.push(['H19','硬','科目','同一班體育課不得排在同一天，且不得排在相鄰兩天','-','是']);
   for(const row of RULES){
     if(row[0]==='H13')row[3]='資源班一般節次須讓所有來源班級在同一節排入同一個可抽離科目；早自修不綁原班科目';
     if(row[0]==='S08')row[3]=`教師每日以 ${Math.min(5,policyDailyCap)} 節為負荷偏好，硬上限為 ${policyDailyCap} 節`;
@@ -4788,21 +4822,36 @@ function parseV5(wb,S,opt){
     if(period!=='全部'&&(!/^\d+$/.test(period)||+period<1||+period>7)){importIssue(nd,'error','不排課時間',index+1,`節次「${period}」不正確`);continue}
     nd.limits.push([target,day,period,String(r[3]||'不可排'),String(r[4]||'')]);
   }
-  const rgMap={};
-  const resourceRows=opt('資源班overlay');
+  const rgMap=new Map(),resourceSheetName=wb.Sheets['資源班課表']?'資源班課表':'資源班overlay';
+  const resourceRows=opt(resourceSheetName),isResourceTimetable=resourceSheetName==='資源班課表';
   for(let index=1;index<resourceRows.length;index++){
     const r=resourceRows[index];if(!importRowHasData(r))continue;
-    if(!r?.[1]||!r?.[2]||!r?.[3]){importIssue(nd,'error','資源班overlay',index+1,'必須完整填寫來源班級、科目與教師');continue}
-    if(!gOf[String(r[1]).trim()]){importIssue(nd,'error','資源班overlay',index+1,`來源班級「${r[1]}」不存在`);continue}
-    if(!nd.subjects[String(r[2]).trim()]){importIssue(nd,'error','資源班overlay',index+1,`科目「${r[2]}」不存在`);continue}
-    if(!Object.prototype.hasOwnProperty.call(nd.roster,String(r[3]).trim())){importIssue(nd,'error','資源班overlay',index+1,`教師「${r[3]}」不在教師名冊`);continue}
-    const key=[String(r[0]||'A組'),String(r[1]),String(r[2]),String(r[3])].join('|');
-    rgMap[key]=(rgMap[key]||0)+1;
+    const excelRow=index+1,grp=String(r?.[0]||'A組').trim(),sources=nativeSourceCodes(r?.[1]);
+    const subj=String(r?.[2]||'').trim(),t=String(r?.[3]||'').trim();
+    if(!sources.length||!subj||!t){importIssue(nd,'error',resourceSheetName,excelRow,'必須完整填寫來源班級、科目與教師');continue}
+    const invalidSource=sources.find(code=>!gOf[code]);
+    if(invalidSource){importIssue(nd,'error',resourceSheetName,excelRow,`來源班級「${invalidSource}」不存在`);continue}
+    if(new Set(sources.map(code=>gOf[code].g)).size>1){importIssue(nd,'error',resourceSheetName,excelRow,'同一資源班分組的來源班級必須屬於同一年級');continue}
+    if(!nd.subjects[subj]){importIssue(nd,'error',resourceSheetName,excelRow,`科目「${subj}」不存在`);continue}
+    if(!Object.prototype.hasOwnProperty.call(nd.roster,t)){importIssue(nd,'error',resourceSheetName,excelRow,`教師「${t}」不在教師名冊`);continue}
+    const pullSubjects=nativeSourceCodes(r?.[6]||subj),invalidPull=pullSubjects.find(subject=>!nd.subjects[subject]);
+    if(!pullSubjects.length||invalidPull){importIssue(nd,'error',resourceSheetName,excelRow,`原班綁定科目「${invalidPull||''}」不存在`);continue}
+    const key=JSON.stringify([grp,sources,subj,t,pullSubjects]);
+    let group=rgMap.get(key);
+    if(!group){group={id:`import-resource-${rgMap.size+1}`,grp,sources,subj,t,pullSubjects,n:0,scheduleMode:isResourceTimetable?'fixed':'auto',slots:[]};rgMap.set(key,group)}
+    if(isResourceTimetable){
+      const d=String(r?.[4]||'').trim(),rawPeriod=r?.[5],p=Number(rawPeriod);
+      if(!DAYS.includes(d)||!Number.isInteger(p)||p<0||p>7){
+        importIssue(nd,'error',resourceSheetName,excelRow,'星期或節次格式不正確');continue
+      }
+      if(group.slots.some(slot=>slot.d===d&&slot.p===p)){
+        importIssue(nd,'error',resourceSheetName,excelRow,`${grp}重複填寫週${d}${p===0?'早自修':`第 ${p} 節`}`);continue
+      }
+      group.slots.push({d,p});group.n=group.slots.length;
+    }else group.n+=1;
   }
-  nd.resGroups=Object.entries(rgMap).map(([key,n])=>{
-    const[grp,code,subj,t]=key.split('|');return{grp,code,subj,t,n};
-  });
-  for(const group of nd.resGroups){const classroom=nd.classes.find(c=>c.code===group.code);if(classroom)classroom.res=true}
+  nd.resGroups=[...rgMap.values()];
+  for(const group of nd.resGroups)for(const code of group.sources){const classroom=nd.classes.find(c=>c.code===code);if(classroom)classroom.res=true}
   nd.rules=JSON.parse(JSON.stringify(DEMO0.rules));
   return finalizeImportedWorkbook(nd);
 }
